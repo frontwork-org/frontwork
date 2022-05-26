@@ -1,0 +1,165 @@
+use std::env;
+use std::io::Read;
+use std::process;
+use unzpack::Unzpack;
+
+
+
+
+fn print_help(had_error: bool, error_message: &str) {
+    match had_error {
+        false => {
+            println!("FrontWork by LuceusXylian <luceusxylian@gmail.com>");
+            println!("-- The TypeScript Framework using Deno & Webassembly --");
+            println!("\n Usage:");
+        },
+        true => {
+            println!("The usage of arguments has been entered wrong because {}. \nPlease follow the following usage:", error_message);
+        }
+    }
+    println!("  -h or --help                    | this help message");
+    println!("  -t IPADDRESS PORT               | tests if the entered port is open");
+}
+
+pub enum SubCommand {
+    Install
+}
+
+pub enum Flag {
+    Default
+}
+
+struct Arguments {
+    subcomand: SubCommand,
+    flag: Flag,
+}
+
+impl Arguments {
+    fn new(args: &[String]) -> Result<Arguments, &'static str> {
+        if args.len() < 2 {
+            return Err("no arguments have been entered");
+        }
+
+        if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
+            print_help(false, "");
+            return Err("")
+        } else {
+            let subcommand: SubCommand = match args[1].as_str() {
+                "install" => SubCommand::Install,
+                _ => return Err("the entered subcommand is not valid")
+            };
+            let flag: Flag = Flag::Default;
+
+            return Ok(Arguments {
+                subcomand: subcommand,
+                flag: flag
+            });
+        }
+
+        //return Err("of invalid syntax")
+    }
+}
+
+
+fn request(url: &str) -> Result<reqwest::blocking::Response, ()> {
+    let client_builder = reqwest::blocking::Client::builder().build();
+    let client; 
+    match client_builder {
+        Ok(c) => client = c, Err(e) => {
+            println!("Request failed. \n{}", e);
+            return Err(())
+        }
+    }
+
+    if let Ok(response) = client.get(url).send() {
+        Ok(response)
+    } else {
+        Err(())
+    }
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let arguments = Arguments::new(&args).unwrap_or_else(
+        |err| {
+            if err == "" {
+                process::exit(0);
+            } else {
+                print_help(true, err);
+                process::exit(1);
+            }
+        }
+    );
+
+    let homedir = env::var("HOME").unwrap();
+    println!("{}", homedir);
+
+    match arguments.subcomand {
+        SubCommand::Install => {
+            println!("GET & INSTALL: Deno");
+            let (_, output, _) = run_script::run_script!(
+                r#"
+                    #!/bin/sh
+                    # Copyright 2019 the Deno authors. All rights reserved. MIT license.
+                    
+                    set -e
+                    
+                    if ! command -v unzip >/dev/null; then
+                        echo "Error: unzip is required to install Deno (see: https://github.com/denoland/deno_install#unzip-is-required)." 1>&2
+                        exit 1
+                    fi
+                    
+                    if [ "$OS" = "Windows_NT" ]; then
+                        target="x86_64-pc-windows-msvc"
+                    else
+                        case $(uname -sm) in
+                        "Darwin x86_64") target="x86_64-apple-darwin" ;;
+                        "Darwin arm64") target="aarch64-apple-darwin" ;;
+                        *) target="x86_64-unknown-linux-gnu" ;;
+                        esac
+                    fi
+                    
+                    if [ $# -eq 0 ]; then
+                        deno_uri="https://github.com/denoland/deno/releases/latest/download/deno-${target}.zip"
+                    else
+                        deno_uri="https://github.com/denoland/deno/releases/download/${1}/deno-${target}.zip"
+                    fi
+                    
+                    deno_install="${DENO_INSTALL:-$HOME/.deno}"
+                    bin_dir="$deno_install/bin"
+                    exe="$bin_dir/deno"
+                    
+                    if [ ! -d "$bin_dir" ]; then
+                        mkdir -p "$bin_dir"
+                    fi
+                    
+                    curl --fail --location --progress-bar --output "$exe.zip" "$deno_uri"
+                    unzip -d "$bin_dir" -o "$exe.zip"
+                    chmod +x "$exe"
+                    rm "$exe.zip"
+                    
+                    echo "Deno was installed successfully to $exe"
+                    if command -v deno >/dev/null; then
+                        echo "Run 'deno --help' to get started"
+                    else
+                        case $SHELL in
+                        /bin/zsh) shell_profile=".zshrc" ;;
+                        *) shell_profile=".bash_profile" ;;
+                        esac
+                        echo "Manually add the directory to your \$HOME/$shell_profile (or similar)"
+                        echo "  export DENO_INSTALL=\"$deno_install\""
+                        echo "  export PATH=\"\$DENO_INSTALL/bin:\$PATH\""
+                        echo "Run '$exe --help' to get started"
+                    fi
+                "#
+            )
+            .unwrap();
+        
+            println!("{}", output);
+
+
+
+        }
+    }
+
+}
