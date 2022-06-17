@@ -1,7 +1,7 @@
 import { Route, FrontworkRequest, FrontworkMiddleware, FrontworkResponse } from "../frontwork.ts";
 
 export const routes: Route[] = [
-	new Route("/", (_req: FrontworkRequest): FrontworkResponse => {
+	new Route("/", 100, (_req: FrontworkRequest): FrontworkResponse => {
 		const content = `
 			<!doctype html>
 			<html lang="en">
@@ -31,6 +31,16 @@ export const routes: Route[] = [
 			  </body>
 			</html>`;
 	  
+		return new FrontworkResponse(200, content);
+	})
+
+	,new Route("/hello/22222222", 1, (_req: FrontworkRequest): FrontworkResponse => {
+		const content = "hello "+_req.path.split("/")[2];
+		return new FrontworkResponse(200, content);
+	})
+
+	,new Route("/hello/*", 501111, (_req: FrontworkRequest): FrontworkResponse => {
+		const content = "hello "+_req.path.split("/")[2];
 		return new FrontworkResponse(200, content);
 	})
 ];

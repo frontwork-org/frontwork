@@ -1,23 +1,11 @@
-export function parse_url(url:string): {protocol:string, hostname:string, port:number, path:string, query_string:string, fragment:string} {
+export function parse_url(url:string): {protocol:string, host:string, path:string, query_string:string, fragment:string} {
     const url_protocol_split = url.split("://");
     const protocol = url_protocol_split[0];
 
     const url_querystring_split = url_protocol_split[1].split("?");
     const url_host_path_split = url_querystring_split[0].split("/");
 
-    const hostname_port_split = url_host_path_split[0].split(":");
-    const hostname = hostname_port_split[0];
-
-    let port: number;
-    if (hostname_port_split.length === 2) {
-        port = parseInt(hostname_port_split[1]);
-    } else {
-        switch (protocol) {
-            case "http": port = 80; break;
-            case "https": port = 443; break;
-            default: throw new Error("[frontwork-std > utils.ts > parse_url] Unknown protocol: " + protocol);
-        }
-    }
+    const host = url_host_path_split[0];
 
     let path;
     if (url_host_path_split.length < 2) {
@@ -43,8 +31,7 @@ export function parse_url(url:string): {protocol:string, hostname:string, port:n
 
     return {
         protocol: protocol,
-        hostname: hostname,
-        port: port,
+        host: host,
         path: path,
         query_string: query_string,
         fragment: fragment,

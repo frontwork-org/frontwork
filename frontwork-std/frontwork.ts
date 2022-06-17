@@ -28,8 +28,10 @@ export class FrontworkRequest {
     public method: string;
     public url: string;
     public protocol: string;
-    public hostname: string;
+    public host: string;
     public path: string;
+    public path_dirs: string[];
+    public query_string: string;
     public fragment: string;
     public readonly GET: GetScope;
     public readonly POST: PostScope;
@@ -42,8 +44,10 @@ export class FrontworkRequest {
         this.method = method;
         this.url = url;
         this.protocol = parsed_url.protocol;
-        this.hostname = parsed_url.hostname;
+        this.host = parsed_url.host;
         this.path = parsed_url.path;
+        this.path_dirs = parsed_url.path.split("/");
+        this.query_string = parsed_url.query_string;
         this.fragment = parsed_url.fragment;
 
         this.GET = new CookiesScope(
@@ -62,17 +66,33 @@ export class FrontworkRequest {
 export class FrontworkResponse {
     status_code: number;
     content: string;
-    //TODO: headers??
+    private headers: string[][] = [];
 
     constructor(status_code: number, content: string) {
         this.status_code = status_code;
         this.content = content;
     }
 
+    add_header(name: string, value: string) {
+        this.headers.push([name, value]);
+        return this;
+    }
+
     into_response(): Response {
         const response = new Response(this.content, { status: this.status_code });
         response.headers.set('content-type', 'text/html');
+        for (let i = 0; i < this.headers.length; i++) {
+            const header = this.headers[i];
+            response.headers.set(header[0], header[1]);
+        }
         return response;
+    }
+}
+
+export class FrontworkResponseRedirect extends FrontworkResponse {
+    constructor(redirect_path: string) {
+        super(301, "redirecting...");
+        this.add_header("Location", redirect_path);
     }
 }
 
@@ -90,11 +110,12 @@ export class Route {
     public id: number;
     public path: string;
     public handler: FrontworkResponseEvent;
-    // TODO: add priority; resolve which route should execute if multiple routes match the requested path
+    public priority: number;
 
-    constructor(path: string, handler: FrontworkResponseEvent) {
+    constructor(path: string, priority: number, handler: FrontworkResponseEvent) {
         this.path = path;
         this.handler = handler;
+        this.priority = priority;
 
         this.id = previous_route_id;
         previous_route_id += 1;
@@ -107,13 +128,18 @@ export class Frontwork {
 	middleware: FrontworkMiddleware;
 
 	constructor(routes: Route[], frontwork_middleware: FrontworkMiddleware) {
-		this.routes = routes;
+		this.routes = routes.sort(function(a: Route, b: Route)  {
+            return a.priority < b.priority? 1 : -1;
+        });
+        
 		this.middleware = frontwork_middleware;
 	}
 
 	async routes_resolver(request: FrontworkRequest): Promise<FrontworkResponse> {
         // Middleware: error
 		const error_handler: FrontworkResponseEvent = (request: FrontworkRequest): FrontworkResponse => {
+            this.log(request, "[ERROR]");
+
             if (this.middleware.error_handler === null) {
                 return new FrontworkResponse(500, "ERROR");
             } else {
@@ -121,21 +147,51 @@ export class Frontwork {
             }
 		}
 
+        // Middleware: redirect lonely slash
+        if (this.middleware.redirect_lonely_slash && request.path_dirs.length > 2 && request.path_dirs[request.path_dirs.length -1] === "") {
+            let new_path = "";
+            for (let i = 0; i < request.path_dirs.length - 1; i++) {
+                if (request.path_dirs[i] !== "") {
+                    new_path += "/" + request.path_dirs[i];
+                }
+            }
+            
+            this.log(request, "[REDIRECT] -> " + new_path);
+            return new FrontworkResponseRedirect(new_path);
+        }
+
 		// Middleware: before Routes
         if (this.middleware.before_routes !== null) {
             const after_routes_result = this.middleware.before_routes(request);
-            if(after_routes_result !== null) return <FrontworkResponse> after_routes_result;
+            if(after_routes_result !== null) {
+                this.log(request, "[BEFORE_ROUTES]");
+                return <FrontworkResponse> after_routes_result;
+            }
         }
 
         // Routes
         for (let i = 0; i < this.routes.length; i++) {
             const route = this.routes[i];
-            if (route.path === request.path) {
-                try {
-                    return await route.handler(request);
-                } catch (error) {
-                    console.error(error);
-                    return error_handler(request);
+            const route_path_dirs = route.path.split("/");
+
+            if (request.path_dirs.length === route_path_dirs.length) {
+                let found = true;
+                for (let i = 0; i < route_path_dirs.length; i++) {
+                    const route_path_dir = route_path_dirs[i];
+                    if (route_path_dir !== "*" && route_path_dir !== request.path_dirs[i]) {
+                        found = false;
+                        break;
+                    }
+                }
+
+                if (found) {
+                    this.log(request, "[ROUTE #" + route.id + " ("+route.path+")]");
+                    try {
+                        return await route.handler(request);
+                    } catch (error) {
+                        console.error(error);
+                        return error_handler(request);
+                    }
                 }
             }
         }
@@ -143,16 +199,27 @@ export class Frontwork {
         // Middleware: after Routes
         if (this.middleware.after_routes !== null) {
             const after_routes_result = this.middleware.after_routes(request);
-            if(after_routes_result !== null) return <FrontworkResponse> after_routes_result;
+            if(after_routes_result !== null) {
+                this.log(request, "[AFTER_ROUTES]");
+                return <FrontworkResponse> after_routes_result;
+            }
         }
 
         // Middleware: not found
+        this.log(request, "[NOT FOUND]");
         if (this.middleware.not_found_handler === null) {
             return new FrontworkResponse(404, "ERROR 404 - Page not found");
         } else {
             return this.middleware.not_found_handler(request);
         }
 	}
+
+    log(request: FrontworkRequest, extra: string) {
+        let path_with_query_string = request.path;
+        if(request.query_string !== "") path_with_query_string += "?" + request.query_string;
+        console.log(request.method + " " + path_with_query_string + " " + extra);
+        if (request.POST.items.length > 0) console.log(" Scope POST: ", request.POST.items);
+    }
 }
 
 export interface FrontworkMiddlewareInit {
@@ -163,7 +230,7 @@ export interface FrontworkMiddlewareInit {
     redirect_lonely_slash?: boolean;
 }
 
-// TODO: redirect option to remove last "/" on empty. Example: "/test/" -> "/test"
+// TODO: assets folder and favicon.ico
 export class FrontworkMiddleware {
     error_handler: FrontworkResponseEvent|null;
 	not_found_handler: FrontworkResponseEvent|null;
