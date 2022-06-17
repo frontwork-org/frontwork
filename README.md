@@ -1,4 +1,4 @@
-# FrontWork - The TypeScript Framework using Deno & Webassembly
+# Frontwork - The TypeScript Framework using Deno & Webassembly
 
 - Deno as server side renderer and assets sender
 - Wasmer as runtime for desktop and android
