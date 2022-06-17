@@ -52,7 +52,7 @@ export function parse_url(url:string): {protocol:string, hostname:string, port:n
 }
 
 
-export function keyValueArrayFromList(list: string, list_delimiter: string, key_value_delimiter: string): { key: string, value: string }[] {
+export function key_value_list_to_array(list: string, list_delimiter: string, key_value_delimiter: string): { key: string, value: string }[] {
     const result: { key: string, value: string }[] = [];
 
     const list_split = list.split(list_delimiter);

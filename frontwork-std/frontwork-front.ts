@@ -1,11 +1,13 @@
 // deno-lint-ignore-file
 
-import { Route, FrontworkRequest } from "./route.ts";
-import { routes, Middleware } from "./frontwork.ts";
+import { Frontwork, FrontworkMiddleware, Route } from "./frontwork.ts";
 
 
-// TODO: Initiate the FrontWork Framework
-
+class FrontworkFront extends Frontwork {
+    constructor(routes: Route[], frontwork_middleware: FrontworkMiddleware) {
+        super(routes, frontwork_middleware);
+    }
+}
 
 // TODO: add handler for page switching
 //          - implement function for window.location
