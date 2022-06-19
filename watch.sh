@@ -1,3 +1,3 @@
 #!/usr/bin/bash
 
-deno run --allow-net --watch frontwork-std/test/test.service.ts
+deno run --config ./deno.json --allow-net --allow-read --watch frontwork-std/test/test.service.ts

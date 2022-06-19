@@ -1,4 +1,8 @@
+import { Document, Element } from "https://deno.land/x/deno_dom@v0.1.31-alpha/deno-dom-wasm.ts";
 import { parse_url, key_value_list_to_array } from "./utils.ts";
+
+const document = new Document();
+document.createElement("html"); //TODO: more testing needed
 
 class Scope {
     items: { key: string, value: string }[];
@@ -21,6 +25,57 @@ export class GetScope extends Scope { constructor(items: { key: string, value: s
 export class PostScope extends Scope { constructor(items: { key: string, value: string }[]) { super(items); } }
 export class CookiesScope extends Scope { constructor(items: { key: string, value: string }[]) { super(items); } }
 
+
+export class Cookie {
+    name: string;
+    private value: string;
+    private expires: number|null = null;
+    private max_age: number|null = null;
+    private domain: string|null = null;
+    private path = "/";
+    private secure = false;
+    private http_only = false;
+    private same_site: string|null = null;
+
+    constructor(name: string, value: string) {
+        this.name = name;
+        this.value = value;
+    }
+
+    set_expires(expires: number): Cookie { this.expires = expires; return this; }
+    set_max_age(max_age: number): Cookie { this.max_age = max_age; return this; }
+    set_domain(domain: string): Cookie { this.domain = domain; return this; }
+    set_path(path: string): Cookie { this.path = path; return this; }
+    set_secure(secure: boolean): Cookie { this.secure = secure; return this; }
+    set_http_only(http_only: boolean): Cookie { this.http_only = http_only; return this; }
+    set_same_site(same_site: string): Cookie { this.same_site = same_site; return this; }
+
+    to_string(): string {
+        let result = this.name + "=" + this.value;
+        if(this.expires !== null) {
+            result += "; Expires=" + new Date(this.expires).toUTCString();
+        }
+        if(this.max_age !== null) {
+            result += "; Max-Age=" + this.max_age;
+        }
+        if(this.domain !== null) {
+            result += "; Domain=" + this.domain;
+        }
+        if(this.path !== "") {
+            result += "; Path=" + this.path;
+        }
+        if(this.secure) {
+            result += "; Secure";
+        }
+        if(this.http_only) {
+            result += "; HttpOnly";
+        }
+        if(this.same_site !== null) {
+            result += "; SameSite=" + this.same_site;
+        }
+        return result;
+    }
+}
 
 
 export class FrontworkRequest {
@@ -63,10 +118,28 @@ export class FrontworkRequest {
     }
 }
 
+export class PageBuilderConfig {
+    constructor() {
+    }
+}
+
+const default_page_builder_config = new PageBuilderConfig();
+
+export class PageBuilder {
+    config: PageBuilderConfig = default_page_builder_config;
+
+    constructor() {
+    }
+}
+
 export class FrontworkResponse {
     status_code: number;
-    content: string;
+    content: Element|string;
     private headers: string[][] = [];
+    private cookies: Cookie[] = [];
+    //TODO: add page builder
+    //TODO: somehow allow different response mime_types
+    test = document.createElement("div");
 
     constructor(status_code: number, content: string) {
         this.status_code = status_code;
@@ -78,13 +151,32 @@ export class FrontworkResponse {
         return this;
     }
 
+    set_cookie(cookie: Cookie) {
+        for (let i = 0; i < this.cookies.length; i++) {
+            if (this.cookies[i].name === cookie.name) {
+                this.cookies[i] = cookie;
+                return this;
+            }
+        }
+        this.cookies.push(cookie);
+        return this;
+    }
+
     into_response(): Response {
-        const response = new Response(this.content, { status: this.status_code });
+        const content_text = typeof this.content === "string" ? this.content : this.content.outerHTML;
+        const response = new Response(content_text, { status: this.status_code });
         response.headers.set('content-type', 'text/html');
+
         for (let i = 0; i < this.headers.length; i++) {
             const header = this.headers[i];
             response.headers.set(header[0], header[1]);
         }
+
+        for (let i = 0; i < this.cookies.length; i++) {
+            const cookie = this.cookies[i];
+            response.headers.append('set-cookie', cookie.to_string());
+        }
+
         return response;
     }
 }
@@ -124,8 +216,8 @@ export class Route {
 
 
 export class Frontwork {
-	routes: Route[];
-	middleware: FrontworkMiddleware;
+	private routes: Route[];
+	private middleware: FrontworkMiddleware;
 
 	constructor(routes: Route[], frontwork_middleware: FrontworkMiddleware) {
 		this.routes = routes.sort(function(a: Route, b: Route)  {
@@ -135,7 +227,7 @@ export class Frontwork {
 		this.middleware = frontwork_middleware;
 	}
 
-	async routes_resolver(request: FrontworkRequest): Promise<FrontworkResponse> {
+	protected async routes_resolver(request: FrontworkRequest): Promise<FrontworkResponse> {
         // Middleware: error
 		const error_handler: FrontworkResponseEvent = (request: FrontworkRequest): FrontworkResponse => {
             this.log(request, "[ERROR]");
@@ -206,7 +298,6 @@ export class Frontwork {
         }
 
         // Middleware: not found
-        this.log(request, "[NOT FOUND]");
         if (this.middleware.not_found_handler === null) {
             return new FrontworkResponse(404, "ERROR 404 - Page not found");
         } else {
@@ -214,7 +305,7 @@ export class Frontwork {
         }
 	}
 
-    log(request: FrontworkRequest, extra: string) {
+    protected log(request: FrontworkRequest, extra: string) {
         let path_with_query_string = request.path;
         if(request.query_string !== "") path_with_query_string += "?" + request.query_string;
         console.log(request.method + " " + path_with_query_string + " " + extra);
@@ -230,7 +321,6 @@ export interface FrontworkMiddlewareInit {
     redirect_lonely_slash?: boolean;
 }
 
-// TODO: assets folder and favicon.ico
 export class FrontworkMiddleware {
     error_handler: FrontworkResponseEvent|null;
 	not_found_handler: FrontworkResponseEvent|null;

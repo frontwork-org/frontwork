@@ -9,6 +9,7 @@
 ## CLI Tool
 1. fontwork-cli install // install Deno and Wasmer
 
+## [Read the Docs](DOCUMENTATION.md) 
 
 ## Contribution
 ### Rust Conventions
