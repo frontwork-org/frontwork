@@ -1,8 +1,8 @@
-import { Document, Element } from "https://deno.land/x/deno_dom@v0.1.31-alpha/deno-dom-wasm.ts";
+import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.31-alpha/deno-dom-wasm.ts";
 import { parse_url, key_value_list_to_array } from "./utils.ts";
 
-const document = new Document();
-document.createElement("html"); //TODO: more testing needed
+const IS_DENO_SERVERSIDE = typeof document === "undefined";
+
 
 class Scope {
     items: { key: string, value: string }[];
@@ -118,30 +118,115 @@ export class FrontworkRequest {
     }
 }
 
-export class PageBuilderConfig {
-    constructor() {
-    }
+export class DocumentBuilderConfig {
+    doctype = "<!DOCTYPE html>";
+
+    constructor() {}
 }
 
-const default_page_builder_config = new PageBuilderConfig();
+export class DocumentBuilder {
+    readonly config: DocumentBuilderConfig;
+    readonly document: globalThis.Document;
+    readonly document_html: HTMLHtmlElement;
+    readonly document_head: HTMLHeadElement;
+    readonly document_body: HTMLBodyElement;
 
-export class PageBuilder {
-    config: PageBuilderConfig = default_page_builder_config;
+    constructor(document_builder_config?: DocumentBuilderConfig) {
+        this.config = typeof document_builder_config === "undefined"? new DocumentBuilderConfig() : document_builder_config;
+        
+        if (IS_DENO_SERVERSIDE) {
+            // Deno Server Side Rendering
+            this.document = <globalThis.Document> <unknown> new DOMParser().parseFromString('', "text/html", );
 
-    constructor() {
+            // @ts-ignore: hack so that we can use the same codebase on both client and server
+            globalThis.document = {
+                createElement: this.document.createElement,
+            }
+
+            //this.document_html = <HTMLHtmlElement> this.document.appendChild( this.document.createElement("html") );
+            //this.document_head = <HTMLHeadElement> this.document_html.appendChild( this.document.createElement("head") );
+            //this.document_body = <HTMLBodyElement> this.document_html.appendChild( this.document.createElement("body") );
+        } else {
+            this.document = document;
+            this.document.head.innerHTML = "";
+            this.document.body.innerHTML = "";
+        }
+
+
+        this.document_html = <HTMLHtmlElement> this.document.documentElement.children[0];
+        this.document_head = <HTMLHeadElement> this.document.head;
+        this.document_body = <HTMLBodyElement> this.document.body;
+    }
+
+    createElement(tagName: string): HTMLElement {
+        return <HTMLElement> <unknown> this.document.createElement(tagName);
+    }
+
+    set_html_lang(code: string): DocumentBuilder {
+        const html_element = this.document.documentElement.children[0];
+        html_element.setAttribute("lang", code);
+        return this;
+    }
+
+    set_head_meta_data(title: string, description: string, robots: string): DocumentBuilder {
+        const meta_chatset = this.document.head.appendChild( this.createElement("meta") );
+        meta_chatset.setAttribute("charset", "UTF-8");
+        const meta_viewport = this.document.head.appendChild( this.createElement("meta") );
+        meta_viewport.setAttribute("name", "viewport");
+        meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
+        
+        const meta_title = this.document.head.appendChild( this.createElement("title") );
+        meta_title.innerHTML = title;
+        
+        const meta_description = this.document.head.appendChild( this.createElement("meta") );
+        meta_description.setAttribute("name", "description");
+        meta_description.setAttribute("content", description);
+        
+        const meta_robots = this.document.head.appendChild( this.createElement("meta") );
+        meta_robots.setAttribute("name", "robots");
+        meta_robots.setAttribute("content", robots);
+        return this;
+    }
+
+    set_head_meta_opengraph_website(title: string, description: string, url: string, image_url: string): DocumentBuilder {
+        const meta_og_type = this.document.head.appendChild( this.createElement("meta") );
+        meta_og_type.setAttribute("property", "og:type");
+        meta_og_type.setAttribute("content", "website");
+
+        const meta_og_url = this.document.head.appendChild( this.createElement("meta") );
+        meta_og_url.setAttribute("property", "og:url");
+        meta_og_url.setAttribute("content", url);
+
+        const meta_og_title = this.document.head.appendChild( this.createElement("meta") );
+        meta_og_title.setAttribute("property", "og:title");
+        meta_og_title.setAttribute("content", title);
+
+        const meta_og_description = this.document.head.appendChild( this.createElement("meta") );
+        meta_og_description.setAttribute("property", "og:description");
+        meta_og_description.setAttribute("content", description);
+
+        const meta_og_image = this.document.head.appendChild( this.createElement("meta") );
+        meta_og_image.setAttribute("property", "og:image");
+        meta_og_image.setAttribute("content", image_url);
+
+        return this;
+    }
+
+    toString() {
+        let content = this.config.doctype + '\n';
+        if(this.document.documentElement !== null) content += this.document.documentElement.outerHTML;
+        return content;
     }
 }
 
 export class FrontworkResponse {
     status_code: number;
-    content: Element|string;
+    mime_type = "text/html";
+    content: DocumentBuilder|Blob|string;
     private headers: string[][] = [];
     private cookies: Cookie[] = [];
-    //TODO: add page builder
-    //TODO: somehow allow different response mime_types
-    test = document.createElement("div");
 
-    constructor(status_code: number, content: string) {
+    constructor(status_code: number, content: DocumentBuilder|Blob|string) {
         this.status_code = status_code;
         this.content = content;
     }
@@ -163,9 +248,9 @@ export class FrontworkResponse {
     }
 
     into_response(): Response {
-        const content_text = typeof this.content === "string" ? this.content : this.content.outerHTML;
+        const content_text = typeof this.content === "object" ? this.content.toString() : this.content;
         const response = new Response(content_text, { status: this.status_code });
-        response.headers.set('content-type', 'text/html');
+        response.headers.set('content-type', this.mime_type);
 
         for (let i = 0; i < this.headers.length; i++) {
             const header = this.headers[i];
@@ -196,17 +281,22 @@ export interface FrontworkResponseEventNullable {
     (request: FrontworkRequest): FrontworkResponse|null
 }
 
+export declare interface Component {
+    build(request: FrontworkRequest): FrontworkResponse;
+    on_dom_ready(): void;
+}
+
 
 let previous_route_id = 0;
 export class Route {
     public id: number;
     public path: string;
-    public handler: FrontworkResponseEvent;
+    component: Component;
     public priority: number;
 
-    constructor(path: string, priority: number, handler: FrontworkResponseEvent) {
+    constructor(path: string, priority: number, component: Component) {
         this.path = path;
-        this.handler = handler;
+        this.component = component;
         this.priority = priority;
 
         this.id = previous_route_id;
@@ -279,7 +369,7 @@ export class Frontwork {
                 if (found) {
                     this.log(request, "[ROUTE #" + route.id + " ("+route.path+")]");
                     try {
-                        return await route.handler(request);
+                        return await route.component.build(request);
                     } catch (error) {
                         console.error(error);
                         return error_handler(request);
@@ -345,8 +435,3 @@ export class FrontworkMiddleware {
         else this.redirect_lonely_slash = true;
 	}
 }
-
-
-
-
-

@@ -7,11 +7,11 @@ class FrontworkFront extends Frontwork {
     constructor(routes: Route[], frontwork_middleware: FrontworkMiddleware) {
         super(routes, frontwork_middleware);
     }
-}
-
-// TODO: add handler for page switching
-//          - implement function for window.location
-
-function on_page_change() {
     
+    // TODO: add handler for page switching
+    //          - implement function for window.location
+    
+    on_page_change() {
+        
+    }
 }
