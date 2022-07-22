@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
       "allowJs": true,
-      "lib": ["deno.window", "ES2015", "dom"],
+      "lib": ["ES2015", "dom"],
       "strict": true
     },
     "lint": {
@@ -29,6 +29,10 @@
       }
     },
 
+    "imports": {
+      "lodash": "https://cdn.skypack.dev/lodash"
+    },
+
     "deno.enable": true,
     "deno.import_intellisense_origins": {
       "https://deno.land": true,
@@ -36,4 +40,4 @@
     },
     "deno.lint": true,
     "deno.unstable": true
-  }
+}

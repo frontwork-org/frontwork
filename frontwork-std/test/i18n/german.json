@@ -1,0 +1,5 @@
+[
+    { "key": "title1", "translation": "Frontwork Test Seite" }
+    ,{ "key": "text1", "translation": "Dies ist eine deutsche Test Seite für das Frontwork framework." }
+    ,{ "key": "title2", "translation": "Test Formular" }
+]

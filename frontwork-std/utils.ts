@@ -1,5 +1,7 @@
 export function parse_url(url:string): {protocol:string, host:string, path:string, query_string:string, fragment:string} {
     const url_protocol_split = url.split("://");
+    if(url_protocol_split.length < 2) throw new Error("Invalid URL: " + url);
+    
     const protocol = url_protocol_split[0];
 
     const url_querystring_split = url_protocol_split[1].split("?");
@@ -51,4 +53,11 @@ export function key_value_list_to_array(list: string, list_delimiter: string, ke
         }
     }
     return result;
+}
+
+export function html_element_set_attributes(html_element: HTMLElement, attributes: NamedNodeMap) {
+    for (let i = 0; i < attributes.length; i++) {
+        const attribute = attributes[i];
+        html_element.setAttribute(attribute.name, attribute.value);
+    }
 }

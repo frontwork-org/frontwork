@@ -4,6 +4,7 @@
 - Wasmer as runtime for desktop and android
 - CLI Tool to create project like ng, and provide CI capabilities like npm
 - Yarn as package manager
+- esbuild as bundler. required to share libraries between apps
 
 
 ## CLI Tool

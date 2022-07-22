@@ -1,34 +1,52 @@
-import { Component, Route, FrontworkRequest, FrontworkMiddleware, FrontworkResponse, DocumentBuilder } from "../frontwork.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkInit } from "../frontwork.ts";
+import { EnvironmentPlatform, EnvironmentStage } from "../environment.ts";
+import { FrontworkFront } from "../frontwork-front.ts";
+import { i18n } from "./test.i18n.ts";
 
-function render_header(document_builder: DocumentBuilder): HTMLElement {
+function render_header(): HTMLElement {
 	const header = document.createElement("header");
 	const link1 = header.appendChild(document.createElement("a"));
 	link1.innerText = "Home";
 	link1.setAttribute("href", "/");
 	link1.setAttribute("style", "margin-right: 10px;");
-	
+
 	const link2 = header.appendChild(document.createElement("a"));
 	link2.innerText = "Test 2";
 	link2.setAttribute("href", "/test2");
 	link2.setAttribute("style", "margin-right: 10px;");
+
+	const link3 = header.appendChild(document.createElement("a"));
+	link3.innerText = "Test 3";
+	link3.setAttribute("href", "/test3");
+	link3.setAttribute("style", "margin-right: 10px;");
+
+	const link_german = header.appendChild(document.createElement("a"));
+	link_german.innerText = "German";
+	link_german.setAttribute("href", "/german");
+	link_german.setAttribute("style", "margin-right: 10px;");
+
+	const link_crash = header.appendChild(document.createElement("a"));
+	link_crash.innerText = "Crash";
+	link_crash.setAttribute("href", "/crash");
+	link_crash.setAttribute("style", "margin-right: 10px;");
 	
 	return header;
 }
 
 class TestComponent implements Component {
-    build(_request: FrontworkRequest) {
+    build(context: FrontworkContext) {
 		const document_builder = new DocumentBuilder();
-		document_builder.document_body.appendChild( render_header(document_builder) );
+		document_builder.document_body.appendChild( render_header() );
 		const main = document_builder.document_body.appendChild( document.createElement("main") );
 
 		const title1 = main.appendChild( document.createElement("h1") );
-		title1.innerText = "HTML5 Test Page";
+		title1.innerText = context.i18n.get_translation("title1");
 		const description = main.appendChild( document.createElement("p") );
-		description.innerText = "This is a test page for the Frontwork framework.";
+		description.innerText = context.i18n.get_translation("text1");
 		
 		const section_form = main.appendChild( document.createElement("section") );
 		const section_form_title = section_form.appendChild( document.createElement("h2") );
-		section_form_title.innerText = "Test Form";
+		section_form_title.innerText = context.i18n.get_translation("title2");
 		
 		const section_form_form = section_form.appendChild( document.createElement("form") );
 		section_form_form.setAttribute("id", "test_form");
@@ -50,61 +68,107 @@ class TestComponent implements Component {
 
 		return new FrontworkResponse(200, 
 			document_builder
-				.set_html_lang("en")
-				.set_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow")
+				.set_html_lang(context.i18n.selected_locale.locale)
+				.add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow")
 		);
 	}
-    on_dom_ready(): void {}
+    dom_ready(): void {}
+}
+
+class TestGerman extends TestComponent implements Component {
+    build(context: FrontworkContext) {
+		context.i18n.set_locale("de");
+		return super.build(context);
+	}
+    dom_ready(): void {}
 }
 
 class Test2Component implements Component {
-    build(_request: FrontworkRequest) {
+    build() {
 		const document_builder = new DocumentBuilder();
-		document_builder.document_body.appendChild( render_header(document_builder) );
+		document_builder.document_body.appendChild( render_header() );
 		const main = document_builder.document_body.appendChild( document.createElement("main") );
 
 		const title1 = main.appendChild( document.createElement("h1") );
 		title1.innerText = "Test Page 2";
 		const description = main.appendChild( document.createElement("p") );
-		description.innerHTML = "This is a test page <b>2</b> for the Frontwork framework.";
+		description.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
 		
 		return new FrontworkResponse(200, 
 			document_builder
 				.set_html_lang("en")
-				.set_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow")
+				.add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow")
 		);
 	}
-    on_dom_ready(): void {}
+    dom_ready(context: FrontworkContext, frontwork: FrontworkFront): void {
+		console.log("FrontworkContext", context);
+		console.log("frontwork", frontwork);
+		setTimeout(() => {
+			frontwork.page_change_to("/")
+		}, 1000);
+	}
 }
 
+class Test3Component implements Component {
+    build() {
+		return new FrontworkResponseRedirect("/");	
+	}
+    dom_ready(): void {}
+}
+
+
 class ElementTestComponent implements Component {
-    build(request: FrontworkRequest) {
+    build() {
 		const document_builder = new DocumentBuilder();
 		return new FrontworkResponse(200, 
 			document_builder
 				.set_html_lang("en")
-				.set_head_meta_data("element_test", "element_test", "noindex,nofollow")
+				.add_head_meta_data("element_test", "element_test", "noindex,nofollow")
 		);
 	}
-    on_dom_ready(): void {}
+    dom_ready(): void {}
 }
 
 class HelloWorldComponent implements Component {
-    build(request: FrontworkRequest) {
-		const content = "hello "+request.path.split("/")[2];
+    build(context: FrontworkContext) {
+		const content = "hello "+context.request.path_dirs[2];
 		return new FrontworkResponse(200, content);
 	}
-    on_dom_ready(): void {}
+    dom_ready(): void {}
+}
+
+class CrashComponent implements Component {
+    build() {
+		throw new Error("Crash Test");
+		// deno-lint-ignore no-unreachable
+		return new FrontworkResponse(200, "this text shall never be seen in the browser");
+	}
+    dom_ready(): void {}
 }
 
 
-export const routes: Route[] = [
-	new Route("/", 100, new TestComponent()),
-	new Route("/test2", 100, new Test2Component()),
-	new Route("/element_test", 100, new ElementTestComponent()),
-	new Route("/hello/22222222", 1, new HelloWorldComponent()),
-	new Route("/hello/*", 501111, new HelloWorldComponent()),
+const domain_routes: DomainRoutes[] = [
+	new DomainRoutes(/.*/, [
+		new Route("/", new TestComponent()),
+		new Route("/test2", new Test2Component()),
+		new Route("/test3", new Test3Component()),
+		new Route("/german", new TestGerman()),
+		new Route("/crash", new CrashComponent()),
+		new Route("/element_test", new ElementTestComponent()),
+		new Route("/hello/22222222", new HelloWorldComponent()),
+		new Route("/hello/*", new HelloWorldComponent()),
+	])
 ];
 
+const middleware = new FrontworkMiddleware();
 
-export const middleware = new FrontworkMiddleware();
+
+
+export const init: FrontworkInit = {
+	platform: EnvironmentPlatform.WEB, 
+	stage: EnvironmentStage.DEVELOPMENT,
+	port: 8080,
+	domain_routes: domain_routes,
+	middleware: middleware,
+	i18n: i18n,
+};
