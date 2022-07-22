@@ -1,0 +1,43 @@
+{
+    "compilerOptions": {
+      "allowJs": true,
+      "lib": ["ES2015", "dom"],
+      "strict": true
+    },
+    "lint": {
+      "files": {
+        "include": ["frontwork-std/"],
+        "exclude": []
+      },
+      "rules": {
+        "tags": ["recommended"],
+        "include": [],
+        "exclude": ["no-unused-vars"]
+      }
+    },
+    "fmt": {
+      "files": {
+        "include": ["frontwork-std/"],
+        "exclude": []
+      },
+      "options": {
+        "useTabs": true,
+        "lineWidth": 80,
+        "indentWidth": 4,
+        "singleQuote": true,
+        "proseWrap": "preserve"
+      }
+    },
+
+    "imports": {
+      "lodash": "https://cdn.skypack.dev/lodash"
+    },
+
+    "deno.enable": true,
+    "deno.import_intellisense_origins": {
+      "https://deno.land": true,
+      "https://deno.land/x": true
+    },
+    "deno.lint": true,
+    "deno.unstable": true
+}

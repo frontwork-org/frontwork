@@ -1,7 +1,5 @@
 use std::env;
-use std::io::Read;
 use std::process;
-use unzpack::Unzpack;
 
 
 
@@ -18,7 +16,7 @@ fn print_help(had_error: bool, error_message: &str) {
         }
     }
     println!("  -h or --help                    | this help message");
-    println!("  -t IPADDRESS PORT               | tests if the entered port is open");
+    println!("  install                         | install required dependencies");
 }
 
 pub enum SubCommand {
@@ -31,7 +29,7 @@ pub enum Flag {
 
 struct Arguments {
     subcomand: SubCommand,
-    flag: Flag,
+    _flag: Flag,
 }
 
 impl Arguments {
@@ -52,7 +50,7 @@ impl Arguments {
 
             return Ok(Arguments {
                 subcomand: subcommand,
-                flag: flag
+                _flag: flag
             });
         }
 
@@ -60,7 +58,7 @@ impl Arguments {
     }
 }
 
-
+/*
 fn request(url: &str) -> Result<reqwest::blocking::Response, ()> {
     let client_builder = reqwest::blocking::Client::builder().build();
     let client; 
@@ -77,6 +75,7 @@ fn request(url: &str) -> Result<reqwest::blocking::Response, ()> {
         Err(())
     }
 }
+*/
 
 fn main() {
     let args: Vec<String> = env::args().collect();

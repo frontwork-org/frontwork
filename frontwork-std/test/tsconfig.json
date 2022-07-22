@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+      "outDir": "./assets/js/",
+      "allowJs": true,
+      "resolveJsonModule": true,
+      "esModuleInterop": true,
+      "experimentalDecorators": true,
+      "inlineSourceMap": true,
+      "isolatedModules": true,
+      "jsx": "react",
+      "lib": ["dom", "esnext"],
+      "module": "esnext",
+      "strict": true,
+      "target": "esnext",
+      "moduleResolution": "node",
+      "useDefineForClassFields": true
+    },
+    "files": [
+      "test.front.ts",
+      "test.routes.ts",
+      "../frontwork.ts",
+      "../frontwork-front.ts",
+      "./i18n/*.json"
+    ]
+}
