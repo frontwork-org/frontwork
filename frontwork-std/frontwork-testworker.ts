@@ -2,7 +2,6 @@ import { } from "./dom.ts";
 import { Frontwork, FrontworkInit, FrontworkRequest, PostScope } from "./frontwork.ts";
 import { green, red } from "https://deno.land/std@0.149.0/fmt/colors.ts";
 
-// TODO: automated tests for the frontwork framework. Iterate over all routes and test them.
 export class FrontworkTestworker extends Frontwork {
     test_count = 0;
     fail_count = 0;
@@ -66,7 +65,6 @@ export class FrontworkTestworker extends Frontwork {
 
                 this.assert_function(() => {
                     route.component.build(context, this);
-                    // TODO: route.component.dom_ready(context, this);
                 });
             }
         }
