@@ -72,13 +72,11 @@ export class FrontworkTestworker extends Frontwork {
     }
 
     print_summary() {
-        let status_text, status_color;
+        let status_text;
         if (this.fail_count === 0) {
             status_text = green("ok");
-            status_color = "color: green";
         } else {
             status_text = red("failed");
-            status_color = "color: red";
         }
 
         const time_finished = new Date().getTime();
