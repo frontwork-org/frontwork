@@ -1,4 +1,5 @@
 import { Document } from "https://deno.land/x/deno_dom@v0.1.31-alpha/deno-dom-wasm.ts";
+"https://deno.land/x/frontwork-std@0.0.1/frontwork.ts";
 
 const doc = new Document();
 
