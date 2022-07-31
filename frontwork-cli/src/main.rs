@@ -1,7 +1,10 @@
-use std::env;
+use std::{env, fs};
+use std::path::Path;
 use std::process;
+use include_dir::{include_dir, Dir};
 
 
+static PROJECT_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/template/");
 
 
 fn print_help(had_error: bool, error_message: &str) {
@@ -19,8 +22,11 @@ fn print_help(had_error: bool, error_message: &str) {
     println!("  install                         | install required dependencies");
 }
 
+#[derive(PartialEq)]
 pub enum SubCommand {
-    Install
+    Install,
+    Init,
+    New,
 }
 
 pub enum Flag {
@@ -29,6 +35,7 @@ pub enum Flag {
 
 struct Arguments {
     subcomand: SubCommand,
+    projectname: Option<String>,
     _flag: Flag,
 }
 
@@ -44,12 +51,24 @@ impl Arguments {
         } else {
             let subcommand: SubCommand = match args[1].as_str() {
                 "install" => SubCommand::Install,
+                "init" => SubCommand::Init,
+                "new" => SubCommand::New,
                 _ => return Err("the entered subcommand is not valid")
             };
             let flag: Flag = Flag::Default;
 
+            let projectname: Option<String> = if subcommand == SubCommand::New {
+                if args.len() < 3 {
+                    return Err("no projectname has been entered")
+                }
+                Some(args[2].clone())
+            } else {
+                None
+            };
+
             return Ok(Arguments {
                 subcomand: subcommand,
+                projectname: projectname,
                 _flag: flag
             });
         }
@@ -90,8 +109,7 @@ fn main() {
         }
     );
 
-    let homedir = env::var("HOME").unwrap();
-    println!("{}", homedir);
+    // let homedir = env::var("HOME").unwrap();
 
     match arguments.subcomand {
         SubCommand::Install => {
@@ -155,10 +173,33 @@ fn main() {
             .unwrap();
         
             println!("{}", output);
+        }
 
+        SubCommand::Init | SubCommand::New => {
+            let projectpath= if arguments.subcomand == SubCommand::New {
+                // try to create folder with the name of the project
+                let projectname = arguments.projectname.unwrap();
+                let projectpath_local = format!("{}/{}", env::current_dir().unwrap().to_str().unwrap(), projectname);
+                if Path::new(&projectpath_local).exists() {
+                    println!("The projectname has been used. Please use another name.");
+                    process::exit(1);
+                } else {
+                    fs::create_dir_all(&projectpath_local).unwrap();
+                    projectpath_local
+                }
+            } else {
+                env::current_dir().unwrap().to_str().unwrap().to_string()
+            };
 
+            // https://docs.rs/include_dir/latest/include_dir/
+            if let Ok(_) = PROJECT_DIR.extract(&projectpath) {
+                println!("The project has been initialized successfully.");
+            } else {
+                println!("The project has not been initialized successfully.");
+            }
 
         }
+
     }
 
 }
