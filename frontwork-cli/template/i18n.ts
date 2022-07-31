@@ -1,0 +1,8 @@
+import { I18n, I18nLocale, I18nLocaleTranslation } from "./env.ts";
+import { default as english } from "./i18n/english.json" assert { type: "json" };
+import { default as german } from "./i18n/german.json" assert { type: "json" };
+
+export const i18n = new I18n([
+    new I18nLocale("en", english as I18nLocaleTranslation[]),
+    new I18nLocale("de", german as I18nLocaleTranslation[]),
+]);

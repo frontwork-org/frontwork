@@ -20,6 +20,8 @@ fn print_help(had_error: bool, error_message: &str) {
     }
     println!("  -h or --help                    | this help message");
     println!("  install                         | install required dependencies");
+    println!("  init                            | create a new project in the current directory");
+    println!("  new                             | create a new folder in the current directory and then execute init");
 }
 
 #[derive(PartialEq)]
@@ -27,6 +29,7 @@ pub enum SubCommand {
     Install,
     Init,
     New,
+    //TODO: Add component subcommands
 }
 
 pub enum Flag {

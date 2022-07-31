@@ -1,0 +1,5 @@
+[
+    { "key": "title1", "translation": "Frontwork Test Page" }
+    ,{ "key": "text1", "translation": "This is a test page for the Frontwork framework." }
+    ,{ "key": "title2", "translation": "Test Form" }
+]
