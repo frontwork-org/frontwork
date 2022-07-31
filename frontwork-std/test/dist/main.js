@@ -57,6 +57,18 @@ function html_element_set_attributes(html_element, attributes) {
         html_element.setAttribute(attribute.name, attribute.value);
     }
 }
+var EnvironmentPlatform;
+(function(EnvironmentPlatform1) {
+    EnvironmentPlatform1[EnvironmentPlatform1["WEB"] = 0] = "WEB";
+    EnvironmentPlatform1[EnvironmentPlatform1["DESKTOP"] = 1] = "DESKTOP";
+    EnvironmentPlatform1[EnvironmentPlatform1["ANDROID"] = 2] = "ANDROID";
+})(EnvironmentPlatform || (EnvironmentPlatform = {}));
+var EnvironmentStage;
+(function(EnvironmentStage1) {
+    EnvironmentStage1[EnvironmentStage1["DEVELOPMENT"] = 0] = "DEVELOPMENT";
+    EnvironmentStage1[EnvironmentStage1["STAGING"] = 1] = "STAGING";
+    EnvironmentStage1[EnvironmentStage1["PRODUCTION"] = 2] = "PRODUCTION";
+})(EnvironmentStage || (EnvironmentStage = {}));
 class I18n {
     locales;
     selected_locale;
@@ -514,18 +526,6 @@ class FrontworkFront extends Frontwork {
         return false;
     }
 }
-var EnvironmentPlatform;
-(function(EnvironmentPlatform1) {
-    EnvironmentPlatform1[EnvironmentPlatform1["WEB"] = 0] = "WEB";
-    EnvironmentPlatform1[EnvironmentPlatform1["DESKTOP"] = 1] = "DESKTOP";
-    EnvironmentPlatform1[EnvironmentPlatform1["ANDROID"] = 2] = "ANDROID";
-})(EnvironmentPlatform || (EnvironmentPlatform = {}));
-var EnvironmentStage;
-(function(EnvironmentStage1) {
-    EnvironmentStage1[EnvironmentStage1["DEVELOPMENT"] = 0] = "DEVELOPMENT";
-    EnvironmentStage1[EnvironmentStage1["STAGING"] = 1] = "STAGING";
-    EnvironmentStage1[EnvironmentStage1["PRODUCTION"] = 2] = "PRODUCTION";
-})(EnvironmentStage || (EnvironmentStage = {}));
 const __default = JSON.parse(`[
     { "key": "title1", "translation": "Frontwork Test Page" }
     ,{ "key": "text1", "translation": "This is a test page for the Frontwork framework." }

@@ -1,6 +1,17 @@
 import { parse_url, key_value_list_to_array } from "./utils.ts";
-import { EnvironmentPlatform, EnvironmentStage } from './environment.ts'
 import { FrontworkFront } from './frontwork-front.ts'
+
+export enum EnvironmentPlatform {
+    WEB,
+    DESKTOP,
+    ANDROID,
+}
+
+export enum EnvironmentStage {
+    DEVELOPMENT,
+    STAGING,
+    PRODUCTION,
+}
 
 export class I18n {
     locales: I18nLocale[];

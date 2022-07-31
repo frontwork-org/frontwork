@@ -1,5 +1,4 @@
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkInit } from "../frontwork.ts";
-import { EnvironmentPlatform, EnvironmentStage } from "../environment.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage } from "../frontwork.ts";
 import { FrontworkFront } from "../frontwork-front.ts";
 import { i18n } from "./test.i18n.ts";
 
