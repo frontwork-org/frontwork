@@ -378,8 +378,11 @@ export interface RoutesResolverResult {
     dom_ready(context: FrontworkContext, frontwork: FrontworkClient): void;
 }
 
+/**
+ *   @param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
+ */
 export interface FrontworkInit {
-    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, domain_routes: DomainRoutes[], middleware: FrontworkMiddleware, i18n: I18n,
+    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, domain_routes: DomainRoutes[], middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
 }
 
 export class Frontwork {

@@ -302,13 +302,13 @@ class Frontwork {
     domain_routes;
     middleware;
     i18n;
-    constructor(init1){
-        this.platform = init1.platform;
-        this.stage = init1.stage;
-        this.port = init1.port;
-        this.domain_routes = init1.domain_routes;
-        this.middleware = init1.middleware;
-        this.i18n = init1.i18n;
+    constructor(init){
+        this.platform = init.platform;
+        this.stage = init.stage;
+        this.port = init.port;
+        this.domain_routes = init.domain_routes;
+        this.middleware = init.middleware;
+        this.i18n = init.i18n;
     }
     routes_resolver(context) {
         if (this.middleware.redirect_lonely_slash && context.request.path_dirs.length > 2 && context.request.path_dirs[context.request.path_dirs.length - 1] === "") {
@@ -380,9 +380,9 @@ class FrontworkMiddleware {
     before_routes;
     after_routes;
     redirect_lonely_slash;
-    constructor(init2){
-        if (init2 && init2.error_handler) {
-            const init_error_handler = init2.error_handler;
+    constructor(init){
+        if (init && init.error_handler) {
+            const init_error_handler = init.error_handler;
             this.error_handler = (request, error)=>{
                 this.log(request, "[ERROR]");
                 return init_error_handler(request, error);
@@ -393,8 +393,8 @@ class FrontworkMiddleware {
                 return new FrontworkResponse(500, "ERROR");
             };
         }
-        if (init2 && init2.not_found_handler) {
-            this.not_found_handler = init2.not_found_handler;
+        if (init && init.not_found_handler) {
+            this.not_found_handler = init.not_found_handler;
         } else {
             this.not_found_handler = {
                 build: ()=>{
@@ -403,9 +403,9 @@ class FrontworkMiddleware {
                 dom_ready: ()=>{}
             };
         }
-        this.before_routes = init2 && init2.before_routes ? init2.before_routes : null;
-        this.after_routes = init2 && init2.after_routes ? init2.after_routes : null;
-        this.redirect_lonely_slash = init2 && init2.redirect_lonely_slash ? init2.redirect_lonely_slash : true;
+        this.before_routes = init && init.before_routes ? init.before_routes : null;
+        this.after_routes = init && init.after_routes ? init.after_routes : null;
+        this.redirect_lonely_slash = init && init.redirect_lonely_slash ? init.redirect_lonely_slash : true;
     }
     log(request, extra) {
         let path_with_query_string = request.path;
@@ -417,10 +417,10 @@ class FrontworkMiddleware {
 class FrontworkClient extends Frontwork {
     request_url;
     build_on_page_load;
-    constructor(init3, front_init){
-        super(init3);
+    constructor(init){
+        super(init);
         this.request_url = location.toString();
-        if (typeof front_init.build_on_page_load === "boolean") this.build_on_page_load = front_init.build_on_page_load;
+        if (typeof init.build_on_page_load === "boolean") this.build_on_page_load = init.build_on_page_load;
         else this.build_on_page_load = false;
         document.addEventListener("DOMContentLoaded", ()=>{
             this.page_change({
@@ -677,14 +677,13 @@ const middleware = new FrontworkMiddleware({
         dom_ready: ()=>{}
     }
 });
-const init = {
+const APP_CONFIG = {
     platform: EnvironmentPlatform.WEB,
     stage: EnvironmentStage.DEVELOPMENT,
     port: 8080,
     domain_routes: domain_routes,
     middleware: middleware,
-    i18n: i18n
-};
-new FrontworkClient(init, {
+    i18n: i18n,
     build_on_page_load: false
-});
+};
+new FrontworkClient(APP_CONFIG);
