@@ -1,7 +1,4 @@
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkInit } from "./env.ts";
-import { EnvironmentPlatform, EnvironmentStage } from "./env.ts";
-import { FrontworkFront } from "./env.ts";
-import { i18n } from "./i18n.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkFront } from "../dependencies.ts";
 
 function render_header(): HTMLElement {
 	const header = document.createElement("header");
@@ -147,7 +144,7 @@ class CrashComponent implements Component {
 }
 
 
-const domain_routes: DomainRoutes[] = [
+export const domain_routes: DomainRoutes[] = [
 	new DomainRoutes(/.*/, [
 		new Route("/", new TestComponent()),
 		new Route("/test2", new Test2Component()),
@@ -160,15 +157,12 @@ const domain_routes: DomainRoutes[] = [
 	])
 ];
 
-const middleware = new FrontworkMiddleware();
-
-
-
-export const init: FrontworkInit = {
-	platform: EnvironmentPlatform.WEB, 
-	stage: EnvironmentStage.DEVELOPMENT,
-	port: 8080,
-	domain_routes: domain_routes,
-	middleware: middleware,
-	i18n: i18n,
-};
+export const middleware = new FrontworkMiddleware({
+	before_routes: {
+		build: (context: FrontworkContext) => {
+			context.i18n.set_locale("en");
+			return null;
+		},
+		dom_ready: () => {}
+	}
+});

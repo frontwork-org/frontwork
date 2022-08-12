@@ -1,4 +1,4 @@
-import { I18n, I18nLocale, I18nLocaleTranslation } from "./env.ts";
+import { I18n, I18nLocale, I18nLocaleTranslation } from "./dependencies.ts";
 import { default as english } from "./i18n/english.json" assert { type: "json" };
 import { default as german } from "./i18n/german.json" assert { type: "json" };
 

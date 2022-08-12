@@ -92,37 +92,33 @@ export class FrontworkWebservice extends Frontwork {
         const POST = new PostScope(post_data)
         const request = new FrontworkRequest(request_event.request.method, request_event.request.url, request_event.request.headers, POST);
 
-        await new Promise<boolean>((resolve, reject) => {
+        try {
             const context = { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
-            const resolved_component = this.routes_resolver(request);
+            const resolved_component = this.routes_resolver(context);
             
             if(resolved_component !== null) {
-                const resolved_response: FrontworkResponse | null = resolved_component.build(context, this);
-                if(resolved_response !== null) {
-                    request_event.respondWith(resolved_response.into_response());
-                    resolve(true);
+                const resolved_response = resolved_component;
+                if(resolved_response.response !== null) {
+                    request_event.respondWith(resolved_response.response.into_response());
                     return;
                 }
             }
-
+    
             // IF route not found, check assets resolver
             const resolved_asset = this.assets_resolver(request);
             if(resolved_asset !== null) {
                 this.log(request, "[ASSET]");
                 request_event.respondWith(resolved_asset);
-                resolve(true);
                 return;    
             }
     
             this.log(request, "[NOT FOUND]");
             const not_found_response = <FrontworkResponse> this.middleware.not_found_handler.build(context, this);
             request_event.respondWith(not_found_response.into_response());
-            resolve(true);
-            return;
-        }).catch((error) => {
+        } catch (error) {
             console.error(error);
             request_event.respondWith(this.middleware.error_handler(request, error).into_response());
-        })
+        }
     }
 }
 

@@ -9,7 +9,7 @@ export interface FrontworkFrontInit {
     build_on_page_load?: boolean;
 }
 
-export class FrontworkFront extends Frontwork {
+export class FrontworkClient extends Frontwork {
     private request_url: string;
     private build_on_page_load: boolean;
 
@@ -55,9 +55,9 @@ export class FrontworkFront extends Frontwork {
 
         let result: PageChangeResult;
         try {
-            const resolved_component = this.routes_resolver(request);
+            const resolved_component = this.routes_resolver(context);
             if (resolved_component) {
-                result = { response: resolved_component.build(context, this), dom_ready: resolved_component.dom_ready };
+                result = { response: resolved_component.response, dom_ready: resolved_component.dom_ready };
             } else {
                 result = { response: this.middleware.not_found_handler.build(context, this), dom_ready: this.middleware.not_found_handler.dom_ready };
             }

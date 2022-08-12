@@ -1,5 +1,5 @@
 import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage } from "../frontwork.ts";
-import { FrontworkFront } from "../frontwork-front.ts";
+import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
 
 function render_header(): HTMLElement {
@@ -99,7 +99,7 @@ class Test2Component implements Component {
 				.add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow")
 		);
 	}
-    dom_ready(context: FrontworkContext, frontwork: FrontworkFront): void {
+    dom_ready(context: FrontworkContext, frontwork: FrontworkClient): void {
 		console.log("FrontworkContext", context);
 		console.log("frontwork", frontwork);
 		setTimeout(() => {
@@ -159,7 +159,15 @@ const domain_routes: DomainRoutes[] = [
 	])
 ];
 
-const middleware = new FrontworkMiddleware();
+const middleware = new FrontworkMiddleware({
+	before_routes: {
+		build: (context: FrontworkContext) => {
+			context.i18n.set_locale("en");
+			return null;
+		},
+		dom_ready: () => {}
+	}
+});
 
 
 
