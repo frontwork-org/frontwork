@@ -1,6 +1,4 @@
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage } from "../frontwork.ts";
-import { FrontworkClient } from "../frontwork-client.ts";
-import { i18n } from "./test.i18n.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkFront } from "../dependencies.ts";
 
 function render_header(): HTMLElement {
 	const header = document.createElement("header");
@@ -99,7 +97,7 @@ class Test2Component implements Component {
 				.add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow")
 		);
 	}
-    dom_ready(context: FrontworkContext, frontwork: FrontworkClient): void {
+    dom_ready(context: FrontworkContext, frontwork: FrontworkFront): void {
 		console.log("FrontworkContext", context);
 		console.log("frontwork", frontwork);
 		setTimeout(() => {
@@ -146,7 +144,7 @@ class CrashComponent implements Component {
 }
 
 
-const domain_routes: DomainRoutes[] = [
+export const domain_routes: DomainRoutes[] = [
 	new DomainRoutes(/.*/, [
 		new Route("/", new TestComponent()),
 		new Route("/test2", new Test2Component()),
@@ -159,7 +157,7 @@ const domain_routes: DomainRoutes[] = [
 	])
 ];
 
-const middleware = new FrontworkMiddleware({
+export const middleware = new FrontworkMiddleware({
 	before_routes: {
 		build: (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
@@ -168,14 +166,3 @@ const middleware = new FrontworkMiddleware({
 		dom_ready: () => {}
 	}
 });
-
-
-
-export const init: FrontworkInit = {
-	platform: EnvironmentPlatform.WEB, 
-	stage: EnvironmentStage.DEVELOPMENT,
-	port: 8080,
-	domain_routes: domain_routes,
-	middleware: middleware,
-	i18n: i18n,
-};

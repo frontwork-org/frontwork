@@ -1,0 +1,9 @@
+{
+  "name": "my-new-frontwork-app",
+  "version": "0.0.1",
+  "description": "My New Frontwork App",
+  "main": "service.ts",
+  "engines": {
+    "deno": "^1.23.0"  
+  }
+}

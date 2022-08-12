@@ -1,5 +1,5 @@
 import { parse_url, key_value_list_to_array } from "./utils.ts";
-import { FrontworkFront } from './frontwork-front.ts'
+import { FrontworkClient } from './frontwork-client.ts'
 
 export enum EnvironmentPlatform {
     WEB,
@@ -25,6 +25,7 @@ export class I18n {
     }
 
     set_locale(locale: string) {
+        console.log("I18n: Setting locale to " + locale);
         const locale_found = this.locales.find(l => l.locale === locale);
         if(locale_found === undefined) throw new Error("I18nLocale "+locale+" does not exist");
 
@@ -193,10 +194,6 @@ export class DocumentBuilder {
         this.document_body = <HTMLBodyElement> this.document_html.appendChild( document.createElement("body") );
     }
 
-    createElement(tagName: string): HTMLElement {
-        return <HTMLElement> <unknown> document.createElement(tagName);
-    }
-
     set_html_lang(code: string): DocumentBuilder {
         this.document_html.setAttribute("lang", code);
         return this;
@@ -336,12 +333,12 @@ export interface FrontworkErrorResponseEvent {
 }
 
 export interface DomReadyEvent {
-    (context: FrontworkContext, frontwork: FrontworkFront): void
+    (context: FrontworkContext, frontwork: FrontworkClient): void
 }
 
 export declare interface Component {
     build(context: FrontworkContext, frontwork: Frontwork): FrontworkResponse|null;
-    dom_ready(context: FrontworkContext, frontwork: FrontworkFront): void;
+    dom_ready(context: FrontworkContext, frontwork: FrontworkClient): void;
 }
 
 let previous_route_id = 0;
@@ -376,6 +373,11 @@ export interface FrontworkContext {
     readonly request: FrontworkRequest;
 }
 
+export interface RoutesResolverResult {
+    response: FrontworkResponse|null;
+    dom_ready(context: FrontworkContext, frontwork: FrontworkClient): void;
+}
+
 export interface FrontworkInit {
     platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, domain_routes: DomainRoutes[], middleware: FrontworkMiddleware, i18n: I18n,
 }
@@ -397,21 +399,19 @@ export class Frontwork {
 		this.i18n = init.i18n;
 	}
 
-	protected routes_resolver(request: FrontworkRequest): Component|null {
+	protected routes_resolver(context: FrontworkContext): RoutesResolverResult|null {
         // Middleware: redirect lonely slash
-        if (this.middleware.redirect_lonely_slash && request.path_dirs.length > 2 && request.path_dirs[request.path_dirs.length -1] === "") {
+        if (this.middleware.redirect_lonely_slash && context.request.path_dirs.length > 2 && context.request.path_dirs[context.request.path_dirs.length -1] === "") {
             let new_path = "";
-            for (let i = 0; i < request.path_dirs.length - 1; i++) {
-                if (request.path_dirs[i] !== "") {
-                    new_path += "/" + request.path_dirs[i];
+            for (let i = 0; i < context.request.path_dirs.length - 1; i++) {
+                if (context.request.path_dirs[i] !== "") {
+                    new_path += "/" + context.request.path_dirs[i];
                 }
             }
             
-            this.log(request, "[REDIRECT] -> " + new_path);
-            const redirect_component: Component = {
-                build: () => {
-                    return new FrontworkResponseRedirect(new_path);
-                },
+            this.log(context.request, "[REDIRECT] -> " + new_path);
+            const redirect_component: RoutesResolverResult = {
+                response: new FrontworkResponseRedirect(new_path),
                 dom_ready: () => {}
             };
             return redirect_component;
@@ -419,31 +419,33 @@ export class Frontwork {
 
 		// Middleware: before Routes
         if (this.middleware.before_routes !== null) {
-            this.log(request, "[BEFORE_ROUTES]");
-            return this.middleware.before_routes;
+            this.log(context.request, "[BEFORE_ROUTES]");
+            const response = this.middleware.before_routes.build(context, this);
+            if(response !== null) return { response: response, dom_ready: this.middleware.before_routes.dom_ready };
         }
 
         // Routes
         for (let i = 0; i < this.domain_routes.length; i++) {
             const domain_routes = this.domain_routes[i];
-            if (domain_routes.domain.test(request.host)) {
+            if (domain_routes.domain.test(context.request.host)) {
                 for (let i = 0; i < domain_routes.routes.length; i++) {
                     const route = domain_routes.routes[i];
                     const route_path_dirs = route.path.split("/");
 
-                    if (request.path_dirs.length === route_path_dirs.length) {
+                    if (context.request.path_dirs.length === route_path_dirs.length) {
                         let found = true;
                         for (let i = 0; i < route_path_dirs.length; i++) {
                             const route_path_dir = route_path_dirs[i];
-                            if (route_path_dir !== "*" && route_path_dir !== request.path_dirs[i]) {
+                            if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i]) {
                                 found = false;
                                 break;
                             }
                         }
 
                         if (found) {
-                            this.log(request, "[ROUTE #" + route.id + " ("+route.path+")]");
-                            return route.component;
+                            this.log(context.request, "[ROUTE #" + route.id + " ("+route.path+")]");
+                            const response = route.component.build(context, this);
+                            if(response !== null) return { response: response, dom_ready: route.component.dom_ready };
                         }
                     }
                 }
@@ -452,8 +454,9 @@ export class Frontwork {
 
         // Middleware: after Routes
         if (this.middleware.after_routes !== null) {
-            this.log(request, "[AFTER_ROUTES]");
-            return this.middleware.after_routes;
+            this.log(context.request, "[AFTER_ROUTES]");
+            const response = this.middleware.after_routes.build(context, this);
+            if(response !== null) return { response: response, dom_ready: this.middleware.after_routes.dom_ready };
         }
 
         return null;
