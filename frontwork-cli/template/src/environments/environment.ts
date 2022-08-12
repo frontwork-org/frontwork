@@ -9,4 +9,5 @@ export const APP_CONFIG: FrontworkInit = {
 	domain_routes: domain_routes,
 	middleware: middleware,
 	i18n: i18n,
+	build_on_page_load: false
 };

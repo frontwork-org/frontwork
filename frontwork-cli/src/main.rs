@@ -10,7 +10,7 @@ static PROJECT_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/template/");
 fn print_help(had_error: bool, error_message: &str) {
     match had_error {
         false => {
-            println!("FrontWork by LuceusXylian <luceusxylian@gmail.com>");
+            println!("FrontWork by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors");
             println!("-- The TypeScript Framework using Deno & Webassembly --");
             println!("\n Usage:");
         },
@@ -198,7 +198,7 @@ fn main() {
             if let Ok(_) = PROJECT_DIR.extract(&projectpath) {
                 println!("The project has been initialized successfully.");
             } else {
-                println!("The project has not been initialized successfully.");
+                println!("The project initialisation failed.");
             }
 
         }
