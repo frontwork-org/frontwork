@@ -1,8 +1,8 @@
 import { FrontworkTestworker } from "../frontwork-testworker.ts";
-import { init } from "./test.routes.ts";
+import { APP_CONFIG } from "./test.routes.ts";
 
 
-new FrontworkTestworker(init)
+new FrontworkTestworker(APP_CONFIG)
     .test_routes()
     .print_summary()
     .exit()

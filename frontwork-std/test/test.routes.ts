@@ -171,11 +171,12 @@ const middleware = new FrontworkMiddleware({
 
 
 
-export const init: FrontworkInit = {
+export const APP_CONFIG: FrontworkInit = {
 	platform: EnvironmentPlatform.WEB, 
 	stage: EnvironmentStage.DEVELOPMENT,
 	port: 8080,
 	domain_routes: domain_routes,
 	middleware: middleware,
 	i18n: i18n,
+	build_on_page_load: false
 };

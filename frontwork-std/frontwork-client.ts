@@ -2,22 +2,15 @@ import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkRespo
 import { html_element_set_attributes } from "./utils.ts";
 
 
-/**
- *   @param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
- */
-export interface FrontworkFrontInit {
-    build_on_page_load?: boolean;
-}
-
 export class FrontworkClient extends Frontwork {
     private request_url: string;
     private build_on_page_load: boolean;
 
-    constructor(init: FrontworkInit, front_init: FrontworkFrontInit) {
+    constructor(init: FrontworkInit) {
         super(init);
         this.request_url = location.toString();
 
-        if (typeof front_init.build_on_page_load === "boolean") this.build_on_page_load = front_init.build_on_page_load;
+        if (typeof init.build_on_page_load === "boolean") this.build_on_page_load = init.build_on_page_load;
         else this.build_on_page_load = false;
 
         // DOM Ready

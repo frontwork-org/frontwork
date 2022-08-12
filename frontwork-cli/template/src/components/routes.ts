@@ -1,4 +1,4 @@
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkFront } from "../dependencies.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkClient } from "../dependencies.ts";
 
 function render_header(): HTMLElement {
 	const header = document.createElement("header");
@@ -97,7 +97,7 @@ class Test2Component implements Component {
 				.add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow")
 		);
 	}
-    dom_ready(context: FrontworkContext, frontwork: FrontworkFront): void {
+    dom_ready(context: FrontworkContext, frontwork: FrontworkClient): void {
 		console.log("FrontworkContext", context);
 		console.log("frontwork", frontwork);
 		setTimeout(() => {
