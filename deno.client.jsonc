@@ -39,5 +39,5 @@
       "https://deno.land/x": true
     },
     "deno.lint": true,
-    "deno.unstable": true
+    "deno.unstable": false
 }

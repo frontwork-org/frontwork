@@ -1,11 +1,12 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkRequest, FrontworkMiddleware, Route, PostScope, FrontworkResponse, DomainRoutes, FrontworkInit } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit } from "./frontwork.ts";
 import { key_value_list_to_array } from "./utils.ts";
 
 export class FrontworkWebservice extends Frontwork {
     private service: Deno.Listener;
     private assets_folder_path = "";
     private assets_relative_path_files: string[] = [];
+    private style_css_absolute_path = "";
     private main_js_absolute_path = "";
 
     constructor (init: FrontworkInit) {
@@ -29,6 +30,11 @@ export class FrontworkWebservice extends Frontwork {
         return this;
     }
 
+    setup_style_css(style_css_absolute_path: string) {
+        this.style_css_absolute_path = style_css_absolute_path;
+        return this;
+    }
+
     setup_main_js(main_js_absolute_path: string) {
         this.main_js_absolute_path = main_js_absolute_path;
         return this;
@@ -44,7 +50,15 @@ export class FrontworkWebservice extends Frontwork {
     }
 
     private assets_resolver (request: FrontworkRequest): Response|null {
-        if(request.path === "/assets/main.js") {
+        if(request.path === "/assets/style.css") {
+            try {
+                const file = Deno.readFileSync(this.style_css_absolute_path);
+                return new Response(file);
+            } catch (error) {
+                console.log("ERROR can not load main.js from '" + this.style_css_absolute_path + "'\n", error);
+                return null;
+            }
+        } else if(request.path === "/assets/main.js") {
             try {
                 const file = Deno.readFileSync(this.main_js_absolute_path);
                 return new Response(file);

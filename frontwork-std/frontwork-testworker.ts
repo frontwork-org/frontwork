@@ -17,7 +17,7 @@ export class FrontworkTestworker extends Frontwork {
         this.test_count++;
         
         if (actual === expected) {
-            console.error("Test "+this.test_count+": passed");
+            console.log("Test "+this.test_count+": passed");
         } else {
             this.fail_count++;
             console.error("Test "+this.test_count+": expected " + expected + " but got " + actual);
@@ -33,7 +33,7 @@ export class FrontworkTestworker extends Frontwork {
             this.fail_count++;
             console.error("Test "+this.test_count+": expected " + expected + " but got " + actual);
         } else {
-            console.error("Test "+this.test_count+": passed");
+            console.log("Test "+this.test_count+": passed");
         }
         return this;
     }
@@ -44,7 +44,7 @@ export class FrontworkTestworker extends Frontwork {
         
         try {
             fn();
-            console.error("Test "+this.test_count+": passed");
+            console.log("Test "+this.test_count+": passed");
         } catch (error) {
             this.fail_count++;
             console.error("Test "+this.test_count+": failed.", error);
@@ -59,13 +59,17 @@ export class FrontworkTestworker extends Frontwork {
             const domain_route = this.domain_routes[d];
             for (let r = 0; r < domain_route.routes.length; r++) {
                 const route = domain_route.routes[r];
-                const url = "http://172.0.0.1:"+this.port+route.path;
-                const request = new FrontworkRequest("GET", url, new Headers(), new PostScope([]));
-                const context = { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
+                if (route.path.indexOf('*') === -1) {
+                    // Test only if the path is static
 
-                this.assert_function(() => {
-                    route.component.build(context, this);
-                });
+                    const url = "http://127.0.0.1:"+this.port+route.path;
+                    const request = new FrontworkRequest("GET", url, new Headers(), new PostScope([]));
+                    const context = { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
+    
+                    this.assert_function(() => {
+                        route.component.build(context, this);
+                    });
+                }
             }
         }
         return this;
