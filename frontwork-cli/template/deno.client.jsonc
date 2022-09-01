@@ -1,13 +1,13 @@
 {
     "compilerOptions": {
       "allowJs": true,
-      "lib": ["ES2015", "dom", "deno.window"],
+      "lib": ["ES2015", "dom"],
       "strict": true
     },
     "lint": {
       "files": {
-        "include": ["frontwork-std/"],
-        "exclude": ["dist/"]
+        "include": ["src/"],
+        "exclude": []
       },
       "rules": {
         "tags": ["recommended"],
@@ -17,7 +17,7 @@
     },
     "fmt": {
       "files": {
-        "include": ["frontwork-std/"],
+        "include": ["src/"],
         "exclude": []
       },
       "options": {

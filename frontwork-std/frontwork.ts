@@ -244,6 +244,12 @@ export class DocumentBuilder {
     }
 
     html_response() {
+        // force adding style.css to the end of the head
+        const style_css = this.document_body.appendChild( document.createElement("link") );
+        style_css.setAttribute("rel", "stylesheet");
+        style_css.setAttribute("href", "/assets/style.css");
+        style_css.setAttribute("type", "text/css");
+
         // force adding main.js to the end of the body
         const main_js = this.document_body.appendChild( document.createElement("script") );
         main_js.setAttribute("src", "/assets/main.js");

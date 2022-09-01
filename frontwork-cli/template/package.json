@@ -2,8 +2,13 @@
   "name": "my-new-frontwork-app",
   "version": "0.0.1",
   "description": "My New Frontwork App",
-  "main": "service.ts",
+  "main": "main.service.ts",
   "engines": {
     "deno": "^1.23.0"  
+  },
+  "scripts": {
+    "test": "fw test",
+    "build": "fw build",
+    "watch": "fw watch"
   }
 }
