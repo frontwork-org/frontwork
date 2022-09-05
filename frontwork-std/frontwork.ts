@@ -245,7 +245,7 @@ export class DocumentBuilder {
 
     html_response() {
         // force adding style.css to the end of the head
-        const style_css = this.document_body.appendChild( document.createElement("link") );
+        const style_css = this.document_head.appendChild( document.createElement("link") );
         style_css.setAttribute("rel", "stylesheet");
         style_css.setAttribute("href", "/assets/style.css");
         style_css.setAttribute("type", "text/css");

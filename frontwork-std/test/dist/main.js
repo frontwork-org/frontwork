@@ -58,16 +58,16 @@ function html_element_set_attributes(html_element, attributes) {
     }
 }
 var EnvironmentPlatform;
-(function(EnvironmentPlatform1) {
-    EnvironmentPlatform1[EnvironmentPlatform1["WEB"] = 0] = "WEB";
-    EnvironmentPlatform1[EnvironmentPlatform1["DESKTOP"] = 1] = "DESKTOP";
-    EnvironmentPlatform1[EnvironmentPlatform1["ANDROID"] = 2] = "ANDROID";
+(function(EnvironmentPlatform) {
+    EnvironmentPlatform[EnvironmentPlatform["WEB"] = 0] = "WEB";
+    EnvironmentPlatform[EnvironmentPlatform["DESKTOP"] = 1] = "DESKTOP";
+    EnvironmentPlatform[EnvironmentPlatform["ANDROID"] = 2] = "ANDROID";
 })(EnvironmentPlatform || (EnvironmentPlatform = {}));
 var EnvironmentStage;
-(function(EnvironmentStage1) {
-    EnvironmentStage1[EnvironmentStage1["DEVELOPMENT"] = 0] = "DEVELOPMENT";
-    EnvironmentStage1[EnvironmentStage1["STAGING"] = 1] = "STAGING";
-    EnvironmentStage1[EnvironmentStage1["PRODUCTION"] = 2] = "PRODUCTION";
+(function(EnvironmentStage) {
+    EnvironmentStage[EnvironmentStage["DEVELOPMENT"] = 0] = "DEVELOPMENT";
+    EnvironmentStage[EnvironmentStage["STAGING"] = 1] = "STAGING";
+    EnvironmentStage[EnvironmentStage["PRODUCTION"] = 2] = "PRODUCTION";
 })(EnvironmentStage || (EnvironmentStage = {}));
 class I18n {
     locales;
@@ -205,6 +205,10 @@ class DocumentBuilder {
         return this;
     }
     html_response() {
+        const style_css = this.document_head.appendChild(document.createElement("link"));
+        style_css.setAttribute("rel", "stylesheet");
+        style_css.setAttribute("href", "/assets/style.css");
+        style_css.setAttribute("type", "text/css");
         const main_js = this.document_body.appendChild(document.createElement("script"));
         main_js.setAttribute("src", "/assets/main.js");
         main_js.setAttribute("type", "text/javascript");
@@ -333,26 +337,26 @@ class Frontwork {
                 dom_ready: this.middleware.before_routes.dom_ready
             };
         }
-        for(let i = 0; i < this.domain_routes.length; i++){
-            const domain_routes1 = this.domain_routes[i];
-            if (domain_routes1.domain.test(context.request.host)) {
-                for(let i = 0; i < domain_routes1.routes.length; i++){
-                    const route = domain_routes1.routes[i];
+        for(let i1 = 0; i1 < this.domain_routes.length; i1++){
+            const domain_routes = this.domain_routes[i1];
+            if (domain_routes.domain.test(context.request.host)) {
+                for(let i2 = 0; i2 < domain_routes.routes.length; i2++){
+                    const route = domain_routes.routes[i2];
                     const route_path_dirs = route.path.split("/");
                     if (context.request.path_dirs.length === route_path_dirs.length) {
                         let found = true;
-                        for(let i = 0; i < route_path_dirs.length; i++){
-                            const route_path_dir = route_path_dirs[i];
-                            if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i]) {
+                        for(let i3 = 0; i3 < route_path_dirs.length; i3++){
+                            const route_path_dir = route_path_dirs[i3];
+                            if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i3]) {
                                 found = false;
                                 break;
                             }
                         }
                         if (found) {
                             this.log(context.request, "[ROUTE #" + route.id + " (" + route.path + ")]");
-                            const response = route.component.build(context, this);
-                            if (response !== null) return {
-                                response: response,
+                            const response1 = route.component.build(context, this);
+                            if (response1 !== null) return {
+                                response: response1,
                                 dom_ready: route.component.dom_ready
                             };
                         }
@@ -362,9 +366,9 @@ class Frontwork {
         }
         if (this.middleware.after_routes !== null) {
             this.log(context.request, "[AFTER_ROUTES]");
-            const response = this.middleware.after_routes.build(context, this);
-            if (response !== null) return {
-                response: response,
+            const response2 = this.middleware.after_routes.build(context, this);
+            if (response2 !== null) return {
+                response: response2,
                 dom_ready: this.middleware.after_routes.dom_ready
             };
         }
@@ -497,10 +501,12 @@ class FrontworkClient extends Frontwork {
                             document.cookie = cookie.toString();
                         }
                     });
+                    resolved_content.html_response();
                     html_element_set_attributes(document.children[0], resolved_content.document_html.attributes);
                     html_element_set_attributes(document.head, resolved_content.document_head.attributes);
                     html_element_set_attributes(document.body, resolved_content.document_body.attributes);
                     document.head.innerHTML = resolved_content.document_head.innerHTML;
+                    console.log("resolved_content.document_head.innerHTML", resolved_content.document_head.innerHTML);
                     document.body.innerHTML = resolved_content.document_body.innerHTML;
                 }
                 if (result.dom_ready !== null) result.dom_ready(context, this);

@@ -1,12 +1,12 @@
 use std::io::{Write, Read};
 use std::{env, fs};
 use std::path::Path;
-use std::process::{self, Command};
+use std::process::{self, Command, Child};
 use include_dir::{include_dir, Dir};
 use convert_case::{Case, Casing};
 use package_json::PackageJson;
-use utils::{run_command, create_dir_all_verbose};
-
+use utils::{run_command, create_dir_all_verbose, transverse_directory};
+use std::{thread, time};
 use crate::utils::read_from_line;
 mod utils;
 mod package_json;
@@ -15,6 +15,7 @@ static PROJECT_TEMPLATE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/templat
 
 
 fn print_help(had_error: bool, error_message: &str) {
+    print!("\n");
     match had_error {
         false => {
             println!("FrontWork by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors");
@@ -31,6 +32,10 @@ fn print_help(had_error: bool, error_message: &str) {
     println!("  new                             | create a new folder in the current directory and then execute init");
     println!("  component new                   | create a new component");
     println!("  component remove                | remove a component");
+    println!("  run                             | run the script of the entered name in package.json");
+    println!("  test                            | execute main.testworker.ts");
+    println!("  build                           | build the application to the dist folder");
+    println!("  watch                           | start development server and build the application on changes");
 }
 
 #[derive(PartialEq)]
@@ -123,29 +128,9 @@ impl Arguments {
             });
         }
 
-        //return Err("of invalid syntax")
     }
 }
 
-
-/*
-fn request(url: &str) -> Result<reqwest::blocking::Response, ()> {
-    let client_builder = reqwest::blocking::Client::builder().build();
-    let client; 
-    match client_builder {
-        Ok(c) => client = c, Err(e) => {
-            println!("Request failed. \n{}", e);
-            return Err(())
-        }
-    }
-
-    if let Ok(response) = client.get(url).send() {
-        Ok(response)
-    } else {
-        Err(())
-    }
-}
-*/
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -376,7 +361,7 @@ fn main() {
                 let package_json = PackageJson::from_project_path(project_path);
 
                 if let Some(script) = package_json.scripts.get(&input) {
-                    run_command(script);
+                    run_command(script.to_string());
                 } else {
                     println!("The script '{}' does not exist.", input);
                 }
@@ -405,8 +390,7 @@ fn main() {
         }
         
         SubCommand::Watch => {
-            command_build();
-            //TODO: implement watch
+            command_watch();
         }
     }
 
@@ -415,8 +399,9 @@ fn main() {
 
 fn get_project_path() -> String {
     let project_path = env::current_dir().unwrap().to_str().unwrap().to_string();
+    let package_json_path = format!("{}/package.json", project_path);
     let components_path = format!("{}/src/components", project_path);
-    if !Path::new(&components_path).exists() {
+    if !Path::new(&package_json_path).exists() || !Path::new(&components_path).exists() {
         println!("The current directory is not a frontwork project directory. Please change directory or run 'fw init' to initialize the project first.");
         process::exit(1);
     }
@@ -431,13 +416,107 @@ fn command_build() {
     let dist_web_path = format!("{}/dist/web", project_path);
     
     // mkdir dist
-    create_dir_all_verbose(dist_web_path);
+    create_dir_all_verbose(&dist_web_path);
 
     // build service and client
-    let mut build_service_command = run_command("deno bundle -c deno.jsonc src/main.service.ts dist/web/main.service.js");
-    let mut build_client_command = run_command("deno bundle -c deno.client.jsonc src/main.client.ts dist/web/main.client.js");
+    let mut build_service_command = build_service(&project_path, &dist_web_path);
+    let mut build_client_command = build_client(&project_path, &dist_web_path);
 
-    // wait after both commands started
+    // rsync assets
+    build_assets(&project_path, &dist_web_path);
+    
+    // build css
+    build_css(&project_path, &dist_web_path);
+
+    // wait for processes
     build_service_command.wait().ok();
     build_client_command.wait().ok();
+}
+
+fn command_watch() {
+    //TODO: implement watch
+    let project_path = get_project_path();
+    let src_path_string = format!("{}/src", project_path);
+    let src_path = Path::new(&src_path_string);
+    let dist_web_path = format!("{}/dist/web", project_path);
+    
+    // mkdir dist
+    create_dir_all_verbose(&dist_web_path);
+
+    
+    // initate watch worker; check src directory if any file changed. If a file changed then build css, client, restart dev server and reload browser page
+    let watch_interval_sleep_duration = time::Duration::from_secs(4);
+    let mut prev_files = transverse_directory(Path::new(&src_path));
+    let mut run_service_process: Option<Child> = None;
+
+    loop {
+        // build client
+        let mut build_client_command = build_client(&project_path, &dist_web_path);
+
+        // build css
+        build_css(&project_path, &dist_web_path);
+        
+        // wait for processes
+        build_client_command.wait().ok();
+
+        // start/restart service
+        if let Some(mut process) = run_service_process { process.kill().ok(); }
+        run_service_process = Some(run_service(&project_path));
+
+        loop {
+            let files = transverse_directory(src_path);
+            let mut had_changes = prev_files.len() != files.len();
+
+            if !had_changes {
+                for file in &files {
+                    let mut found_new_file = true;
+                    for prev_file in &prev_files {
+                        if file.path == prev_file.path {
+                            if file.modified != prev_file.modified {
+                                had_changes = true;
+                                break;
+                            }                       
+                            found_new_file = false;
+                            break;
+                        }
+                    }
+
+                    if had_changes { break; }
+                    if found_new_file {
+                        had_changes = false;
+                        break;
+                    }
+                }
+            }
+            
+            
+            if had_changes {
+                println!("Files changed reload..");
+                prev_files = files;
+                break;
+            } else {
+                thread::sleep(watch_interval_sleep_duration);
+            }
+        }
+    }
+}
+
+fn build_assets(project_path: &String, dist_web_path: &String) {
+    utils::rsync(format!("{}/src/assets/", project_path), format!("{}/assets/", dist_web_path));
+}
+
+fn build_css(project_path: &String, dist_web_path: &String) {
+    utils::sass(format!("{}/src/style.scss", project_path), format!("{}/style.css", dist_web_path));
+}
+
+fn build_service(project_path: &String, dist_web_path: &String) -> process::Child {
+    run_command(format!("deno bundle -c {}/deno.jsonc {}/src/main.service.ts {}/main.service.js", project_path, project_path, dist_web_path))
+}
+
+fn build_client(project_path: &String, dist_web_path: &String) -> process::Child {
+    run_command(format!("deno bundle -c {}/deno.client.jsonc {}/src/main.client.ts {}/main.client.js", project_path, project_path, dist_web_path))
+}
+
+fn run_service(project_path: &String) -> process::Child {
+    run_command(format!("deno run --allow-net --allow-read -c {}/deno.jsonc {}/src/main.service.ts", project_path, project_path))
 }
