@@ -205,6 +205,10 @@ class DocumentBuilder {
         return this;
     }
     html_response() {
+        const style_css = this.document_body.appendChild(document.createElement("link"));
+        style_css.setAttribute("rel", "stylesheet");
+        style_css.setAttribute("href", "/assets/style.css");
+        style_css.setAttribute("type", "text/css");
         const main_js = this.document_body.appendChild(document.createElement("script"));
         main_js.setAttribute("src", "/assets/main.js");
         main_js.setAttribute("type", "text/javascript");
@@ -412,6 +416,126 @@ class FrontworkMiddleware {
         if (request.query_string !== "") path_with_query_string += "?" + request.query_string;
         console.log(request.method + " " + path_with_query_string + " " + extra);
         if (request.POST.items.length > 0) console.log(" Scope POST: ", request.POST.items);
+    }
+}
+class FrontworkClient extends Frontwork {
+    request_url;
+    build_on_page_load;
+    constructor(init3){
+        super(init3);
+        this.request_url = location.toString();
+        if (typeof init3.build_on_page_load === "boolean") this.build_on_page_load = init3.build_on_page_load;
+        else this.build_on_page_load = false;
+        document.addEventListener("DOMContentLoaded", ()=>{
+            this.page_change({
+                url: location.toString(),
+                is_redirect: false
+            }, this.build_on_page_load);
+        });
+        document.addEventListener('click', (event)=>{
+            const target = event.target;
+            if (target.tagName === 'A') {
+                if (this.page_change_to(target.href)) {
+                    event.preventDefault();
+                }
+            }
+        }, false);
+        addEventListener('popstate', (event)=>{
+            const savestate = event.state;
+            if (savestate && savestate.url) {
+                this.page_change(savestate, true);
+            }
+        });
+    }
+    page_change(savestate, do_building) {
+        this.request_url = savestate.url;
+        const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope([]));
+        const context = {
+            request: request,
+            i18n: this.i18n,
+            platform: this.platform,
+            stage: this.stage
+        };
+        let result;
+        try {
+            const resolved_component = this.routes_resolver(context);
+            if (resolved_component) {
+                result = {
+                    response: resolved_component.response,
+                    dom_ready: resolved_component.dom_ready
+                };
+            } else {
+                result = {
+                    response: this.middleware.not_found_handler.build(context, this),
+                    dom_ready: this.middleware.not_found_handler.dom_ready
+                };
+            }
+        } catch (error) {
+            console.error(error);
+            const error_handler_result = this.middleware.error_handler(request, error);
+            result = {
+                response: error_handler_result,
+                dom_ready: null
+            };
+        }
+        if (result.response !== null) {
+            if (result.response.status_code === 301) {
+                const redirect_url = result.response.get_header("Location");
+                if (redirect_url === null) {
+                    console.error("Tried to redirect: Status Code is 301, but Location header is null");
+                    return null;
+                } else {
+                    console.log("Redirect to:", redirect_url);
+                    this.page_change_to(redirect_url);
+                    return {
+                        url: this.request_url,
+                        is_redirect: true
+                    };
+                }
+            }
+            const resolved_content = result.response.content;
+            if (typeof resolved_content.document_html !== "undefined") {
+                if (do_building) {
+                    result.response.cookies.forEach((cookie)=>{
+                        if (cookie.http_only === false) {
+                            document.cookie = cookie.toString();
+                        }
+                    });
+                    html_element_set_attributes(document.children[0], resolved_content.document_html.attributes);
+                    html_element_set_attributes(document.head, resolved_content.document_head.attributes);
+                    html_element_set_attributes(document.body, resolved_content.document_body.attributes);
+                    document.head.innerHTML = resolved_content.document_head.innerHTML;
+                    document.body.innerHTML = resolved_content.document_body.innerHTML;
+                }
+                if (result.dom_ready !== null) result.dom_ready(context, this);
+                return {
+                    url: this.request_url,
+                    is_redirect: false
+                };
+            }
+        }
+        return null;
+    }
+    page_change_to(url_or_path) {
+        console.log("page_change_to url_or_path:", url_or_path);
+        let url;
+        const test = url_or_path.indexOf("//");
+        if (test === 0 || test === 5 || test === 6) {
+            url = url_or_path;
+        } else {
+            url = location.protocol + "//" + location.host + url_or_path;
+        }
+        const result = this.page_change({
+            url: url,
+            is_redirect: false
+        }, true);
+        if (result !== null) {
+            if (result.is_redirect) return true;
+            console.log("history.pushState result", result);
+            history.pushState(result, document.title, this.request_url);
+            return true;
+        }
+        return false;
     }
 }
 const importMeta = {
@@ -4680,126 +4804,6 @@ const IS_DENO_SERVERSIDE = typeof document === "undefined";
 if (IS_DENO_SERVERSIDE) {
     globalThis.document = new FrontworkDocument();
 }
-class FrontworkClient extends Frontwork {
-    request_url;
-    build_on_page_load;
-    constructor(init3){
-        super(init3);
-        this.request_url = location.toString();
-        if (typeof init3.build_on_page_load === "boolean") this.build_on_page_load = init3.build_on_page_load;
-        else this.build_on_page_load = false;
-        document.addEventListener("DOMContentLoaded", ()=>{
-            this.page_change({
-                url: location.toString(),
-                is_redirect: false
-            }, this.build_on_page_load);
-        });
-        document.addEventListener('click', (event)=>{
-            const target = event.target;
-            if (target.tagName === 'A') {
-                if (this.page_change_to(target.href)) {
-                    event.preventDefault();
-                }
-            }
-        }, false);
-        addEventListener('popstate', (event)=>{
-            const savestate = event.state;
-            if (savestate && savestate.url) {
-                this.page_change(savestate, true);
-            }
-        });
-    }
-    page_change(savestate, do_building) {
-        this.request_url = savestate.url;
-        const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope([]));
-        const context = {
-            request: request,
-            i18n: this.i18n,
-            platform: this.platform,
-            stage: this.stage
-        };
-        let result;
-        try {
-            const resolved_component = this.routes_resolver(context);
-            if (resolved_component) {
-                result = {
-                    response: resolved_component.response,
-                    dom_ready: resolved_component.dom_ready
-                };
-            } else {
-                result = {
-                    response: this.middleware.not_found_handler.build(context, this),
-                    dom_ready: this.middleware.not_found_handler.dom_ready
-                };
-            }
-        } catch (error) {
-            console.error(error);
-            const error_handler_result = this.middleware.error_handler(request, error);
-            result = {
-                response: error_handler_result,
-                dom_ready: null
-            };
-        }
-        if (result.response !== null) {
-            if (result.response.status_code === 301) {
-                const redirect_url = result.response.get_header("Location");
-                if (redirect_url === null) {
-                    console.error("Tried to redirect: Status Code is 301, but Location header is null");
-                    return null;
-                } else {
-                    console.log("Redirect to:", redirect_url);
-                    this.page_change_to(redirect_url);
-                    return {
-                        url: this.request_url,
-                        is_redirect: true
-                    };
-                }
-            }
-            const resolved_content = result.response.content;
-            if (typeof resolved_content.document_html !== "undefined") {
-                if (do_building) {
-                    result.response.cookies.forEach((cookie)=>{
-                        if (cookie.http_only === false) {
-                            document.cookie = cookie.toString();
-                        }
-                    });
-                    html_element_set_attributes(document.children[0], resolved_content.document_html.attributes);
-                    html_element_set_attributes(document.head, resolved_content.document_head.attributes);
-                    html_element_set_attributes(document.body, resolved_content.document_body.attributes);
-                    document.head.innerHTML = resolved_content.document_head.innerHTML;
-                    document.body.innerHTML = resolved_content.document_body.innerHTML;
-                }
-                if (result.dom_ready !== null) result.dom_ready(context, this);
-                return {
-                    url: this.request_url,
-                    is_redirect: false
-                };
-            }
-        }
-        return null;
-    }
-    page_change_to(url_or_path) {
-        console.log("page_change_to url_or_path:", url_or_path);
-        let url;
-        const test = url_or_path.indexOf("//");
-        if (test === 0 || test === 5 || test === 6) {
-            url = url_or_path;
-        } else {
-            url = location.protocol + "//" + location.host + url_or_path;
-        }
-        const result = this.page_change({
-            url: url,
-            is_redirect: false
-        }, true);
-        if (result !== null) {
-            if (result.is_redirect) return true;
-            console.log("history.pushState result", result);
-            history.pushState(result, document.title, this.request_url);
-            return true;
-        }
-        return false;
-    }
-}
 const { Deno: Deno1  } = globalThis;
 typeof Deno1?.noColor === "boolean" ? Deno1.noColor : true;
 new RegExp([
@@ -4808,7 +4812,7 @@ new RegExp([
 ].join("|"), "g");
 const __default3 = JSON.parse(`[
     { "key": "title1", "translation": "Startpage" }
-    ,{ "key": "text1", "translation": "Thanks you for using the Frontwork framework." }
+    ,{ "key": "text1", "translation": "Thank you for using the Frontwork framework." }
     ,{ "key": "title2", "translation": "Test Form" }
 ]`);
 const __default4 = JSON.parse(`[

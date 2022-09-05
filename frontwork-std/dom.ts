@@ -1,16 +1,6 @@
-import { Document } from "https://deno.land/x/deno_dom@v0.1.31-alpha/deno-dom-wasm.ts";
+//import { Document } from "https://deno.land/x/deno_dom@v0.1.31-alpha/deno-dom-wasm.ts";
+import { Document } from "https://deno.land/x/deno_dom@v0.1.34-alpha/deno-dom-wasm.ts";
 
-const doc = new Document();
-
-export class FrontworkDocument {
-    createElement = doc.createElement;
-}
-
-
-const IS_DENO_SERVERSIDE = typeof document === "undefined";
-
-if (IS_DENO_SERVERSIDE) {
-    // Deno Server Side Rendering
-    // @ts-ignore: hack so that we can use the same codebase on both client and server
-    globalThis.document = new FrontworkDocument();
-}
+// Deno Server Side Rendering
+// @ts-ignore: hack so that we can use the same codebase on both client and server
+globalThis.document = new Document();

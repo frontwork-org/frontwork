@@ -47,6 +47,7 @@ export class FrontworkWebservice extends Frontwork {
                 this.handler(requestEvent);
             }
         }
+        //TODO: add websocket for hot-reload check
     }
 
     private assets_resolver (request: FrontworkRequest): Response|null {
@@ -55,7 +56,7 @@ export class FrontworkWebservice extends Frontwork {
                 const file = Deno.readFileSync(this.style_css_absolute_path);
                 return new Response(file);
             } catch (error) {
-                console.log("ERROR can not load main.js from '" + this.style_css_absolute_path + "'\n", error);
+                console.log("ERROR can not load style.css from '" + this.style_css_absolute_path + "'\n", error);
                 return null;
             }
         } else if(request.path === "/assets/main.js") {
@@ -107,31 +108,37 @@ export class FrontworkWebservice extends Frontwork {
         const request = new FrontworkRequest(request_event.request.method, request_event.request.url, request_event.request.headers, POST);
 
         try {
+            // Assets resolver
+            const resolved_asset = this.assets_resolver(request);
+            if(resolved_asset !== null) {
+                this.log(request, "[ASSET]");
+                await request_event.respondWith(resolved_asset);
+                return;    
+            }
+
+            // Route
             const context = { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
             const resolved_component = this.routes_resolver(context);
             
             if(resolved_component !== null) {
                 const resolved_response = resolved_component;
                 if(resolved_response.response !== null) {
-                    request_event.respondWith(resolved_response.response.into_response());
+                    await request_event.respondWith(resolved_response.response.into_response());
                     return;
                 }
             }
     
-            // IF route not found, check assets resolver
-            const resolved_asset = this.assets_resolver(request);
-            if(resolved_asset !== null) {
-                this.log(request, "[ASSET]");
-                request_event.respondWith(resolved_asset);
-                return;    
-            }
-    
             this.log(request, "[NOT FOUND]");
             const not_found_response = <FrontworkResponse> this.middleware.not_found_handler.build(context, this);
-            request_event.respondWith(not_found_response.into_response());
+            await request_event.respondWith(not_found_response.into_response());
         } catch (error) {
             console.error(error);
-            request_event.respondWith(this.middleware.error_handler(request, error).into_response());
+            
+            try {
+                await request_event.respondWith(this.middleware.error_handler(request, error).into_response());
+            } catch (error) {
+                console.error("ERROR in middleware.error_handler", error);
+            }
         }
     }
 }

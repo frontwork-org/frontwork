@@ -37,6 +37,8 @@ export class FrontworkClient extends Frontwork {
                 this.page_change(savestate, true);
             }
         });
+
+        //TODO: add websocket for hot-reload check
     }
 
     
@@ -85,11 +87,14 @@ export class FrontworkClient extends Frontwork {
                         }
                     });
 
+                    resolved_content.html_response();
+
                     html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.document_html.attributes);
                     html_element_set_attributes(document.head, resolved_content.document_head.attributes);
                     html_element_set_attributes(document.body, resolved_content.document_body.attributes);
                 
                     document.head.innerHTML = resolved_content.document_head.innerHTML;
+                    console.log("resolved_content.document_head.innerHTML", resolved_content.document_head.innerHTML)
                     document.body.innerHTML = resolved_content.document_body.innerHTML;
                 }
             
