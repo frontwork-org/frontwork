@@ -1,18 +1,13 @@
-import { FrontworkWebservice } from "https://deno.land/x/frontwork@0.0.7/frontwork-service.ts";
+import { FrontworkWebservice } from "https://deno.land/x/frontwork@0.0.8/frontwork-service.ts";
 import { APP_CONFIG } from "./environments/environment.ts";
 
 const __FILE_PATH = new URL(import.meta.url).pathname;
-console.log("__FILE_PATH", __FILE_PATH);
-
 const DENO_MAINMODULE_PATH = new URL(Deno.mainModule).pathname;
-console.log("DENO_MAINMODULE_PATH", DENO_MAINMODULE_PATH);
 
 
 const main_module_split = DENO_MAINMODULE_PATH.split("/");
 main_module_split.pop();
 const EXEC_DIR = main_module_split.join("/");
-
-console.log("EXEC_DIR", EXEC_DIR);
 
 
 let assets_dir, style_css_path, main_js_path;
