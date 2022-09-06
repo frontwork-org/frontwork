@@ -1,9 +1,8 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage } from "./frontwork.ts";
 import { key_value_list_to_array } from "./utils.ts";
 
 export class FrontworkWebservice extends Frontwork {
-    private service: Deno.Listener;
     private assets_folder_path = "";
     private assets_relative_path_files: string[] = [];
     private style_css_absolute_path = "";
@@ -11,8 +10,56 @@ export class FrontworkWebservice extends Frontwork {
 
     constructor (init: FrontworkInit) {
         super(init);
+        //this.start_service();
+    }
+    
+    private async start_service() {
+        const service = Deno.listen({ port: this.port });
+        for await (const connection of service) {
+            const httpConnection = Deno.serveHttp(connection);
+            for await (const requestEvent of httpConnection) {
+                this.handler(requestEvent);
+            }
+        }
+
+        //TODO: add websocket for hot-reload check
+    }
+
+    async start() {
+        const server = Deno.listen({ port: 8080 });
         console.log("Deno started webservice on http://localhost:" + this.port);
-        this.service = Deno.listen({ port: this.port });
+
+        // Connections to the server will be yielded up as an async iterable.
+        for await (const conn of server) {
+            // In order to not be blocking, we need to handle each connection individually
+            // without awaiting the function
+            this.serveHttp(conn);
+        }
+    }
+
+    async serveHttp(conn: Deno.Conn) {
+        // This "upgrades" a network connection into an HTTP connection.
+        const httpConn = Deno.serveHttp(conn);
+        // Each request sent over the HTTP connection will be yielded as an async
+        // iterator from the HTTP connection.
+        for await (const requestEvent of httpConn) {
+            // The native HTTP server uses the web standard `Request` and `Response`
+            // objects.
+            const body = `<DOCTYPE html>
+                <body>
+                <form id="test_form" action="" method="post"><input type="text" name="text0" value="aabbcc"><input type="text" name="text1" value="aabbcc"><input type="text" name="text2" value="aabbcc"><button type="submit" name="action" value="sent">Submit</button></form>
+                    Your user-agent is:\n\n${requestEvent.request.headers.get("user-agent") ?? "Unknown"}
+                </body>`;
+            // The requestEvent's `.respondWith()` method is how we send the response
+            // back to the client.
+            const response = new Response(body, {
+                status: 200,
+            });
+            response.headers.set('content-type', "text/html");
+        
+            //requestEvent.respondWith(response);
+            this.handler(requestEvent);
+        }
     }
 
     setup_assets_resolver(assets_folder_path: string) {
@@ -38,16 +85,6 @@ export class FrontworkWebservice extends Frontwork {
     setup_main_js(main_js_absolute_path: string) {
         this.main_js_absolute_path = main_js_absolute_path;
         return this;
-    }
-
-    async start() {
-        for await (const connection of this.service) {
-            const httpConnection = Deno.serveHttp(connection);
-            for await (const requestEvent of httpConnection) {
-                this.handler(requestEvent);
-            }
-        }
-        //TODO: add websocket for hot-reload check
     }
 
     private assets_resolver (request: FrontworkRequest): Response|null {
@@ -78,6 +115,7 @@ export class FrontworkWebservice extends Frontwork {
         return null;
     }
     
+    // TODO: no response after POST
     private async handler (request_event: Deno.RequestEvent) {
         // FormData is too complicated, so we decode it here and put it into PostScope
         let post_data: { key: string, value: string }[] = [];
@@ -112,8 +150,7 @@ export class FrontworkWebservice extends Frontwork {
             const resolved_asset = this.assets_resolver(request);
             if(resolved_asset !== null) {
                 this.log(request, "[ASSET]");
-                await request_event.respondWith(resolved_asset);
-                return;    
+                return request_event.respondWith(resolved_asset);
             }
 
             // Route
@@ -123,23 +160,24 @@ export class FrontworkWebservice extends Frontwork {
             if(resolved_component !== null) {
                 const resolved_response = resolved_component;
                 if(resolved_response.response !== null) {
-                    await request_event.respondWith(resolved_response.response.into_response());
-                    return;
+                    return request_event.respondWith(resolved_response.response.into_response());
                 }
             }
     
             this.log(request, "[NOT FOUND]");
             const not_found_response = <FrontworkResponse> this.middleware.not_found_handler.build(context, this);
-            await request_event.respondWith(not_found_response.into_response());
+            request_event.respondWith(not_found_response.into_response());
         } catch (error) {
             console.error(error);
             
             try {
-                await request_event.respondWith(this.middleware.error_handler(request, error).into_response());
+                return request_event.respondWith(this.middleware.error_handler(request, error).into_response());
             } catch (error) {
                 console.error("ERROR in middleware.error_handler", error);
             }
         }
+        
+        return request_event.respondWith(new Response("ERROR in error_handler", { status: 500 }));
     }
 }
 
