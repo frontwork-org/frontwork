@@ -1,5 +1,5 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit } from "./frontwork.ts";
 import { key_value_list_to_array } from "./utils.ts";
 
 export class FrontworkWebservice extends Frontwork {
@@ -10,21 +10,8 @@ export class FrontworkWebservice extends Frontwork {
 
     constructor (init: FrontworkInit) {
         super(init);
-        //this.start_service();
     }
     
-    private async start_service() {
-        const service = Deno.listen({ port: this.port });
-        for await (const connection of service) {
-            const httpConnection = Deno.serveHttp(connection);
-            for await (const requestEvent of httpConnection) {
-                this.handler(requestEvent);
-            }
-        }
-
-        //TODO: add websocket for hot-reload check
-    }
-
     async start() {
         const server = Deno.listen({ port: 8080 });
         console.log("Deno started webservice on http://localhost:" + this.port);
@@ -35,6 +22,8 @@ export class FrontworkWebservice extends Frontwork {
             // without awaiting the function
             this.serveHttp(conn);
         }
+
+        //TODO: add websocket for hot-reload check
     }
 
     async serveHttp(conn: Deno.Conn) {
@@ -43,21 +32,6 @@ export class FrontworkWebservice extends Frontwork {
         // Each request sent over the HTTP connection will be yielded as an async
         // iterator from the HTTP connection.
         for await (const requestEvent of httpConn) {
-            // The native HTTP server uses the web standard `Request` and `Response`
-            // objects.
-            const body = `<DOCTYPE html>
-                <body>
-                <form id="test_form" action="" method="post"><input type="text" name="text0" value="aabbcc"><input type="text" name="text1" value="aabbcc"><input type="text" name="text2" value="aabbcc"><button type="submit" name="action" value="sent">Submit</button></form>
-                    Your user-agent is:\n\n${requestEvent.request.headers.get("user-agent") ?? "Unknown"}
-                </body>`;
-            // The requestEvent's `.respondWith()` method is how we send the response
-            // back to the client.
-            const response = new Response(body, {
-                status: 200,
-            });
-            response.headers.set('content-type', "text/html");
-        
-            //requestEvent.respondWith(response);
             this.handler(requestEvent);
         }
     }
