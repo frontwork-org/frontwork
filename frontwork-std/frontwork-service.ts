@@ -115,7 +115,6 @@ export class FrontworkWebservice extends Frontwork {
         return null;
     }
     
-    // TODO: no response after POST
     private async handler (request_event: Deno.RequestEvent) {
         // FormData is too complicated, so we decode it here and put it into PostScope
         let post_data: { key: string, value: string }[] = [];
@@ -176,7 +175,7 @@ export class FrontworkWebservice extends Frontwork {
                 console.error("ERROR in middleware.error_handler", error);
             }
         }
-        
+
         return request_event.respondWith(new Response("ERROR in error_handler", { status: 500 }));
     }
 }
