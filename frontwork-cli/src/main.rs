@@ -434,7 +434,6 @@ fn command_build() {
 }
 
 fn command_watch() {
-    //TODO: implement watch
     let project_path = get_project_path();
     let src_path_string = format!("{}/src", project_path);
     let src_path = Path::new(&src_path_string);
@@ -510,13 +509,35 @@ fn build_css(project_path: &String, dist_web_path: &String) {
 }
 
 fn build_service(project_path: &String, dist_web_path: &String) -> process::Child {
-    run_command(format!("deno bundle -c {}/deno.jsonc {}/src/main.service.ts {}/main.service.js", project_path, project_path, dist_web_path))
+    std::process::Command::new("deno")
+        .arg("bundle")
+        .arg("-c")
+        .arg(format!("{}/deno.jsonc", project_path))
+        .arg(format!("{}/src/main.service.ts", project_path))
+        .arg(format!("{}/main.service.js", dist_web_path))
+        .spawn()
+        .expect("Failed to execute deno. Make sure deno is installed on this machine.")
 }
 
 fn build_client(project_path: &String, dist_web_path: &String) -> process::Child {
-    run_command(format!("deno bundle -c {}/deno.client.jsonc {}/src/main.client.ts {}/main.client.js", project_path, project_path, dist_web_path))
+    std::process::Command::new("deno")
+        .arg("bundle")
+        .arg("-c")
+        .arg(format!("{}/deno.client.jsonc", project_path))
+        .arg(format!("{}/src/main.client.ts", project_path))
+        .arg(format!("{}/main.client.js", dist_web_path))
+        .spawn()
+        .expect("Failed to execute deno. Make sure deno is installed on this machine.")
 }
 
 fn run_service(project_path: &String) -> process::Child {
-    run_command(format!("deno run --allow-net --allow-read -c {}/deno.jsonc {}/src/main.service.ts", project_path, project_path))
+    std::process::Command::new("deno")
+        .arg("run")
+        .arg("--allow-net")
+        .arg("--allow-read")
+        .arg("-c")
+        .arg(format!("{}/deno.jsonc", project_path))
+        .arg(format!("{}/src/main.service.ts", project_path))
+        .spawn()
+        .expect("Failed to execute deno. Make sure deno is installed on this machine.")
 }

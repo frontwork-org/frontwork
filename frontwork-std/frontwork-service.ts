@@ -1,6 +1,8 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage } from "./frontwork.ts";
 import { key_value_list_to_array } from "./utils.ts";
+import { serve } from "https://deno.land/std@0.154.0/http/server.ts";
+
 
 export class FrontworkWebservice extends Frontwork {
     private assets_folder_path = "";
@@ -12,27 +14,13 @@ export class FrontworkWebservice extends Frontwork {
         super(init);
     }
     
-    async start() {
-        const server = Deno.listen({ port: 8080 });
+    start() {
         console.log("Deno started webservice on http://localhost:" + this.port);
-
-        // Connections to the server will be yielded up as an async iterable.
-        for await (const conn of server) {
-            // In order to not be blocking, we need to handle each connection individually
-            // without awaiting the function
-            this.serveHttp(conn);
-        }
-
-        //TODO: add websocket for hot-reload check
-    }
-
-    async serveHttp(conn: Deno.Conn) {
-        // This "upgrades" a network connection into an HTTP connection.
-        const httpConn = Deno.serveHttp(conn);
-        // Each request sent over the HTTP connection will be yielded as an async
-        // iterator from the HTTP connection.
-        for await (const requestEvent of httpConn) {
-            this.handler(requestEvent);
+        if (this.stage === EnvironmentStage.DEVELOPMENT) {
+            const service_started_timestamp = new Date().getTime().toString();
+            serve((_request: Request) => this.handler_dev(_request, service_started_timestamp), { port: this.port });
+        } else {
+            serve((_request: Request) => this.handler(_request), { port: this.port });
         }
     }
 
@@ -61,7 +49,7 @@ export class FrontworkWebservice extends Frontwork {
         return this;
     }
 
-    private assets_resolver (request: FrontworkRequest): Response|null {
+    private assets_resolver(request: FrontworkRequest): Response|null {
         if(request.path === "/assets/style.css") {
             try {
                 const file = Deno.readFileSync(this.style_css_absolute_path);
@@ -89,18 +77,18 @@ export class FrontworkWebservice extends Frontwork {
         return null;
     }
     
-    private async handler (request_event: Deno.RequestEvent) {
+    private async handler(_request: Request): Promise<Response> {
         // FormData is too complicated, so we decode it here and put it into PostScope
         let post_data: { key: string, value: string }[] = [];
 
 
-        let content_type = request_event.request.headers.get("content-type");
+        let content_type = _request.headers.get("content-type");
         if (content_type !== null) {
             content_type = content_type.split(";")[0];
             
-            if (request_event.request.body !== null) {
+            if (_request.body !== null) {
                 if (content_type === "application/x-www-form-urlencoded") {
-                    const reader = request_event.request.body.getReader();
+                    const reader = _request.body.getReader();
                     if (reader !== null) {
                         await reader.read().then((body) => {
                             if (body.value !== null) {
@@ -116,14 +104,14 @@ export class FrontworkWebservice extends Frontwork {
         }
         
         const POST = new PostScope(post_data)
-        const request = new FrontworkRequest(request_event.request.method, request_event.request.url, request_event.request.headers, POST);
+        const request = new FrontworkRequest(_request.method, _request.url, _request.headers, POST);
 
         try {
             // Assets resolver
             const resolved_asset = this.assets_resolver(request);
             if(resolved_asset !== null) {
                 this.log(request, "[ASSET]");
-                return request_event.respondWith(resolved_asset);
+                return resolved_asset;
             }
 
             // Route
@@ -133,24 +121,45 @@ export class FrontworkWebservice extends Frontwork {
             if(resolved_component !== null) {
                 const resolved_response = resolved_component;
                 if(resolved_response.response !== null) {
-                    return request_event.respondWith(resolved_response.response.into_response());
+                    return resolved_response.response.into_response();
                 }
             }
     
             this.log(request, "[NOT FOUND]");
             const not_found_response = <FrontworkResponse> this.middleware.not_found_handler.build(context, this);
-            request_event.respondWith(not_found_response.into_response());
+            return not_found_response.into_response();
         } catch (error) {
             console.error(error);
             
             try {
-                return request_event.respondWith(this.middleware.error_handler(request, error).into_response());
+                return this.middleware.error_handler(request, error).into_response();
             } catch (error) {
                 console.error("ERROR in middleware.error_handler", error);
             }
         }
 
-        return request_event.respondWith(new Response("ERROR in error_handler", { status: 500 }));
+        return new Response("ERROR in error_handler", { status: 500 });
+    }
+    
+    private async handler_dev(_request: Request, service_started_timestamp: string): Promise<Response> {
+        const url = _request.url;
+        const url_sub = url.substring(url.length -4, url.length);
+        if (url_sub === "//ws") {
+            let response, socket: WebSocket;
+            try {
+                await ({ response, socket } = Deno.upgradeWebSocket(_request));
+            } catch {
+                return new Response("request isn't trying to upgrade to websocket.");
+            }
+
+            // sent client service_started_timestamp
+            socket.onmessage = () => {
+                socket.send(service_started_timestamp);
+            };
+            return response;
+        } else {
+            return this.handler(_request);
+        }
     }
 }
 

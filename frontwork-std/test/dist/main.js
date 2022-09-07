@@ -429,7 +429,8 @@ class FrontworkClient extends Frontwork {
         document.addEventListener("DOMContentLoaded", ()=>{
             this.page_change({
                 url: location.toString(),
-                is_redirect: false
+                is_redirect: false,
+                status_code: 200
             }, this.build_on_page_load);
         });
         document.addEventListener('click', (event)=>{
@@ -446,6 +447,29 @@ class FrontworkClient extends Frontwork {
                 this.page_change(savestate, true);
             }
         });
+        if (this.stage === EnvironmentStage.DEVELOPMENT) {
+            console.log("hot-reloading is enabled; Make sure this is the development environment");
+            let state = 0;
+            const connect = ()=>{
+                const ws = new WebSocket("ws://" + location.host + "//ws");
+                ws.onopen = function() {
+                    ws.send("REQUEST::SERVICE_STARTED");
+                    if (state === 2) {
+                        location.reload();
+                    } else {
+                        state = 1;
+                    }
+                };
+                ws.onclose = function() {
+                    state = 2;
+                    setTimeout(connect, 1000);
+                };
+                ws.onerror = function() {
+                    ws.close();
+                };
+            };
+            connect();
+        }
     }
     page_change(savestate, do_building) {
         this.request_url = savestate.url;
@@ -489,7 +513,8 @@ class FrontworkClient extends Frontwork {
                     this.page_change_to(redirect_url);
                     return {
                         url: this.request_url,
-                        is_redirect: true
+                        is_redirect: true,
+                        status_code: result.response.status_code
                     };
                 }
             }
@@ -506,13 +531,13 @@ class FrontworkClient extends Frontwork {
                     html_element_set_attributes(document.head, resolved_content.document_head.attributes);
                     html_element_set_attributes(document.body, resolved_content.document_body.attributes);
                     document.head.innerHTML = resolved_content.document_head.innerHTML;
-                    console.log("resolved_content.document_head.innerHTML", resolved_content.document_head.innerHTML);
                     document.body.innerHTML = resolved_content.document_body.innerHTML;
                 }
                 if (result.dom_ready !== null) result.dom_ready(context, this);
                 return {
                     url: this.request_url,
-                    is_redirect: false
+                    is_redirect: false,
+                    status_code: result.response.status_code
                 };
             }
         }
@@ -529,7 +554,8 @@ class FrontworkClient extends Frontwork {
         }
         const result = this.page_change({
             url: url,
-            is_redirect: false
+            is_redirect: false,
+            status_code: 200
         }, true);
         if (result !== null) {
             if (result.is_redirect) return true;
