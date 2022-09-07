@@ -1,4 +1,4 @@
-import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkResponse, DomReadyEvent, FrontworkInit } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkResponse, DomReadyEvent, FrontworkInit, EnvironmentStage } from "./frontwork.ts";
 import { html_element_set_attributes } from "./utils.ts";
 
 
@@ -15,7 +15,7 @@ export class FrontworkClient extends Frontwork {
 
         // DOM Ready
         document.addEventListener("DOMContentLoaded", () => {
-            this.page_change({url: location.toString(), is_redirect: false}, this.build_on_page_load);
+            this.page_change({url: location.toString(), is_redirect: false, status_code: 200}, this.build_on_page_load);
         });
 
         // add event listener for page change on link click
@@ -38,7 +38,37 @@ export class FrontworkClient extends Frontwork {
             }
         });
 
-        //TODO: add websocket for hot-reload check
+        // websocket for hot-reload check
+        if (this.stage === EnvironmentStage.DEVELOPMENT) {
+            console.log("hot-reloading is enabled; Make sure this is the development environment");
+            // location.reload() after noticing the disconnect and reconnect is successful
+            let state = 0;
+
+            const connect = () => {
+                const ws = new WebSocket("ws://"+location.host+"//ws");
+                ws.onopen = function() {
+                    ws.send("REQUEST::SERVICE_STARTED");
+
+                    if (state === 2) {
+                        location.reload();
+                    } else {
+                        state = 1;
+                    }
+                };
+              
+                ws.onclose = function() {
+                    state = 2;
+                    setTimeout(connect, 1000);
+                };
+              
+                ws.onerror = function() {
+                    ws.close();
+                };
+              }
+              
+              connect();
+              
+        }
     }
 
     
@@ -73,7 +103,7 @@ export class FrontworkClient extends Frontwork {
                 } else {
                     console.log("Redirect to:", redirect_url);
                     this.page_change_to(redirect_url);
-                    return { url: this.request_url, is_redirect: true };
+                    return { url: this.request_url, is_redirect: true, status_code: result.response.status_code };
                 }
             }
 
@@ -94,12 +124,11 @@ export class FrontworkClient extends Frontwork {
                     html_element_set_attributes(document.body, resolved_content.document_body.attributes);
                 
                     document.head.innerHTML = resolved_content.document_head.innerHTML;
-                    console.log("resolved_content.document_head.innerHTML", resolved_content.document_head.innerHTML)
                     document.body.innerHTML = resolved_content.document_body.innerHTML;
                 }
             
                 if(result.dom_ready !== null) result.dom_ready(context, this);
-                return { url: this.request_url, is_redirect: false };
+                return { url: this.request_url, is_redirect: false, status_code: result.response.status_code };
             }
         }
 
@@ -117,7 +146,7 @@ export class FrontworkClient extends Frontwork {
             url = location.protocol+"//"+location.host+url_or_path
         }
 
-        const result = this.page_change({url: url, is_redirect: false}, true);
+        const result = this.page_change({url: url, is_redirect: false, status_code: 200}, true);
         if(result !== null) {
             if(result.is_redirect) return true;
 
@@ -136,10 +165,12 @@ interface PageChangeResult {
 }
 
 class PageChangeSavestate {
-    url: string
-    is_redirect: boolean
-    constructor(url: string, is_redirect: boolean) {
+    url: string;
+    is_redirect: boolean;
+    status_code: number;
+    constructor(url: string, is_redirect: boolean, status_code: number) {
         this.url = url;
         this.is_redirect = is_redirect;
+        this.status_code = status_code;
     }
 }
