@@ -20,8 +20,8 @@ if (__FILE_PATH === DENO_MAINMODULE_PATH) {
     ;
 
     assets_dir = EXEC_DIR + '/assets';
-    style_css_path = PROJECT_DIR + '/dist/web/style.css';
-    main_js_path = PROJECT_DIR + '/dist/web/main.client.js';
+    style_css_path = PROJECT_DIR + '/dist/development-web/style.css';
+    main_js_path = PROJECT_DIR + '/dist/development-web/main.client.js';
 } else {
     // PRODUCTION: we are in the dist directory
     assets_dir = EXEC_DIR + '/assets';
