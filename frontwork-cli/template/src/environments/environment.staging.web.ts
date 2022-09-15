@@ -3,8 +3,8 @@ import { i18n } from "../i18n.ts";
 import { domain_routes, middleware } from "../components/routes.ts";
 
 export const APP_CONFIG: FrontworkInit = {
-	platform: EnvironmentPlatform.WEB, 
-	stage: EnvironmentStage.STAGING,
+	platform: EnvironmentPlatform.Web, 
+	stage: EnvironmentStage.Staging,
 	port: 80,
 	domain_routes: domain_routes,
 	middleware: middleware,
