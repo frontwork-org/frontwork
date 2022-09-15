@@ -72,7 +72,7 @@ The class "FrontworkResponse" contains information about the data you want to se
 ### Set-Cookie Headers
 According to RFC6265 section 4.1 to set or change the value of a cookie the server has to sent for each cookie a "Set-Cookie" header.  
 
-To make it easier to set cookies we have the class "Cookies" to create them and the set_cookie method to add them inside the class "FrontworkResponse". If a cookie with the same name already exists it will be overwritten.
+To make it easier to set cookies we have the class "Cookie" to create them and the set_cookie method to add them inside the class "FrontworkResponse". If a cookie with the same name already exists it will be overwritten.
 
 ### Redirection
 The extended class "FrontworkResponseRedirect" of FrontworkResponse requires only the path or URL to redirect.
