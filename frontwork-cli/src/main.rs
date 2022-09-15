@@ -2,6 +2,7 @@ use std::io::{Write, Read};
 use std::{env, fs};
 use std::path::Path;
 use std::process::{self, Command, Child};
+use environment_platform::Environment;
 use include_dir::{include_dir, Dir};
 use convert_case::{Case, Casing};
 use package_json::PackageJson;
@@ -10,21 +11,19 @@ use std::{thread, time};
 use crate::utils::read_from_line;
 mod utils;
 mod package_json;
+mod environment_platform;
 
 static PROJECT_TEMPLATE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/template/");
 
 
-fn print_help(had_error: bool, error_message: &str) {
+fn print_help(no_error: bool, error_message: &str) {
     print!("\n");
-    match had_error {
-        false => {
-            println!("FrontWork by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors");
-            println!("-- The TypeScript Framework using Deno & Webassembly --");
-            println!("\n Usage:");
-        },
-        true => {
-            println!("The usage of arguments has been entered wrong because {}. \nPlease follow the following usage:", error_message);
-        }
+    if no_error {
+        println!("The usage of arguments has been entered wrong because {}. \nPlease follow the following usage:", error_message);
+    } else {
+        println!("FrontWork by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors");
+        println!("-- The TypeScript Framework using Deno & Webassembly --");
+        println!("\n Usage:");
     }
     println!("  -h or --help                    | this help message");
     println!("  install                         | install required dependencies");
@@ -34,7 +33,7 @@ fn print_help(had_error: bool, error_message: &str) {
     println!("  component remove                | remove a component");
     println!("  run                             | run the script of the entered name in package.json");
     println!("  test                            | execute main.testworker.ts");
-    println!("  build                           | build the application to the dist folder");
+    println!("  build                           | build the application to the dist folder. Optional use: --production or --staging");
     println!("  watch                           | start development server and build the application on changes");
 }
 
@@ -69,7 +68,7 @@ impl Arguments {
         }
 
         if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
-            print_help(false, "");
+            print_help(true, "");
             return Err("")
         } else {
             let subcommand: SubCommand = match args[1].as_str() {
@@ -139,7 +138,7 @@ fn main() {
             if err == "" {
                 process::exit(0);
             } else {
-                print_help(true, err);
+                print_help(false, err);
                 process::exit(1);
             }
         }
@@ -366,7 +365,7 @@ fn main() {
                     println!("The script '{}' does not exist.", input);
                 }
             } else {
-                print_help(true, "missing input");
+                print_help(false, "missing input");
                 process::exit(1);
             }
 
@@ -377,16 +376,26 @@ fn main() {
             let main_testworker_file_path = format!("{}/src/main.testworker.ts", project_path);
 
             // deno run src/testworker.service.ts
-            Command::new("deno")
+            let process = Command::new("deno")
                 .arg("run")
                 .arg(main_testworker_file_path)
                 .spawn()
                 .expect("failed to execute process")
                 .wait().unwrap();
+
+            process::exit( if process.success() { 0 } else { 1 } );
         }
         
         SubCommand::Build => {
-            command_build();
+            let environment = if args.contains(&"--staging".to_string()) {
+                Environment::Staging
+            } else if args.contains(&"--development".to_string()) {
+                Environment::Development
+            } else {
+                Environment::Production
+            };
+
+            command_build(environment);
         }
         
         SubCommand::Watch => {
@@ -410,10 +419,30 @@ fn get_project_path() -> String {
 }
 
 
-fn command_build() {
+fn command_build(environment: Environment) {
+    println!("Building Frontwork-Project for {}", environment.to_str());
+
     // TODO: category build; dist/web, dist/electron, dist/android, dist/ios
+    // new build path: /dist/{environment}-{platform}/
     let project_path = get_project_path();
-    let dist_web_path = format!("{}/dist/web", project_path);
+    let platform = "web";
+    let dist_web_path = format!("{}/dist/{}-{}", project_path, environment.to_str_lcase(), platform);
+    
+    // environment: move respective files
+    // File pattern: environment.{environment}.{platform}.ts
+    let envfile_dev_path = &format!("{}/src/environments/environment.ts", project_path);
+    let envfile_selected_path = &format!("{}/src/environments/environment.{}.{}.ts", project_path, environment.to_str_lcase(), platform);
+    let envfile_tempdev_path = &format!("{}/src/environments/environment.development.web.ts", project_path);
+    if environment != Environment::Development {
+        if !Path::new(envfile_selected_path).exists() {
+            eprintln!("ERROR environment file ({}) does not exists", envfile_selected_path);
+            return;
+        } else {
+            fs::rename(envfile_dev_path, envfile_tempdev_path).expect("expected to be able move file");
+            fs::rename(envfile_selected_path, envfile_dev_path).expect("expected to be able move file");
+        }
+    }
+    
     
     // mkdir dist
     create_dir_all_verbose(&dist_web_path);
@@ -431,13 +460,19 @@ fn command_build() {
     // wait for processes
     build_service_command.wait().ok();
     build_client_command.wait().ok();
+
+    // rename files back their original names
+    if environment != Environment::Development {
+        fs::rename(envfile_dev_path, envfile_selected_path).expect("expected to be able move file");
+        fs::rename(envfile_tempdev_path, envfile_dev_path).expect("expected to be able move file");
+    }
 }
 
 fn command_watch() {
     let project_path = get_project_path();
     let src_path_string = format!("{}/src", project_path);
     let src_path = Path::new(&src_path_string);
-    let dist_web_path = format!("{}/dist/web", project_path);
+    let dist_web_path = format!("{}/dist/development-web", project_path);
     
     // mkdir dist
     create_dir_all_verbose(&dist_web_path);
