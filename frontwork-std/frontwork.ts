@@ -2,15 +2,15 @@ import { parse_url, key_value_list_to_array } from "./utils.ts";
 import { FrontworkClient } from './frontwork-client.ts'
 
 export enum EnvironmentPlatform {
-    WEB,
-    DESKTOP,
-    ANDROID,
+    Web,
+    Desktop,
+    Android,
 }
 
 export enum EnvironmentStage {
-    DEVELOPMENT,
-    STAGING,
-    PRODUCTION,
+    Development,
+    Staging,
+    Production,
 }
 
 export class I18n {
