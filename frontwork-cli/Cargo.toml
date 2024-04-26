@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 reqwest = {version = "0.11.0", features = ["blocking"] }
 error-chain = "0.12.4"
-unzpack = "0.1"
 shell = "*"
 time = "*"
 include_dir = "*"
@@ -18,3 +17,6 @@ serde_json = "*"
 run_script = "^0.9.0"
 rusync = "0.7.2"
 rsass = "0.25.2"
+unzip = "0.1.0"
+tempfile = "3.10.1"
+tokio = { version = "1.37.0", features = ["full"] }

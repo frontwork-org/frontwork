@@ -3,6 +3,8 @@
       "outDir": "./assets/js/",
       "allowJs": true,
       "resolveJsonModule": true,
+      "noEmit": true,
+      "allowImportingTsExtensions": true,
       "esModuleInterop": true,
       "experimentalDecorators": true,
       "inlineSourceMap": true,
@@ -19,7 +21,7 @@
       "test.front.ts",
       "test.routes.ts",
       "../frontwork.ts",
-      "../frontwork-front.ts",
+      "../frontwork-client.ts",
       "./i18n/*.json"
     ]
 }

@@ -10,7 +10,6 @@ use utils::{run_command, create_dir_all_verbose, transverse_directory};
 use std::{thread, time};
 use crate::utils::read_from_line;
 mod utils;
-mod download;
 mod package_json;
 mod environment_platform;
 
@@ -27,7 +26,7 @@ fn print_help(no_error: bool, error_message: &str) {
         println!("\n Usage:");
     }
     println!("  -h or --help                    | this help message");
-    println!("  install                         | install required dependencies to develop with FrontWork");
+    println!("  install                         | install required dependencies");
     println!("  init                            | create a new project in the current directory");
     println!("  new                             | create a new folder in the current directory and then execute init");
     println!("  component new                   | create a new component");
@@ -36,7 +35,6 @@ fn print_help(no_error: bool, error_message: &str) {
     println!("  test                            | execute main.testworker.ts");
     println!("  build                           | build the application to the dist folder. Optional use: --production or --staging");
     println!("  watch                           | start development server and build the application on changes");
-    println!("");
 }
 
 #[derive(PartialEq)]
@@ -133,9 +131,7 @@ impl Arguments {
 }
 
 
-
-#[tokio::main]
-async fn main() {
+fn main() {
     let args: Vec<String> = env::args().collect();
     let arguments = Arguments::new(&args).unwrap_or_else(
         |err| {
@@ -143,80 +139,89 @@ async fn main() {
                 process::exit(0);
             } else {
                 print_help(false, err);
-                process::exit(2);
+                process::exit(1);
             }
         }
     );
 
-    
+    // let homedir = env::var("HOME").unwrap();
+
     match arguments.subcomand {
         SubCommand::Install => {
             println!("GET & INSTALL: Deno");
-
-            // Check if deno is already installed
-            let deno_is_installed = 
-                std::process::Command::new("deno")
-                    .arg("help")
-                    .output().is_ok();
-
-            if deno_is_installed {
-                println!("Deno is already installed");
-            } else {
-                let target =
-                if cfg!(target_os = "windows") {
-                    "x86_64-pc-windows-msvc"
-                } else if cfg!(target_os = "macos") {
-                    if cfg!(target_arch = "aarch64") {
-                        "aarch64-apple-darwin"
-                    } else {
-                        "x86_64-apple-darwin"
-                    }
+            let target =
+            if cfg!(target_os = "windows") {
+                "x86_64-pc-windows-msvc"
+            } else if cfg!(target_os = "macos") {
+                if cfg!(target_arch = "aarch64") {
+                    "aarch64-apple-darwin"
                 } else {
-                    "x86_64-unknown-linux-gnu"
-                };
-
-                let homedir = env::var("HOME").unwrap();
-                let deno_uri = format!("https://github.com/denoland/deno/releases/latest/download/deno-{}.zip", target);
-                let deno_install = homedir + "/.deno}";
-                let bin_dir = deno_install + "/bin";
-                // let exe = bin_dir.clone() + "/deno";
-
-                // Create Deno installation directory if not exists
-                create_dir_all_verbose(&bin_dir);
-                
-                if download::download_file(&deno_uri).is_err() {
-                    println!("Download of {} failed", deno_uri);
-                } else {
+                    "x86_64-apple-darwin"
                 }
+            } else {
+                "x86_64-unknown-linux-gnu"
+            };
 
-                println!("OLD____GET & INSTALL: Deno");
-                let (_, output, _) = run_script::run_script!(
-                    r#"
-                        
-                        unzip -d "$bin_dir" -o "$exe.zip"
-                        chmod +x "$exe"
-                        rm "$exe.zip"
-                        
-                        echo "Deno was installed successfully to $exe"
-                        if command -v deno >/dev/null; then
-                            echo "Run 'deno --help' to get started"
-                        else
-                            case $SHELL in
-                            /bin/zsh) shell_profile=".zshrc" ;;
-                            *) shell_profile=".bash_profile" ;;
-                            esac
-                            echo "Manually add the directory to your \$HOME/$shell_profile (or similar)"
-                            echo "  export DENO_INSTALL=\"$deno_install\""
-                            echo "  export PATH=\"\$DENO_INSTALL/bin:\$PATH\""
-                            echo "Run '$exe --help' to get started"
-                        fi
-                    "#
-                )
-                .unwrap();
-            
-                println!("{}", output);
-            }
-
+            println!("OLD____GET & INSTALL: Deno");
+            let (_, output, _) = run_script::run_script!(
+                r#"
+                    #!/bin/sh
+                    # Copyright 2019 the Deno authors. All rights reserved. MIT license.
+                    
+                    set -e
+                    
+                    if ! command -v unzip >/dev/null; then
+                        echo "Error: unzip is required to install Deno (see: https://github.com/denoland/deno_install#unzip-is-required)." 1>&2
+                        exit 1
+                    fi
+                    
+                    if [ "$OS" = "Windows_NT" ]; then
+                        target="x86_64-pc-windows-msvc"
+                    else
+                        case $(uname -sm) in
+                        "Darwin x86_64") target="x86_64-apple-darwin" ;;
+                        "Darwin arm64") target="aarch64-apple-darwin" ;;
+                        *) target="x86_64-unknown-linux-gnu" ;;
+                        esac
+                    fi
+                    
+                    if [ $# -eq 0 ]; then
+                        deno_uri="https://github.com/denoland/deno/releases/latest/download/deno-${target}.zip"
+                    else
+                        deno_uri="https://github.com/denoland/deno/releases/download/${1}/deno-${target}.zip"
+                    fi
+                    
+                    deno_install="${DENO_INSTALL:-$HOME/.deno}"
+                    bin_dir="$deno_install/bin"
+                    exe="$bin_dir/deno"
+                    
+                    if [ ! -d "$bin_dir" ]; then
+                        mkdir -p "$bin_dir"
+                    fi
+                    
+                    curl --fail --location --progress-bar --output "$exe.zip" "$deno_uri"
+                    unzip -d "$bin_dir" -o "$exe.zip"
+                    chmod +x "$exe"
+                    rm "$exe.zip"
+                    
+                    echo "Deno was installed successfully to $exe"
+                    if command -v deno >/dev/null; then
+                        echo "Run 'deno --help' to get started"
+                    else
+                        case $SHELL in
+                        /bin/zsh) shell_profile=".zshrc" ;;
+                        *) shell_profile=".bash_profile" ;;
+                        esac
+                        echo "Manually add the directory to your \$HOME/$shell_profile (or similar)"
+                        echo "  export DENO_INSTALL=\"$deno_install\""
+                        echo "  export PATH=\"\$DENO_INSTALL/bin:\$PATH\""
+                        echo "Run '$exe --help' to get started"
+                    fi
+                "#
+            )
+            .unwrap();
+        
+            println!("{}", output);
         }
 
         SubCommand::Init | SubCommand::New => {
@@ -226,7 +231,7 @@ async fn main() {
                 let projectpath_local = format!("{}/{}", env::current_dir().unwrap().to_str().unwrap(), projectname);
                 if Path::new(&projectpath_local).exists() {
                     println!("The projectname has been used. Please use another name.");
-                    process::exit(2);
+                    process::exit(1);
                 } else {
                     fs::create_dir_all(&projectpath_local).unwrap();
                     projectpath_local
@@ -264,7 +269,7 @@ async fn main() {
                     // Create the component
                     if Path::new(&componentpath).exists() {
                         println!("The componentname has been used. Please use another name.");
-                        process::exit(2);
+                        process::exit(1);
                     } else {
                         fs::create_dir_all(&componentpath).unwrap();
 
@@ -311,7 +316,7 @@ async fn main() {
                             Err(error) => {
                                 println!("{}", error);
                                 println!("Unable to open '{}'. The project may not be initialized.", &global_style_file_path);
-                                process::exit(2);
+                                process::exit(1);
                             }
                         }
                     }
@@ -346,7 +351,7 @@ async fn main() {
                             Err(error) => {
                                 println!("{}", error);
                                 println!("Unable to open '{}'. The project may not be initialized.", &global_style_file_path);
-                                process::exit(2);
+                                process::exit(1);
                             }
                         }
 
@@ -375,7 +380,7 @@ async fn main() {
                 }
             } else {
                 print_help(false, "missing input");
-                process::exit(2);
+                process::exit(1);
             }
 
         }
@@ -447,8 +452,8 @@ fn command_build(environment: Environment) {
             eprintln!("ERROR environment file ({}) does not exists", envfile_selected_path);
             return;
         } else {
-            fs::rename(envfile_dev_path, envfile_tempdev_path).expect("expected to be able move file");
-            fs::rename(envfile_selected_path, envfile_dev_path).expect("expected to be able move file");
+            fs::rename(envfile_dev_path, envfile_tempdev_path).expect("expected to be able rename file");
+            fs::rename(envfile_selected_path, envfile_dev_path).expect("expected to be able rename file");
         }
     }
     
