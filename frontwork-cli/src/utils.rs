@@ -1,4 +1,4 @@
-use std::{io::{stdout, Write}, process::Child, path::{Path}, time::SystemTime};
+use std::{io::{stdout, Write}, path::Path, process::Child, time::SystemTime};
 use std::fs;
 use rsass::{compile_scss_path, output};
 
@@ -101,3 +101,17 @@ pub fn transverse_directory(dir_path: &Path) -> Vec<TransversedFile> {
 
     files
 }
+
+
+// pub fn move_file(from_filepath: &String, to_filepath: &String) {
+//     if std::fs::rename(&from_filepath, to_filepath).is_err()  {
+//         // failed to rename, the file could be on another disk, so we copy and then delete it
+//         if let Err(e) = std::fs::copy(&from_filepath, &to_filepath) {
+//             eprintln!("failed to move file from: {}  to  {}\n{}", &from_filepath, &to_filepath, e);
+//             std::process::exit(1);
+//         } else {
+//             std::fs::remove_file(&from_filepath).ok();
+//         }
+//     }
+// }
+

@@ -16,8 +16,9 @@ export class FrontworkWebservice extends Frontwork {
     
     start() {
         console.log("Deno started webservice on http://localhost:" + this.port);
-        if (this.stage === EnvironmentStage.DEVELOPMENT) {
+        if (this.stage === EnvironmentStage.Development) {
             const service_started_timestamp = new Date().getTime().toString();
+            //TODO: use Deno.serve
             serve((_request: Request) => this.handler_dev(_request, service_started_timestamp), { port: this.port });
         } else {
             serve((_request: Request) => this.handler(_request), { port: this.port });

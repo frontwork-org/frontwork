@@ -39,7 +39,7 @@ export class FrontworkClient extends Frontwork {
         });
 
         // websocket for hot-reload check
-        if (this.stage === EnvironmentStage.DEVELOPMENT) {
+        if (this.stage === EnvironmentStage.Development) {
             console.log("hot-reloading is enabled; Make sure this is the development environment");
             // location.reload() after noticing the disconnect and reconnect is successful
             let state = 0;
