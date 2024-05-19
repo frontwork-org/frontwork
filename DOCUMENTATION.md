@@ -16,9 +16,9 @@ Still, apple has a market share, thus Frontwork will support apple products in t
 
 
 ## 2. Getting Started
-For getting started you need to install the frontwork-cli tool "fw": cargo install fw
-    fw install
-    fw init
+For getting started you need to install the frontwork-cli tool "frontwork": cargo install frontwork
+    frontwork install
+    frontwork init
 
 
 ## 3. Routing

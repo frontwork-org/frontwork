@@ -1,5 +1,5 @@
 [package]
-name = "fw"
+name = "frontwork"
 version = "0.1.0"
 edition = "2021"
 authors = ["LuceusXylian <luceusxylian@gmail.com>", "frontwork-org Contributors <https://github.com/frontwork-org>"]
