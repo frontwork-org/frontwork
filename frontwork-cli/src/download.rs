@@ -2,7 +2,6 @@ use error_chain::error_chain;
 use reqwest::header::{HeaderValue, CONTENT_LENGTH, RANGE};
 use reqwest::StatusCode;
 use std::fs::File;
-use std::path::PathBuf;
 use std::str::FromStr;
 
 
@@ -42,11 +41,13 @@ impl Iterator for DownloadPartialRangeIter {
         if self.start > self.end {
             None
         } else {
-            let prev_start = self.start;
-            let progress_percentage = ((self.start as f64 / self.end as f64)*100.0).ceil() as u64;
+            let mut progress_percentage = ((self.start as f64 / self.end as f64)*100.0).ceil() as u64;
+            if progress_percentage == 100 && self.start != self.end { progress_percentage = 99; }
+
             println!("Download progress: {}%    {}/{}", fillspaces(progress_percentage, 100), fillspaces(self.start, self.end), self.end);
+            
             self.start += std::cmp::min(self.buffer_size as u64, self.end - self.start + 1);
-            Some(HeaderValue::from_str(&format!("bytes={}-{}", prev_start, self.start - 1)).expect("string provided by format!"))
+            Some(HeaderValue::from_str(&format!("bytes={}-{}", self.start, self.start - 1)).expect("string provided by format!"))
         }
     }
 }
@@ -58,7 +59,7 @@ fn fillspaces(start: u64, end: u64) -> String {
 
 pub fn download_file(url: &str) -> Result<String> {
     const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0";
-    const CHUNK_SIZE: u32 = 10240;
+    const CHUNK_SIZE: u32 = 10240 * 64;
     let client = reqwest::blocking::Client::new();
 
     // HEAD request: parse Content-Length header

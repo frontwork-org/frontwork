@@ -1,6 +1,6 @@
 use std::io::{Write, Read};
 use std::{env, fs};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{self, Command, Child};
 use environment_platform::Environment;
 use include_dir::{include_dir, Dir};
@@ -134,8 +134,7 @@ impl Arguments {
 
 
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let args: Vec<String> = env::args().collect();
     let arguments = Arguments::new(&args).unwrap_or_else(
         |err| {
@@ -157,7 +156,8 @@ async fn main() {
             let deno_is_installed = 
                 std::process::Command::new("deno")
                     .arg("help")
-                    .output().is_ok();
+                    .output()
+                    .is_ok();
 
             if deno_is_installed {
                 println!("Deno is already installed");
@@ -177,44 +177,45 @@ async fn main() {
 
                 let homedir = env::var("HOME").unwrap();
                 let deno_uri = format!("https://github.com/denoland/deno/releases/latest/download/deno-{}.zip", target);
-                let deno_install = homedir + "/.deno}";
-                let bin_dir = deno_install + "/bin";
-                // let exe = bin_dir.clone() + "/deno";
+                let deno_install = homedir.clone() + "/.deno";
+                let bin_dir = deno_install.clone() + "/bin";
+                let bin_file = deno_install.clone() + "/bin/deno";
 
                 // Create Deno installation directory if not exists
                 create_dir_all_verbose(&bin_dir);
                 
-                if download::download_file(&deno_uri).is_err() {
-                    println!("Download of {} failed", deno_uri);
-                } else {
+                match download::download_file(&deno_uri) {
+                    Err(_) => {
+                        println!("Download of {} failed", deno_uri);
+                    }
+
+                    Ok(file_path) => {
+                        // Download successful, now unzip it
+                        let archive_file: PathBuf = PathBuf::from(file_path);
+                        let target_dir: PathBuf = PathBuf::from(bin_dir);
+                        if let Err(err) = zip_extensions::zip_extract(&archive_file, &target_dir) {
+                            println!("Extration of archive failed.\n\n{:#?}", err);
+                        } else {
+                            if let Err(err) = utils::make_file_executable(&bin_file) {
+                                println!("Unable to make file executable.\n\n{:#?}", err);
+                            } else {
+                                // Add path env of the executable 
+                                let bashrc_path = homedir + "/.bashrc";
+                                let mut bashrc = fs::read_to_string(&bashrc_path).expect(".bashrc should exist and be readable");
+                                if !bashrc.contains("DENO_INSTALL") {
+                                    bashrc += "\n\n";
+                                    bashrc += &format!("export DENO_INSTALL=\"{}\"\n", deno_install);
+                                    bashrc += &"export PATH=\"$DENO_INSTALL/bin:$PATH\"\n".to_string();
+                                    fs::write(&bashrc_path, bashrc).expect(".bashrc should be writeable");
+                                    println!("Deno was installed successfully to {}", bin_file);
+                                    println!("Please restart shell to start using it.");
+                                }
+                            }
+
+                        }
+                    }
                 }
 
-                println!("OLD____GET & INSTALL: Deno");
-                let (_, output, _) = run_script::run_script!(
-                    r#"
-                        
-                        unzip -d "$bin_dir" -o "$exe.zip"
-                        chmod +x "$exe"
-                        rm "$exe.zip"
-                        
-                        echo "Deno was installed successfully to $exe"
-                        if command -v deno >/dev/null; then
-                            echo "Run 'deno --help' to get started"
-                        else
-                            case $SHELL in
-                            /bin/zsh) shell_profile=".zshrc" ;;
-                            *) shell_profile=".bash_profile" ;;
-                            esac
-                            echo "Manually add the directory to your \$HOME/$shell_profile (or similar)"
-                            echo "  export DENO_INSTALL=\"$deno_install\""
-                            echo "  export PATH=\"\$DENO_INSTALL/bin:\$PATH\""
-                            echo "Run '$exe --help' to get started"
-                        fi
-                    "#
-                )
-                .unwrap();
-            
-                println!("{}", output);
             }
 
         }
