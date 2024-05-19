@@ -1,4 +1,4 @@
-use std::{io::{stdout, Write}, path::Path, process::Child, time::SystemTime};
+use std::{io::{stdout, Write}, os::unix::fs::PermissionsExt, path::Path, process::Child, time::SystemTime};
 use std::fs;
 use rsass::{compile_scss_path, output};
 
@@ -100,6 +100,10 @@ pub fn transverse_directory(dir_path: &Path) -> Vec<TransversedFile> {
     });
 
     files
+}
+
+pub fn make_file_executable(file_path: &str) -> std::result::Result<(), std::io::Error> {
+    fs::set_permissions(file_path, fs::Permissions::from_mode(0o775))
 }
 
 
