@@ -27,6 +27,7 @@ export class I18n {
     set_locale(locale: string) {
         console.log("I18n: Setting locale to " + locale);
         const locale_found = this.locales.find(l => l.locale === locale);
+        // TODO: local debug level: do panic in testing, but not in production
         if(locale_found === undefined) throw new Error("I18nLocale "+locale+" does not exist");
 
         this.selected_locale = locale_found;
