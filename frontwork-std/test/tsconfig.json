@@ -22,6 +22,5 @@
       "test.routes.ts",
       "../frontwork.ts",
       "../frontwork-client.ts",
-      "./i18n/*.json"
     ]
 }

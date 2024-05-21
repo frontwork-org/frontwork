@@ -1,7 +1,6 @@
 import { } from "./dom.ts";
 import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage } from "./frontwork.ts";
 import { key_value_list_to_array } from "./utils.ts";
-import { serve } from "https://deno.land/std@0.154.0/http/server.ts";
 
 
 export class FrontworkWebservice extends Frontwork {
@@ -16,13 +15,17 @@ export class FrontworkWebservice extends Frontwork {
     
     start() {
         console.log("Deno started webservice on http://localhost:" + this.port);
+        const abortController = new AbortController();
+
         if (this.stage === EnvironmentStage.Development) {
             const service_started_timestamp = new Date().getTime().toString();
-            //TODO: use Deno.serve
-            serve((_request: Request) => this.handler_dev(_request, service_started_timestamp), { port: this.port });
+
+            Deno.serve({ port: this.port, signal: abortController.signal }, (_request: Request) => { return this.handler_dev(_request, service_started_timestamp); });
         } else {
-            serve((_request: Request) => this.handler(_request), { port: this.port });
+            Deno.serve({ port: this.port, signal: abortController.signal }, this.handler);
         }
+
+        globalThis.addEventListener("unload", () => abortController.abort());
     }
 
     setup_assets_resolver(assets_folder_path: string) {
