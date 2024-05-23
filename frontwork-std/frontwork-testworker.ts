@@ -1,6 +1,6 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkInit, FrontworkRequest, PostScope } from "./frontwork.ts";
-import { green, red } from "https://deno.land/std@0.149.0/fmt/colors.ts";
+import { Frontwork, FrontworkInit, FrontworkRequest, PostScope, debug } from "./frontwork.ts";
+import { green, red } from "https://deno.land/std@0.224.0/fmt/colors.ts";
 
 export class FrontworkTestworker extends Frontwork {
     test_count = 0;
@@ -10,6 +10,12 @@ export class FrontworkTestworker extends Frontwork {
     constructor(init: FrontworkInit) {
         super(init);
         console.log("Test worker started\n");
+        debug.verbose_logging = true;
+        //TODO: count I18n and other categories of debug_reporter for testworker
+        debug.reporter = (category: string, text: string) => {
+            this.fail_count++;
+            console.error("["+category+"]", text); 
+        };
     }
 
     // deno-lint-ignore no-explicit-any
@@ -31,7 +37,7 @@ export class FrontworkTestworker extends Frontwork {
         
         if (actual === expected) {
             this.fail_count++;
-            console.error("Test "+this.test_count+": expected " + expected + " but got " + actual);
+            console.error("Test "+this.test_count+": expected not" + expected + " but got " + actual);
         } else {
             console.log("Test "+this.test_count+": passed");
         }

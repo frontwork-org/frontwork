@@ -53,6 +53,7 @@ export class FrontworkWebservice extends Frontwork {
         return this;
     }
 
+    // TODO: Add a cache controller for assets
     private assets_resolver(request: FrontworkRequest): Response|null {
         if(request.path === "/assets/style.css") {
             try {

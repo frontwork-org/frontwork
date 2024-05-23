@@ -1,6 +1,30 @@
 import { parse_url, key_value_list_to_array } from "./utils.ts";
 import { FrontworkClient } from './frontwork-client.ts'
 
+// TODO: https://tsdoc.org/
+
+class Debug {
+    /**
+     * Choose on which DebugMode should the function debug.reporter be called.
+     * Error messages will always be reported
+     * @type Frontwork::DebugMode
+     */
+    verbose_logging: boolean = false;
+    
+    /**
+     * To enable a bug reporter for staging and production you can modify debug.reporter, that it sents a request to the backend
+     * @param category: string 
+     * @param text: string
+    */
+    reporter = (category: string, text: string) => { 
+        // TODO To get the developers attention to a bug we throw an error
+        // if(debug.mode === DebugMode.Debug) throw new Error("["+category+"] " + text);
+        console.error("["+category+"]", text); 
+    };
+}
+export const debug = new Debug();
+
+
 export enum EnvironmentPlatform {
     Web,
     Desktop,
@@ -25,12 +49,16 @@ export class I18n {
     }
 
     set_locale(locale: string) {
-        console.log("I18n: Setting locale to " + locale);
+        if(debug.verbose_logging) console.log("I18n: Setting locale to " + locale);
         const locale_found = this.locales.find(l => l.locale === locale);
-        // TODO: local debug level: do panic in testing, but not in production
-        if(locale_found === undefined) throw new Error("I18nLocale "+locale+" does not exist");
 
+        if(locale_found === undefined) {
+            debug.reporter("I18n", "Locale '"+locale+"' does not exist");
+            return false;
+        }
+        
         this.selected_locale = locale_found;
+        return true;
     }
 
     get_translation(key: string): string {
@@ -50,7 +78,12 @@ export class I18nLocale {
 
     get_translation(key: string): string {
         const translation = this.translations.find(t => t.key === key);
-        if(translation === undefined) throw new Error("I18nLocale.get_translation(\""+key+"\"): can not get translation, because the specific key does not exist.");
+
+        // local debug level: do panic in Development, but not in Production
+        if(translation === undefined) {
+            debug.reporter("I18n", "The translation can not be retrieved because the specific key '"+key+"' for the locale '"+this.locale+"' does not exist.");
+            return "";
+        }
 
         return translation.translation;
     }
@@ -407,6 +440,7 @@ export class Frontwork {
 		this.domain_routes = init.domain_routes;
 		this.middleware = init.middleware;
 		this.i18n = init.i18n;
+        if(this.stage === EnvironmentStage.Development) debug.verbose_logging = true;
 	}
 
 	protected routes_resolver(context: FrontworkContext): RoutesResolverResult|null {
@@ -472,8 +506,8 @@ export class Frontwork {
         return null;
 	}
 
-    protected log(request: FrontworkRequest, extra: string) {
-        this.middleware.log(request, extra);
+    protected log(request: FrontworkRequest, called_from: string) {
+        this.middleware.log(request, called_from);
     }
 }
 
@@ -497,12 +531,12 @@ export class FrontworkMiddleware {
         if (init && init.error_handler) {
             const init_error_handler = init.error_handler;
             this.error_handler = (request: FrontworkRequest, error: Error): FrontworkResponse => {
-                this.log(request, "[ERROR]");
+                this.error(request, error);
                 return init_error_handler(request, error);
             }
         } else {
-            this.error_handler = (request: FrontworkRequest): FrontworkResponse => {
-                this.log(request, "[ERROR]");
+            this.error_handler = (request: FrontworkRequest, error: Error): FrontworkResponse => {
+                this.error(request, error);
                 return new FrontworkResponse(500, "ERROR");
             }
         }
@@ -524,10 +558,22 @@ export class FrontworkMiddleware {
         this.redirect_lonely_slash = init && init.redirect_lonely_slash? init.redirect_lonely_slash : true;
 	}
 
-    log(request: FrontworkRequest, extra: string) {
-        let path_with_query_string = request.path;
-        if(request.query_string !== "") path_with_query_string += "?" + request.query_string;
-        console.log(request.method + " " + path_with_query_string + " " + extra);
-        if (request.POST.items.length > 0) console.log(" Scope POST: ", request.POST.items);
+    log(request: FrontworkRequest, called_from: string) {
+        let text = request.method + " " + request.path;
+        if(request.query_string !== "") text += "?" + request.query_string;
+        text += " " + called_from;
+        if (request.POST.items.length > 0) {
+            text += "\n" + "    Scope POST: ";
+            for (let i = 0; i < request.POST.items.length; i++) {
+                const item = request.POST.items[i];
+                text += "\n" + "    Scope POST: ";
+            }
+        }
+    
+        debug.reporter("Userspace-Error", text);
+    }
+
+    error(request: FrontworkRequest, error: Error) {
+        this.log(request, "[ERROR]");
     }
 }
