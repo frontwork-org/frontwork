@@ -18,7 +18,7 @@
       "useDefineForClassFields": true
     },
     "files": [
-      "test.front.ts",
+      "test.client.ts",
       "test.routes.ts",
       "../frontwork.ts",
       "../frontwork-client.ts",

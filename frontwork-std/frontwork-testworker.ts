@@ -1,20 +1,26 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkInit, FrontworkRequest, PostScope, debug } from "./frontwork.ts";
-import { green, red } from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import { Frontwork, FrontworkInit, FrontworkRequest, LogType, PostScope, debug } from "./frontwork.ts";
+import { green, red, yellow } from "https://deno.land/std@0.224.0/fmt/colors.ts";
+
 
 export class FrontworkTestworker extends Frontwork {
     test_count = 0;
     fail_count = 0;
+    warn_count = 0;
     time_start = new Date().getTime();
 
     constructor(init: FrontworkInit) {
         super(init);
         console.log("Test worker started\n");
         debug.verbose_logging = true;
-        //TODO: count I18n and other categories of debug_reporter for testworker
-        debug.reporter = (category: string, text: string) => {
-            this.fail_count++;
-            console.error("["+category+"]", text); 
+        debug.reporter = (log_type: LogType, category: string, text: string) => {
+            if (log_type === LogType.Error) {
+                this.fail_count++;
+                console.error(text); 
+            } else if (log_type === LogType.Warn) {
+                this.warn_count++;
+                console.warn(text); 
+            }
         };
     }
 
@@ -92,6 +98,9 @@ export class FrontworkTestworker extends Frontwork {
         const time_finished = new Date().getTime();
         const time_taken = (time_finished - this.time_start) / 1000;
         console.log("\n"+"test result:", status_text, this.fail_count + " failures / " + this.test_count + " tests; finished in "+time_taken.toFixed(2)+"s"+"\n");
+        if (this.warn_count > 0) {
+            console.log("Please note that there are ", yellow(this.warn_count.toString()) + " warnings.\n");
+        }
         return this;
     }
 

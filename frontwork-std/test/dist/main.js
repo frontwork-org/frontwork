@@ -57,17 +57,24 @@ function html_element_set_attributes(html_element, attributes) {
         html_element.setAttribute(attribute.name, attribute.value);
     }
 }
+class Debug {
+    verbose_logging = false;
+    reporter = (category, text)=>{
+        console.error("[" + category + "]", text);
+    };
+}
+const debug = new Debug();
 var EnvironmentPlatform;
 (function(EnvironmentPlatform) {
-    EnvironmentPlatform[EnvironmentPlatform["WEB"] = 0] = "WEB";
-    EnvironmentPlatform[EnvironmentPlatform["DESKTOP"] = 1] = "DESKTOP";
-    EnvironmentPlatform[EnvironmentPlatform["ANDROID"] = 2] = "ANDROID";
+    EnvironmentPlatform[EnvironmentPlatform["Web"] = 0] = "Web";
+    EnvironmentPlatform[EnvironmentPlatform["Desktop"] = 1] = "Desktop";
+    EnvironmentPlatform[EnvironmentPlatform["Android"] = 2] = "Android";
 })(EnvironmentPlatform || (EnvironmentPlatform = {}));
 var EnvironmentStage;
 (function(EnvironmentStage) {
-    EnvironmentStage[EnvironmentStage["DEVELOPMENT"] = 0] = "DEVELOPMENT";
-    EnvironmentStage[EnvironmentStage["STAGING"] = 1] = "STAGING";
-    EnvironmentStage[EnvironmentStage["PRODUCTION"] = 2] = "PRODUCTION";
+    EnvironmentStage[EnvironmentStage["Development"] = 0] = "Development";
+    EnvironmentStage[EnvironmentStage["Staging"] = 1] = "Staging";
+    EnvironmentStage[EnvironmentStage["Production"] = 2] = "Production";
 })(EnvironmentStage || (EnvironmentStage = {}));
 class I18n {
     locales;
@@ -78,10 +85,14 @@ class I18n {
         this.selected_locale = locales[0];
     }
     set_locale(locale) {
-        console.log("I18n: Setting locale to " + locale);
+        if (debug.verbose_logging) console.log("I18n: Setting locale to " + locale);
         const locale_found = this.locales.find((l)=>l.locale === locale);
-        if (locale_found === undefined) throw new Error("I18nLocale " + locale + " does not exist");
+        if (locale_found === undefined) {
+            debug.reporter("I18n", "Locale '" + locale + "' does not exist");
+            return false;
+        }
         this.selected_locale = locale_found;
+        return true;
     }
     get_translation(key) {
         return this.selected_locale.get_translation(key);
@@ -96,7 +107,10 @@ class I18nLocale {
     }
     get_translation(key) {
         const translation = this.translations.find((t)=>t.key === key);
-        if (translation === undefined) throw new Error("I18nLocale.get_translation(\"" + key + "\"): can not get translation, because the specific key does not exist.");
+        if (translation === undefined) {
+            debug.reporter("I18n", "The translation can not be retrieved because the specific key '" + key + "' for the locale '" + this.locale + "' does not exist.");
+            return "";
+        }
         return translation.translation;
     }
 }
@@ -266,8 +280,8 @@ class FrontworkResponse {
             const header = this.headers[i];
             response.headers.set(header[0], header[1]);
         }
-        for(let i1 = 0; i1 < this.cookies.length; i1++){
-            const cookie = this.cookies[i1];
+        for(let i = 0; i < this.cookies.length; i++){
+            const cookie = this.cookies[i];
             response.headers.append('set-cookie', cookie.to_string());
         }
         return response;
@@ -313,6 +327,7 @@ class Frontwork {
         this.domain_routes = init.domain_routes;
         this.middleware = init.middleware;
         this.i18n = init.i18n;
+        if (this.stage === EnvironmentStage.Development) debug.verbose_logging = true;
     }
     routes_resolver(context) {
         if (this.middleware.redirect_lonely_slash && context.request.path_dirs.length > 2 && context.request.path_dirs[context.request.path_dirs.length - 1] === "") {
@@ -337,26 +352,26 @@ class Frontwork {
                 dom_ready: this.middleware.before_routes.dom_ready
             };
         }
-        for(let i1 = 0; i1 < this.domain_routes.length; i1++){
-            const domain_routes = this.domain_routes[i1];
+        for(let i = 0; i < this.domain_routes.length; i++){
+            const domain_routes = this.domain_routes[i];
             if (domain_routes.domain.test(context.request.host)) {
-                for(let i2 = 0; i2 < domain_routes.routes.length; i2++){
-                    const route = domain_routes.routes[i2];
+                for(let i = 0; i < domain_routes.routes.length; i++){
+                    const route = domain_routes.routes[i];
                     const route_path_dirs = route.path.split("/");
                     if (context.request.path_dirs.length === route_path_dirs.length) {
                         let found = true;
-                        for(let i3 = 0; i3 < route_path_dirs.length; i3++){
-                            const route_path_dir = route_path_dirs[i3];
-                            if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i3]) {
+                        for(let i = 0; i < route_path_dirs.length; i++){
+                            const route_path_dir = route_path_dirs[i];
+                            if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i]) {
                                 found = false;
                                 break;
                             }
                         }
                         if (found) {
                             this.log(context.request, "[ROUTE #" + route.id + " (" + route.path + ")]");
-                            const response1 = route.component.build(context, this);
-                            if (response1 !== null) return {
-                                response: response1,
+                            const response = route.component.build(context, this);
+                            if (response !== null) return {
+                                response: response,
                                 dom_ready: route.component.dom_ready
                             };
                         }
@@ -366,16 +381,16 @@ class Frontwork {
         }
         if (this.middleware.after_routes !== null) {
             this.log(context.request, "[AFTER_ROUTES]");
-            const response2 = this.middleware.after_routes.build(context, this);
-            if (response2 !== null) return {
-                response: response2,
+            const response = this.middleware.after_routes.build(context, this);
+            if (response !== null) return {
+                response: response,
                 dom_ready: this.middleware.after_routes.dom_ready
             };
         }
         return null;
     }
-    log(request, extra) {
-        this.middleware.log(request, extra);
+    log(request, called_from) {
+        this.middleware.log(request, called_from);
     }
 }
 class FrontworkMiddleware {
@@ -388,12 +403,12 @@ class FrontworkMiddleware {
         if (init && init.error_handler) {
             const init_error_handler = init.error_handler;
             this.error_handler = (request, error)=>{
-                this.log(request, "[ERROR]");
+                this.error(request, error);
                 return init_error_handler(request, error);
             };
         } else {
-            this.error_handler = (request)=>{
-                this.log(request, "[ERROR]");
+            this.error_handler = (request, error)=>{
+                this.error(request, error);
                 return new FrontworkResponse(500, "ERROR");
             };
         }
@@ -411,11 +426,21 @@ class FrontworkMiddleware {
         this.after_routes = init && init.after_routes ? init.after_routes : null;
         this.redirect_lonely_slash = init && init.redirect_lonely_slash ? init.redirect_lonely_slash : true;
     }
-    log(request, extra) {
-        let path_with_query_string = request.path;
-        if (request.query_string !== "") path_with_query_string += "?" + request.query_string;
-        console.log(request.method + " " + path_with_query_string + " " + extra);
-        if (request.POST.items.length > 0) console.log(" Scope POST: ", request.POST.items);
+    log(request, called_from) {
+        let text = request.method + " " + request.path;
+        if (request.query_string !== "") text += "?" + request.query_string;
+        text += " " + called_from;
+        if (request.POST.items.length > 0) {
+            text += "\n" + "    Scope POST: ";
+            for(let i = 0; i < request.POST.items.length; i++){
+                const item = request.POST.items[i];
+                text += "\n" + item.key + " = \"" + item.value + "\"";
+            }
+        }
+        debug.reporter("Userspace", text);
+    }
+    error(request, error) {
+        this.log(request, "[ERROR]");
     }
 }
 class FrontworkClient extends Frontwork {
@@ -447,7 +472,7 @@ class FrontworkClient extends Frontwork {
                 this.page_change(savestate, true);
             }
         });
-        if (this.stage === EnvironmentStage.DEVELOPMENT) {
+        if (this.stage === EnvironmentStage.Development) {
             console.log("hot-reloading is enabled; Make sure this is the development environment");
             let state = 0;
             const connect = ()=>{
@@ -566,19 +591,11 @@ class FrontworkClient extends Frontwork {
         return false;
     }
 }
-const __default = JSON.parse(`[
-    { "key": "title1", "translation": "Frontwork Test Page" }
-    ,{ "key": "text1", "translation": "This is a test page for the Frontwork framework." }
-    ,{ "key": "title2", "translation": "Test Form" }
-]`);
-const __default1 = JSON.parse(`[
-    { "key": "title1", "translation": "Frontwork Test Seite" }
-    ,{ "key": "text1", "translation": "Dies ist eine deutsche Test Seite für das Frontwork framework." }
-    ,{ "key": "title2", "translation": "Test Formular" }
-]`);
+const __default = JSON.parse("[\r\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Page\" }\r\n    ,{ \"key\": \"text1\", \"translation\": \"This is a test page for the Frontwork framework.\" }\r\n    ,{ \"key\": \"title2\", \"translation\": \"Test Form\" }\r\n]");
+const __default1 = JSON.parse("[\r\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Seite\" }\r\n    ,{ \"key\": \"text1\", \"translation\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\" }\r\n    ,{ \"key\": \"title2\", \"translation\": \"Test Formular\" }\r\n]");
 const i18n = new I18n([
     new I18nLocale("en", __default),
-    new I18nLocale("de", __default1), 
+    new I18nLocale("de", __default1)
 ]);
 function render_header() {
     const header = document.createElement("header");
@@ -697,7 +714,7 @@ const domain_routes = [
         new Route("/crash", new CrashComponent()),
         new Route("/element_test", new ElementTestComponent()),
         new Route("/hello/22222222", new HelloWorldComponent()),
-        new Route("/hello/*", new HelloWorldComponent()), 
+        new Route("/hello/*", new HelloWorldComponent())
     ])
 ];
 const middleware = new FrontworkMiddleware({
@@ -710,8 +727,8 @@ const middleware = new FrontworkMiddleware({
     }
 });
 const APP_CONFIG = {
-    platform: EnvironmentPlatform.WEB,
-    stage: EnvironmentStage.DEVELOPMENT,
+    platform: EnvironmentPlatform.Web,
+    stage: EnvironmentStage.Development,
     port: 8080,
     domain_routes: domain_routes,
     middleware: middleware,

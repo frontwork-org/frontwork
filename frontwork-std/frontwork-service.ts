@@ -115,7 +115,7 @@ export class FrontworkWebservice extends Frontwork {
             // Assets resolver
             const resolved_asset = this.assets_resolver(request);
             if(resolved_asset !== null) {
-                this.log(request, "[ASSET]");
+                this.log(request, "ASSET");
                 return resolved_asset;
             }
 

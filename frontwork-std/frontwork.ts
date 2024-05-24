@@ -3,23 +3,31 @@ import { FrontworkClient } from './frontwork-client.ts'
 
 // TODO: https://tsdoc.org/
 
+export enum LogType {
+    Info,
+    Warn,
+    Error,
+}
+
 class Debug {
     /**
      * Choose on which DebugMode should the function debug.reporter be called.
      * Error messages will always be reported
-     * @type Frontwork::DebugMode
      */
     verbose_logging: boolean = false;
     
     /**
      * To enable a bug reporter for staging and production you can modify debug.reporter, that it sents a request to the backend
+     * @param log_type: LogType 
      * @param category: string 
      * @param text: string
     */
-    reporter = (category: string, text: string) => { 
-        // TODO To get the developers attention to a bug we throw an error
-        // if(debug.mode === DebugMode.Debug) throw new Error("["+category+"] " + text);
-        console.error("["+category+"]", text); 
+    reporter = (log_type: LogType, category: string, text: string) => { 
+        if (log_type === LogType.Error) {
+            console.error(text); 
+        } else {
+            console.log(text); 
+        }
     };
 }
 export const debug = new Debug();
@@ -53,7 +61,7 @@ export class I18n {
         const locale_found = this.locales.find(l => l.locale === locale);
 
         if(locale_found === undefined) {
-            debug.reporter("I18n", "Locale '"+locale+"' does not exist");
+            debug.reporter(LogType.Error, "I18n", "Locale '"+locale+"' does not exist");
             return false;
         }
         
@@ -79,9 +87,8 @@ export class I18nLocale {
     get_translation(key: string): string {
         const translation = this.translations.find(t => t.key === key);
 
-        // local debug level: do panic in Development, but not in Production
         if(translation === undefined) {
-            debug.reporter("I18n", "The translation can not be retrieved because the specific key '"+key+"' for the locale '"+this.locale+"' does not exist.");
+            debug.reporter(LogType.Error, "I18n", "The translation can not be retrieved because the specific key '"+key+"' for the locale '"+this.locale+"' does not exist.");
             return "";
         }
 
@@ -463,7 +470,7 @@ export class Frontwork {
 
 		// Middleware: before Routes
         if (this.middleware.before_routes !== null) {
-            this.log(context.request, "[BEFORE_ROUTES]");
+            this.log(context.request, "BEFORE_ROUTES");
             const response = this.middleware.before_routes.build(context, this);
             if(response !== null) return { response: response, dom_ready: this.middleware.before_routes.dom_ready };
         }
@@ -487,7 +494,7 @@ export class Frontwork {
                         }
 
                         if (found) {
-                            this.log(context.request, "[ROUTE #" + route.id + " ("+route.path+")]");
+                            this.log(context.request, "ROUTE #" + route.id + " ("+route.path+")");
                             const response = route.component.build(context, this);
                             if(response !== null) return { response: response, dom_ready: route.component.dom_ready };
                         }
@@ -498,7 +505,7 @@ export class Frontwork {
 
         // Middleware: after Routes
         if (this.middleware.after_routes !== null) {
-            this.log(context.request, "[AFTER_ROUTES]");
+            this.log(context.request, "AFTER_ROUTES");
             const response = this.middleware.after_routes.build(context, this);
             if(response !== null) return { response: response, dom_ready: this.middleware.after_routes.dom_ready };
         }
@@ -506,8 +513,8 @@ export class Frontwork {
         return null;
 	}
 
-    protected log(request: FrontworkRequest, called_from: string) {
-        this.middleware.log(request, called_from);
+    protected log(request: FrontworkRequest, category: string) {
+        this.middleware.log(request, category);
     }
 }
 
@@ -531,12 +538,12 @@ export class FrontworkMiddleware {
         if (init && init.error_handler) {
             const init_error_handler = init.error_handler;
             this.error_handler = (request: FrontworkRequest, error: Error): FrontworkResponse => {
-                this.error(request, error);
+                this.error(request, "Userspace", error);
                 return init_error_handler(request, error);
             }
         } else {
             this.error_handler = (request: FrontworkRequest, error: Error): FrontworkResponse => {
-                this.error(request, error);
+                this.error(request, "Userspace", error);
                 return new FrontworkResponse(500, "ERROR");
             }
         }
@@ -558,22 +565,26 @@ export class FrontworkMiddleware {
         this.redirect_lonely_slash = init && init.redirect_lonely_slash? init.redirect_lonely_slash : true;
 	}
 
-    log(request: FrontworkRequest, called_from: string) {
+    __request_text(request: FrontworkRequest, called_from: string) {
         let text = request.method + " " + request.path;
         if(request.query_string !== "") text += "?" + request.query_string;
-        text += " " + called_from;
+        text += " [" + called_from + "]";
         if (request.POST.items.length > 0) {
-            text += "\n" + "    Scope POST: ";
+            text += "\n    Scope POST: ";
             for (let i = 0; i < request.POST.items.length; i++) {
                 const item = request.POST.items[i];
-                text += "\n" + "    Scope POST: ";
+                text += "\n        " + item.key + " = \"" + item.value + "\"";
             }
         }
-    
-        debug.reporter("Userspace-Error", text);
+        return text;
     }
 
-    error(request: FrontworkRequest, error: Error) {
-        this.log(request, "[ERROR]");
+    log(request: FrontworkRequest, category: string) {
+        debug.reporter(LogType.Info, category, this.__request_text(request, category));
+    }
+    
+    error(request: FrontworkRequest, category: string, error: Error) {
+        debug.reporter(LogType.Info, category, this.__request_text(request, category));
+        console.error(error)
     }
 }
