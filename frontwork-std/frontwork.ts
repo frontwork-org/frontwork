@@ -531,7 +531,6 @@ export class Frontwork {
 	}
 
 	protected routes_resolver_with_middleware(context: FrontworkContext): RoutesResolverResult|null {
-        //TODO: HANDLE ERRORS HERE SO WE KNOW THE CATEGORIES
         // Middleware: redirect lonely slash
         if (this.middleware.redirect_lonely_slash && context.request.path_dirs.length > 2 && context.request.path_dirs[context.request.path_dirs.length -1] === "") {
             let new_path = "";
