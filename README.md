@@ -5,7 +5,7 @@
 
 
 ## CLI Tool
-1. fontwork-cli install // install Deno and Wasmer
+1. fontwork install // install Deno
 
 ## [Read the Docs](DOCUMENTATION.md) 
 

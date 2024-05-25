@@ -22,11 +22,14 @@ class Debug {
      * @param category: string 
      * @param text: string
     */
-    reporter = (log_type: LogType, category: string, text: string) => { 
+    reporter = (log_type: LogType, category: string, text: string, error: Error|null) => { 
         if (log_type === LogType.Error) {
-            console.error(text); 
-        } else {
-            console.log(text); 
+            if(error === null) console.error(text);
+            else console.error(text, error);
+        } else if(log_type === LogType.Warn) {
+            console.warn(text);
+        } else if(log_type === LogType.Info && debug.verbose_logging) {
+            console.log(text);
         }
     };
 }
@@ -57,11 +60,11 @@ export class I18n {
     }
 
     set_locale(locale: string) {
-        if(debug.verbose_logging) console.log("I18n: Setting locale to " + locale);
+        if(debug.verbose_logging) debug.reporter(LogType.Info, "I18n", "   Setting locale to \"" + locale + "\"", null);
         const locale_found = this.locales.find(l => l.locale === locale);
 
         if(locale_found === undefined) {
-            debug.reporter(LogType.Error, "I18n", "Locale '"+locale+"' does not exist");
+            debug.reporter(LogType.Error, "I18n", "Locale '"+locale+"' does not exist", null);
             return false;
         }
         
@@ -88,7 +91,7 @@ export class I18nLocale {
         const translation = this.translations.find(t => t.key === key);
 
         if(translation === undefined) {
-            debug.reporter(LogType.Error, "I18n", "The translation can not be retrieved because the specific key '"+key+"' for the locale '"+this.locale+"' does not exist.");
+            debug.reporter(LogType.Error, "I18n", "The translation can not be retrieved because the specific key '"+key+"' for the locale '"+this.locale+"' does not exist.", null);
             return "";
         }
 
@@ -220,6 +223,28 @@ export class FrontworkRequest {
             cookies_string === null ? [] : key_value_list_to_array(cookies_string, "; ", "=")
         );
     }
+
+    __request_text(category: string) {
+        let text = this.method + " " + this.path;
+        if(this.query_string !== "") text += "?" + this.query_string;
+        text += " [" + category + "]";
+        if (this.POST.items.length > 0) {
+            text += "\n    Scope POST: ";
+            for (let i = 0; i < this.POST.items.length; i++) {
+                const item = this.POST.items[i];
+                text += "\n        " + item.key + " = \"" + item.value + "\"";
+            }
+        }
+        return text;
+    }
+
+    log(category: string) {
+        debug.reporter(LogType.Info, category, this.__request_text(category), null);
+    }
+    
+    error(category: string, error: Error) {
+        debug.reporter(LogType.Error, category, this.__request_text(category), error);
+    }
 }
 
 export class DocumentBuilder {
@@ -320,6 +345,11 @@ export class FrontworkResponse {
         this.content = content;
     }
 
+    set_mime_type(mime_type: string) {
+        this.mime_type = mime_type;
+        return this;
+    }
+
     add_header(name: string, value: string) {
         this.headers.push([name, value]);
         return this;
@@ -366,6 +396,8 @@ export class FrontworkResponse {
 
 export class FrontworkResponseRedirect extends FrontworkResponse {
     constructor(redirect_path: string) {
+        if(debug.verbose_logging) debug.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> "+redirect_path, null);
+        
         super(301, "redirecting...");
         this.add_header("Location", redirect_path);
     }
@@ -375,17 +407,23 @@ export interface FrontworkResponseEvent {
     (request: FrontworkRequest): FrontworkResponse
 }
 
-export interface FrontworkErrorResponseEvent {
-    (request: FrontworkRequest, error: Error): FrontworkResponse
-}
-
 export interface DomReadyEvent {
-    (context: FrontworkContext, frontwork: FrontworkClient): void
+    (context: FrontworkContext, client: FrontworkClient): void
 }
 
 export declare interface Component {
-    build(context: FrontworkContext, frontwork: Frontwork): FrontworkResponse|null;
-    dom_ready(context: FrontworkContext, frontwork: FrontworkClient): void;
+    build(context: FrontworkContext): FrontworkResponse|null;
+    dom_ready(context: FrontworkContext, client: FrontworkClient): void;
+}
+
+export declare interface ComponentErrorHandler {
+    build(context: FrontworkContext): FrontworkResponse;
+    dom_ready(context: FrontworkContext, client: FrontworkClient): void;
+}
+
+export declare interface ComponentAfterRoutes {
+    build(context: FrontworkContext, route_result: RoutesResolverResult|null): FrontworkResponse|null;
+    dom_ready(context: FrontworkContext, client: FrontworkClient): void;
 }
 
 let previous_route_id = 0;
@@ -421,8 +459,8 @@ export interface FrontworkContext {
 }
 
 export interface RoutesResolverResult {
-    response: FrontworkResponse|null;
-    dom_ready(context: FrontworkContext, frontwork: FrontworkClient): void;
+    response: FrontworkResponse;
+    dom_ready(context: FrontworkContext, client: FrontworkClient): void;
 }
 
 /**
@@ -451,6 +489,49 @@ export class Frontwork {
 	}
 
 	protected routes_resolver(context: FrontworkContext): RoutesResolverResult|null {
+        for (let a = 0; a < this.domain_routes.length; a++) {
+            const domain_routes = this.domain_routes[a];
+            if (domain_routes.domain.test(context.request.host)) {
+                for (let b = 0; b < domain_routes.routes.length; b++) {
+                    const route = domain_routes.routes[b];
+                    const route_path_dirs = route.path.split("/");
+
+                    if (context.request.path_dirs.length === route_path_dirs.length) {
+                        for (let c = 0; c < route_path_dirs.length; c++) {
+                            const route_path_dir = route_path_dirs[c];
+                            if (context.request.path_dirs.length === route_path_dirs.length) {
+                                let found = true;
+                                for (let i = 0; i < route_path_dirs.length; i++) {
+                                    const route_path_dir = route_path_dirs[i];
+                                    if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i]) {
+                                        found = false;
+                                        break;
+                                    }
+                                }
+        
+                                if (found) {
+                                    try {
+                                        context.request.log("ROUTE #" + route.id + " ("+route.path+")");
+                                        const response = route.component.build(context);
+                                        if(response !== null) return { response: response, dom_ready: route.component.dom_ready };
+                                        // We got here a deny from a Component, so lets try the next route
+                                    } catch (error) {
+                                        context.request.error("ROUTE #" + route.id + " ("+route.path+")", error);
+                                        return { response: this.middleware.error_handler.build(context), dom_ready: this.middleware.error_handler.dom_ready };
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
+	}
+
+	protected routes_resolver_with_middleware(context: FrontworkContext): RoutesResolverResult|null {
+        //TODO: HANDLE ERRORS HERE SO WE KNOW THE CATEGORIES
         // Middleware: redirect lonely slash
         if (this.middleware.redirect_lonely_slash && context.request.path_dirs.length > 2 && context.request.path_dirs[context.request.path_dirs.length -1] === "") {
             let new_path = "";
@@ -460,7 +541,7 @@ export class Frontwork {
                 }
             }
             
-            this.log(context.request, "[REDIRECT] -> " + new_path);
+            context.request.log("LONELY_SLASH_REDIRECT");
             const redirect_component: RoutesResolverResult = {
                 response: new FrontworkResponseRedirect(new_path),
                 dom_ready: () => {}
@@ -470,56 +551,44 @@ export class Frontwork {
 
 		// Middleware: before Routes
         if (this.middleware.before_routes !== null) {
-            this.log(context.request, "BEFORE_ROUTES");
-            const response = this.middleware.before_routes.build(context, this);
-            if(response !== null) return { response: response, dom_ready: this.middleware.before_routes.dom_ready };
-        }
-
-        // Routes
-        for (let i = 0; i < this.domain_routes.length; i++) {
-            const domain_routes = this.domain_routes[i];
-            if (domain_routes.domain.test(context.request.host)) {
-                for (let i = 0; i < domain_routes.routes.length; i++) {
-                    const route = domain_routes.routes[i];
-                    const route_path_dirs = route.path.split("/");
-
-                    if (context.request.path_dirs.length === route_path_dirs.length) {
-                        let found = true;
-                        for (let i = 0; i < route_path_dirs.length; i++) {
-                            const route_path_dir = route_path_dirs[i];
-                            if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i]) {
-                                found = false;
-                                break;
-                            }
-                        }
-
-                        if (found) {
-                            this.log(context.request, "ROUTE #" + route.id + " ("+route.path+")");
-                            const response = route.component.build(context, this);
-                            if(response !== null) return { response: response, dom_ready: route.component.dom_ready };
-                        }
-                    }
-                }
+            context.request.log("BEFORE_ROUTES");
+            try {
+                const response = this.middleware.before_routes.build(context);
+                if(response !== null) return { response: response, dom_ready: this.middleware.before_routes.dom_ready };
+            } catch (error) {
+                context.request.error("BEFORE_ROUTES", error);
+                return { response: this.middleware.error_handler.build(context), dom_ready: this.middleware.error_handler.dom_ready };
             }
         }
 
+        // Routes
+        const route_result = this.routes_resolver(context);
+
         // Middleware: after Routes
         if (this.middleware.after_routes !== null) {
-            this.log(context.request, "AFTER_ROUTES");
-            const response = this.middleware.after_routes.build(context, this);
-            if(response !== null) return { response: response, dom_ready: this.middleware.after_routes.dom_ready };
+            context.request.log("AFTER_ROUTES");
+            try {
+                const response = this.middleware.after_routes.build(context, route_result);
+                if(response !== null) return { response: response, dom_ready: this.middleware.after_routes.dom_ready };
+            } catch (error) {
+                context.request.error("AFTER_ROUTES", error);
+                return { response: this.middleware.error_handler.build(context), dom_ready: this.middleware.error_handler.dom_ready };
+            }
         }
-
-        return null;
+        
+        if (route_result === null) {
+            const response = this.middleware.not_found_handler.build(context);
+            if (response === null) {
+                return { response: new FrontworkResponse(404, "Page not found"), dom_ready: this.middleware.not_found_handler.dom_ready };
+            }
+            return { response: response, dom_ready: this.middleware.not_found_handler.dom_ready };
+        }
+        return route_result;
 	}
-
-    protected log(request: FrontworkRequest, category: string) {
-        this.middleware.log(request, category);
-    }
 }
 
 export interface FrontworkMiddlewareInit {
-    error_handler?: FrontworkErrorResponseEvent|null;
+    error_handler?: ComponentErrorHandler|null;
 	not_found_handler?: Component|null;
 	before_routes?: Component|null;
 	after_routes?: Component|null;
@@ -527,24 +596,22 @@ export interface FrontworkMiddlewareInit {
 }
 
 export class FrontworkMiddleware {
-    error_handler: FrontworkErrorResponseEvent;
+    error_handler: ComponentErrorHandler;
 	not_found_handler: Component;
 	before_routes: Component|null;
-	after_routes: Component|null;
+	after_routes: ComponentAfterRoutes|null;
     redirect_lonely_slash: boolean;
 
 	constructor(init?: FrontworkMiddlewareInit) {
         // Middleware: error
         if (init && init.error_handler) {
-            const init_error_handler = init.error_handler;
-            this.error_handler = (request: FrontworkRequest, error: Error): FrontworkResponse => {
-                this.error(request, "Userspace", error);
-                return init_error_handler(request, error);
-            }
+            this.error_handler = init.error_handler
         } else {
-            this.error_handler = (request: FrontworkRequest, error: Error): FrontworkResponse => {
-                this.error(request, "Userspace", error);
-                return new FrontworkResponse(500, "ERROR");
+            this.error_handler = {
+                build: (): FrontworkResponse => {
+                    return new FrontworkResponse(500, "ERROR 500 - Internal server error");
+                },
+                dom_ready: () => {}
             }
         }
 
@@ -564,27 +631,4 @@ export class FrontworkMiddleware {
         this.after_routes = init && init.after_routes? init.after_routes : null;
         this.redirect_lonely_slash = init && init.redirect_lonely_slash? init.redirect_lonely_slash : true;
 	}
-
-    __request_text(request: FrontworkRequest, called_from: string) {
-        let text = request.method + " " + request.path;
-        if(request.query_string !== "") text += "?" + request.query_string;
-        text += " [" + called_from + "]";
-        if (request.POST.items.length > 0) {
-            text += "\n    Scope POST: ";
-            for (let i = 0; i < request.POST.items.length; i++) {
-                const item = request.POST.items[i];
-                text += "\n        " + item.key + " = \"" + item.value + "\"";
-            }
-        }
-        return text;
-    }
-
-    log(request: FrontworkRequest, category: string) {
-        debug.reporter(LogType.Info, category, this.__request_text(request, category));
-    }
-    
-    error(request: FrontworkRequest, category: string, error: Error) {
-        debug.reporter(LogType.Info, category, this.__request_text(request, category));
-        console.error(error)
-    }
 }

@@ -1,4 +1,4 @@
-import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkResponse, DomReadyEvent, FrontworkInit, EnvironmentStage } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkResponse, DomReadyEvent, FrontworkInit, EnvironmentStage, LogType, debug } from "./frontwork.ts";
 import { html_element_set_attributes } from "./utils.ts";
 
 
@@ -40,7 +40,7 @@ export class FrontworkClient extends Frontwork {
 
         // websocket for hot-reload check
         if (this.stage === EnvironmentStage.Development) {
-            console.log("hot-reloading is enabled; Make sure this is the development environment");
+            console.info("hot-reloading is enabled; Make sure this is the development environment");
             // location.reload() after noticing the disconnect and reconnect is successful
             let state = 0;
 
@@ -80,16 +80,15 @@ export class FrontworkClient extends Frontwork {
 
         let result: PageChangeResult;
         try {
-            const resolved_component = this.routes_resolver(context);
+            const resolved_component = this.routes_resolver_with_middleware(context);
             if (resolved_component) {
                 result = { response: resolved_component.response, dom_ready: resolved_component.dom_ready };
             } else {
-                result = { response: this.middleware.not_found_handler.build(context, this), dom_ready: this.middleware.not_found_handler.dom_ready };
+                result = { response: this.middleware.not_found_handler.build(context), dom_ready: this.middleware.not_found_handler.dom_ready };
             }
         } catch (error) {
-            console.error(error);
-            const error_handler_result = this.middleware.error_handler(request, error);
-            result = { response: error_handler_result, dom_ready: null };
+            const error_handler_result = this.middleware.error_handler.build(context);
+            result = { response: error_handler_result, dom_ready: this.middleware.error_handler.dom_ready };
         }
 
         
@@ -98,10 +97,10 @@ export class FrontworkClient extends Frontwork {
                 // redirect
                 const redirect_url = result.response.get_header("Location");
                 if (redirect_url === null) {
-                    console.error("Tried to redirect: Status Code is 301, but Location header is null");
+                    debug.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
                     return null;
                 } else {
-                    console.log("Redirect to:", redirect_url);
+                    debug.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
                     this.page_change_to(redirect_url);
                     return { url: this.request_url, is_redirect: true, status_code: result.response.status_code };
                 }
@@ -137,7 +136,7 @@ export class FrontworkClient extends Frontwork {
     
     // function replacement for window.location; accessible for the Component method dom_ready
     public page_change_to(url_or_path: string) {
-        console.log("page_change_to url_or_path:", url_or_path);
+        debug.reporter(LogType.Info, "PageChange", "page_change_to url_or_path: " + url_or_path, null);
         let url;
         const test = url_or_path.indexOf("//");
         if (test === 0 || test === 5 || test === 6) { // if "//" OR "http://" OR "https://"
@@ -150,7 +149,6 @@ export class FrontworkClient extends Frontwork {
         if(result !== null) {
             if(result.is_redirect) return true;
 
-            console.log("history.pushState result", result)
             history.pushState(result, document.title, this.request_url);
             return true;
         }

@@ -283,7 +283,7 @@ fn main() {
                         ts_file_content.push_str("                .add_head_meta_data(title, description, \"index,follow\")\n");
                         ts_file_content.push_str("        );\n");
                         ts_file_content.push_str("    }\n\n");
-                        ts_file_content.push_str("    dom_ready(context: FrontworkContext, frontwork: FrontworkClient) {\n        \n  }\n");
+                        ts_file_content.push_str("    dom_ready(context: FrontworkContext, client: FrontworkClient) {\n        \n  }\n");
                         ts_file_content.push_str("}\n");
                             
 

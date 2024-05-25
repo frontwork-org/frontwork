@@ -11,12 +11,13 @@ export class FrontworkTestworker extends Frontwork {
 
     constructor(init: FrontworkInit) {
         super(init);
-        console.log("Test worker started\n");
+        console.info("Test worker started\n");
         debug.verbose_logging = true;
-        debug.reporter = (log_type: LogType, category: string, text: string) => {
+        debug.reporter = (log_type: LogType, category: string, text: string, error: Error|null) => {
             if (log_type === LogType.Error) {
                 this.fail_count++;
-                console.error(text); 
+                if(error === null) console.error(text);
+                else console.error(text, error);
             } else if (log_type === LogType.Warn) {
                 this.warn_count++;
                 console.warn(text); 
@@ -29,7 +30,7 @@ export class FrontworkTestworker extends Frontwork {
         this.test_count++;
         
         if (actual === expected) {
-            console.log("Test "+this.test_count+": passed");
+            console.info("Test "+this.test_count+": passed");
         } else {
             this.fail_count++;
             console.error("Test "+this.test_count+": expected " + expected + " but got " + actual);
@@ -45,7 +46,7 @@ export class FrontworkTestworker extends Frontwork {
             this.fail_count++;
             console.error("Test "+this.test_count+": expected not" + expected + " but got " + actual);
         } else {
-            console.log("Test "+this.test_count+": passed");
+            console.info("Test "+this.test_count+": passed");
         }
         return this;
     }
@@ -56,7 +57,7 @@ export class FrontworkTestworker extends Frontwork {
         
         try {
             fn();
-            console.log("Test "+this.test_count+": passed");
+            console.info("Test "+this.test_count+": passed");
         } catch (error) {
             this.fail_count++;
             console.error("Test "+this.test_count+": failed.", error);
@@ -79,7 +80,7 @@ export class FrontworkTestworker extends Frontwork {
                     const context = { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
     
                     this.assert_function(() => {
-                        route.component.build(context, this);
+                        route.component.build(context);
                     });
                 }
             }
@@ -97,9 +98,9 @@ export class FrontworkTestworker extends Frontwork {
 
         const time_finished = new Date().getTime();
         const time_taken = (time_finished - this.time_start) / 1000;
-        console.log("\n"+"test result:", status_text, this.fail_count + " failures / " + this.test_count + " tests; finished in "+time_taken.toFixed(2)+"s"+"\n");
+        console.info("\n"+"test result:", status_text, this.fail_count + " failures / " + this.test_count + " tests; finished in "+time_taken.toFixed(2)+"s"+"\n");
         if (this.warn_count > 0) {
-            console.log("Please note that there are ", yellow(this.warn_count.toString()) + " warnings.\n");
+            console.info("Please note that there are ", yellow(this.warn_count.toString()) + " warnings.\n");
         }
         return this;
     }

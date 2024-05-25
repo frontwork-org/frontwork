@@ -5,7 +5,7 @@ Frontwork is a TypeScript Framework to develop Frontend applications for the web
 
 ### Feature highlights
 - Serverside rendering by default
-    - Create serverside rendering code as you would create JS/TS Frontend code
+    - Create serverside rendering code while you also create JS/TS Frontend code
 - Simple assets sender with the method setup_assets_resolver(assets_dir)
 - Routing System
 
@@ -39,7 +39,7 @@ Component contains 2 handler functions "build" and "dom_ready"
 Executed for server side rendering and on client side after clicking on a link.
 
 #### dom_ready
-Executed after.
+Executed after the DOM is ready. Put here the code for events.
 
 
 

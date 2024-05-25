@@ -13,6 +13,7 @@
     "https://deno.land/std@0.154.0/async/pool.ts": "ef9eb97b388543acbf0ac32647121e4dbe629236899586c4d4311a8770fbb239",
     "https://deno.land/std@0.154.0/async/tee.ts": "d27680d911816fcb3d231e16d690e7588079e66a9b2e5ce8cc354db94fdce95f",
     "https://deno.land/std@0.154.0/http/server.ts": "e2e16f0b124ffef022ad04797d4250d6e4fc0d9579780999091949b17789dd1a",
+    "https://deno.land/std@0.224.0/fmt/colors.ts": "508563c0659dd7198ba4bbf87e97f654af3c34eb56ba790260f252ad8012e1c5",
     "https://deno.land/x/deno_dom@v0.1.34-alpha/build/deno-wasm/deno-wasm.js": "3fa41dba4813e6d4b024a53a146b76e1afcbdf218fc02063442378c61239ed14",
     "https://deno.land/x/deno_dom@v0.1.34-alpha/deno-dom-wasm.ts": "bfd999a493a6974e9fca4d331bee03bfb68cfc600c662cd0b48b21d67a2a8ba0",
     "https://deno.land/x/deno_dom@v0.1.34-alpha/src/api.ts": "0ff5790f0a3eeecb4e00b7d8fbfa319b165962cf6d0182a65ba90f158d74f7d7",

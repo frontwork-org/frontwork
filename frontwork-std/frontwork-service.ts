@@ -1,5 +1,5 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage, LogType, debug } from "./frontwork.ts";
 import { key_value_list_to_array } from "./utils.ts";
 
 
@@ -14,7 +14,7 @@ export class FrontworkWebservice extends Frontwork {
     }
     
     start() {
-        console.log("Deno started webservice on http://localhost:" + this.port);
+        console.info("Deno started webservice on http://localhost:" + this.port);
         const abortController = new AbortController();
 
         if (this.stage === EnvironmentStage.Development) {
@@ -60,7 +60,7 @@ export class FrontworkWebservice extends Frontwork {
                 const file = Deno.readFileSync(this.style_css_absolute_path);
                 return new Response(file);
             } catch (error) {
-                console.log("ERROR can not load style.css from '" + this.style_css_absolute_path + "'\n", error);
+                debug.reporter(LogType.Error, "ASSET", "ERROR can not load style.css from '" + this.style_css_absolute_path + "'\n", error);
                 return null;
             }
         } else if(request.path === "/assets/main.js") {
@@ -68,7 +68,7 @@ export class FrontworkWebservice extends Frontwork {
                 const file = Deno.readFileSync(this.main_js_absolute_path);
                 return new Response(file);
             } catch (error) {
-                console.log("ERROR can not load main.js from '" + this.main_js_absolute_path + "'\n", error);
+                debug.reporter(LogType.Error, "ASSET", "ERROR can not load main.js from '" + this.main_js_absolute_path + "'\n", error);
                 return null;
             }
         }
@@ -76,6 +76,7 @@ export class FrontworkWebservice extends Frontwork {
         for (const relative_file_path of this.assets_relative_path_files) {
             if (relative_file_path === request.path) {
                 const file = Deno.readFileSync(this.assets_folder_path + request.path);
+                //TODO: add missing headers
                 return new Response(file);
             }
         }
@@ -115,13 +116,13 @@ export class FrontworkWebservice extends Frontwork {
             // Assets resolver
             const resolved_asset = this.assets_resolver(request);
             if(resolved_asset !== null) {
-                this.log(request, "ASSET");
+                request.log("ASSET");
                 return resolved_asset;
             }
 
             // Route
             const context = { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
-            const resolved_component = this.routes_resolver(context);
+            const resolved_component = this.routes_resolver_with_middleware(context);
             
             if(resolved_component !== null) {
                 const resolved_response = resolved_component;
@@ -130,17 +131,11 @@ export class FrontworkWebservice extends Frontwork {
                 }
             }
     
-            this.log(request, "[NOT FOUND]");
-            const not_found_response = <FrontworkResponse> this.middleware.not_found_handler.build(context, this);
+            request.log("NOT_FOUND");
+            const not_found_response = <FrontworkResponse> this.middleware.not_found_handler.build(context);
             return not_found_response.into_response();
         } catch (error) {
-            console.error(error);
-            
-            try {
-                return this.middleware.error_handler(request, error).into_response();
-            } catch (error) {
-                console.error("ERROR in middleware.error_handler", error);
-            }
+            console.error("ERROR in middleware.error_handler", error);
         }
 
         return new Response("ERROR in error_handler", { status: 500 });
