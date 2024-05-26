@@ -463,6 +463,12 @@ export interface RoutesResolverResult {
 }
 
 /**
+ *   @param {EnvironmentPlatform} platform - Web, Desktop or Android
+ *   @param {EnvironmentStage} stage - Development, Staging or Production
+ *   @param {number} port - Which port should Deno start the webservice
+ *   @param {DomainRoutes[]} domain_routes - Array of routes with a domain as a parent
+ *   @param {FrontworkMiddleware} middleware - Handler for every edge case like 404er, 500er. You can also execute code before and after a route executes.
+ *   @param {i18n} I18n - Prepare always translations before hand to save time later. For every static string please use the context.i18n.get_translation() method.
  *   @param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
  */
 export interface FrontworkInit {

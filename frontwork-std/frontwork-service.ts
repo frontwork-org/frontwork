@@ -68,7 +68,6 @@ export class FrontworkWebservice extends Frontwork {
     private main_js_absolute_path = "";
 
     private assets_folder_path = "";
-    private assets_relative_path_files: string[] = [];
     private assets: Asset[] = [];
 
     constructor (init: FrontworkInit) {
@@ -116,7 +115,6 @@ export class FrontworkWebservice extends Frontwork {
         return this;
     }
 
-    // TODO: Add a cache controller for assets
     private assets_resolver(request: FrontworkRequest): Response|null {
         if(request.path === "/assets/style.css") {
             try {
