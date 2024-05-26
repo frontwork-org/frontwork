@@ -262,9 +262,7 @@ class DocumentBuilder {
     }
     toString() {
         const html_response = this.html_response();
-        let content = this.doctype + '\n';
-        content += html_response.outerHTML;
-        return content;
+        return this.doctype + '\n' + html_response.outerHTML;
     }
 }
 class FrontworkResponse {
@@ -485,7 +483,10 @@ class FrontworkMiddleware {
         } else {
             this.error_handler = {
                 build: ()=>{
-                    return new FrontworkResponse(500, "ERROR 500 - Internal server error");
+                    const document_builder = new DocumentBuilder();
+                    const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
+                    h1.innerText = "ERROR 500 - Internal server error";
+                    return new FrontworkResponse(500, document_builder.set_html_lang("en").add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow"));
                 },
                 dom_ready: ()=>{}
             };
@@ -728,6 +729,7 @@ class Test2Component {
         title1.innerText = "Test Page 2";
         const description = main.appendChild(document.createElement("p"));
         description.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
+        debug.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);
         return new FrontworkResponse(200, document_builder.set_html_lang("en").add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow"));
     }
     dom_ready(context, client) {

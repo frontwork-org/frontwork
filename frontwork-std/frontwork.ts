@@ -327,9 +327,8 @@ export class DocumentBuilder {
     toString() {
         const html_response = <HTMLElement> this.html_response();
 
-        let content = this.doctype + '\n';
-        content += html_response.outerHTML;
-        return content;
+        return this.doctype + '\n' 
+            + html_response.outerHTML;
     }
 }
 
@@ -608,7 +607,15 @@ export class FrontworkMiddleware {
         } else {
             this.error_handler = {
                 build: (): FrontworkResponse => {
-                    return new FrontworkResponse(500, "ERROR 500 - Internal server error");
+                    const document_builder = new DocumentBuilder();
+                    const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
+                    h1.innerText = "ERROR 500 - Internal server error";
+
+                    return new FrontworkResponse(500,
+                        document_builder
+                            .set_html_lang("en")
+                            .add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
+                    );
                 },
                 dom_ready: () => {}
             }
