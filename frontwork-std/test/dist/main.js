@@ -142,6 +142,11 @@ class Scope {
         return null;
     }
 }
+class GetScope extends Scope {
+    constructor(items){
+        super(items);
+    }
+}
 class PostScope extends Scope {
     constructor(items){
         super(items);
@@ -176,7 +181,7 @@ class FrontworkRequest {
         this.path_dirs = decodeURIComponent(parsed_url.path.replace(/\+/g, '%20')).split("/");
         this.query_string = parsed_url.query_string;
         this.fragment = parsed_url.fragment;
-        this.GET = new CookiesScope(key_value_list_to_array(parsed_url.query_string, "&", "="));
+        this.GET = new GetScope(key_value_list_to_array(parsed_url.query_string, "&", "="));
         this.POST = post;
         const cookies_string = this.headers.get("cookie");
         this.COOKIES = new CookiesScope(cookies_string === null ? [] : key_value_list_to_array(cookies_string, "; ", "="));

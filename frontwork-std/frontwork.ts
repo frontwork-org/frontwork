@@ -212,7 +212,7 @@ export class FrontworkRequest {
         this.query_string = parsed_url.query_string;
         this.fragment = parsed_url.fragment;
 
-        this.GET = new CookiesScope(
+        this.GET = new GetScope(
             key_value_list_to_array(parsed_url.query_string, "&", "=")
         );
 
