@@ -3,11 +3,73 @@ import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkIni
 import { key_value_list_to_array } from "./utils.ts";
 
 
+class Asset {
+    absolute_path: string;
+    relative_path: string;
+    content_type: string;
+
+    constructor(absolute_path: string, relative_file_path: string) {
+        this.absolute_path = absolute_path;
+        this.relative_path = relative_file_path;
+
+        const file_dot_split = relative_file_path.split(".");
+        const file_extention = file_dot_split[file_dot_split.length -1];
+        switch (file_extention) {
+            case "js": this.content_type = "text/javascript; charset=utf-8"; break;
+            case "css": this.content_type = "text/css; charset=utf-8"; break;
+            case "txt": this.content_type = "text/txt; charset=utf-8"; break;
+            case "csv": this.content_type = "text/csv; charset=utf-8"; break;
+
+            case "xml": this.content_type = "application/xml"; break;
+            case "json": this.content_type = "application/json"; break;
+
+            case "webp": this.content_type = "image/webp"; break;
+            case "ico": this.content_type = "image/x-icon"; break;
+            case "png": this.content_type = "image/png"; break;
+            case "jpg": this.content_type = "image/jpeg"; break;
+            case "jpeg": this.content_type = "image/jpeg"; break;
+            case "gif": this.content_type = "image/gif"; break;
+
+            case "otf": this.content_type = "font/otf"; break;
+            case "ttf": this.content_type = "font/ttf"; break;
+            case "woff": this.content_type = "font/woff"; break;
+            case "woff2": this.content_type = "font/woff2"; break;
+            case "eot": this.content_type = "application/vnd.ms-fontobject"; break;
+
+            case "weba": this.content_type = "audio/webm"; break;
+            case "opus": this.content_type = "audio/x-opus"; break;
+            case "flac": this.content_type = "audio/x-flac"; break;
+            case "m4a": this.content_type = "audio/x-m4a"; break;
+            case "wav": this.content_type = "audio/x-wav"; break;
+            case "mp3": this.content_type = "audio/mp3"; break;
+            case "aac": this.content_type = "audio/aac"; break;
+            
+            case "webm": this.content_type = "video/webm"; break;
+            case "mp4": this.content_type = "video/mp4"; break;
+            case "m4v": this.content_type = "video/x-m4v"; break;
+            case "mkv": this.content_type = "video/x-matroska"; break;
+            case "mk3d": this.content_type = "video/x-matroska"; break;
+            case "mks": this.content_type = "video/x-matroska"; break;
+            case "avi": this.content_type = "video/x-msvideo"; break;
+
+            
+            default: 
+                this.content_type = "unknown";
+                debug.reporter(LogType.Warn, "ASSET", "Unknown mime type for file extention '"+file_extention+"'. Please use only compatible and efficient file types for the web.", null) 
+                break;
+        }
+
+    }
+}
+
+
 export class FrontworkWebservice extends Frontwork {
-    private assets_folder_path = "";
-    private assets_relative_path_files: string[] = [];
     private style_css_absolute_path = "";
     private main_js_absolute_path = "";
+
+    private assets_folder_path = "";
+    private assets_relative_path_files: string[] = [];
+    private assets: Asset[] = [];
 
     constructor (init: FrontworkInit) {
         super(init);
@@ -29,15 +91,16 @@ export class FrontworkWebservice extends Frontwork {
     }
 
     setup_assets_resolver(assets_folder_path: string) {
+        // add last slash if not exists
+        if (assets_folder_path.slice(-1) !== '/') assets_folder_path += "/"
         this.assets_folder_path = assets_folder_path;
-        // remove last slash if exists
-        if (this.assets_folder_path.charAt(this.assets_folder_path.length -1) === '/') {
-            this.assets_folder_path.substring(0, this.assets_folder_path.length -2)
-        }
 
         for (const dirEntry of Deno.readDirSync(assets_folder_path)) {
             if (dirEntry.isFile) {
-                this.assets_relative_path_files.push('/' + dirEntry.name.replace(this.assets_folder_path, ""));
+                this.assets.push(new Asset(
+                    this.assets_folder_path + dirEntry.name, 
+                    '/' + dirEntry.name
+                ));
             }
         }
         return this;
@@ -58,7 +121,9 @@ export class FrontworkWebservice extends Frontwork {
         if(request.path === "/assets/style.css") {
             try {
                 const file = Deno.readFileSync(this.style_css_absolute_path);
-                return new Response(file);
+                const response = new Response(file);
+                response.headers.append("content-type", "text/css; charset=utf-8")
+                return response;
             } catch (error) {
                 debug.reporter(LogType.Error, "ASSET", "ERROR can not load style.css from '" + this.style_css_absolute_path + "'\n", error);
                 return null;
@@ -66,18 +131,21 @@ export class FrontworkWebservice extends Frontwork {
         } else if(request.path === "/assets/main.js") {
             try {
                 const file = Deno.readFileSync(this.main_js_absolute_path);
-                return new Response(file);
+                const response = new Response(file);
+                response.headers.append("content-type", "text/javascript; charset=utf-8")
+                return response;
             } catch (error) {
                 debug.reporter(LogType.Error, "ASSET", "ERROR can not load main.js from '" + this.main_js_absolute_path + "'\n", error);
                 return null;
             }
         }
 
-        for (const relative_file_path of this.assets_relative_path_files) {
-            if (relative_file_path === request.path) {
-                const file = Deno.readFileSync(this.assets_folder_path + request.path);
-                //TODO: add missing headers
-                return new Response(file);
+        for (const asset of this.assets) {
+            if (asset.relative_path === request.path) {
+                const file = Deno.readFileSync(asset.absolute_path);
+                const response = new Response(file);
+                response.headers.append("content-type", asset.content_type)
+                return response;
             }
         }
         return null;
