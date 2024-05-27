@@ -489,7 +489,7 @@ export class Frontwork {
 		this.domain_routes = init.domain_routes;
 		this.middleware = init.middleware;
 		this.i18n = init.i18n;
-        if(this.stage === EnvironmentStage.Development) DEBUG.verbose_logging = true;
+        // if(this.stage === EnvironmentStage.Development) DEBUG.verbose_logging = true;
 	}
 
 	protected routes_resolver(context: FrontworkContext): RoutesResolverResult|null {
@@ -502,7 +502,6 @@ export class Frontwork {
 
                     if (context.request.path_dirs.length === route_path_dirs.length) {
                         for (let c = 0; c < route_path_dirs.length; c++) {
-                            const route_path_dir = route_path_dirs[c];
                             if (context.request.path_dirs.length === route_path_dirs.length) {
                                 let found = true;
                                 for (let i = 0; i < route_path_dirs.length; i++) {
