@@ -140,12 +140,18 @@ export class FrontworkWebservice extends Frontwork {
 
         for (const asset of this.assets) {
             if (asset.relative_path === request.path) {
-                const file = Deno.readFileSync(asset.absolute_path);
-                const response = new Response(file);
-                response.headers.append("content-type", asset.content_type)
-                return response;
+                try {
+                    const file = Deno.readFileSync(asset.absolute_path);
+                    const response = new Response(file);
+                    response.headers.append("content-type", asset.content_type)
+                    return response;
+                } catch (error) {
+                    DEBUG.reporter(LogType.Error, "ASSET", "ERROR can not load asset from '" + asset.absolute_path + "'\n", error);
+                    return null;
+                }
             }
         }
+        
         return null;
     }
     

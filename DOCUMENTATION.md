@@ -15,7 +15,7 @@ To start a new project you can use `frontwork init` to use the current directory
 
 ## 3. Routing
 ### Domain
-Domain is a RegExp object. It is the pattern to test for a domain. Thanks to this we can use different routes for each domain.
+With FrontworkInit.domain_to_route_selector we are able to selects which routes should work under a domain by returning Route[].
 
 ### Route
 Routes contains the path where the spezific Component will be executed.
@@ -23,6 +23,28 @@ The path con also contain "*" which mean any but not empty characters for the de
 Example:
 
     /hello/*
+
+#### Routes collision
+To handle issue that a route like "/hello/*" make "/hello/world" never in use. It is a eayy fix by ordering the array of routes. The priority is first come, first served.
+
+##### Rare case in which the priority is not sufficient
+In this case we just create a new Component that acts as middleman.
+```TypeScript
+class CollisionHandlerComponent implements Component {
+    build(context: FrontworkContext) {
+        if (context.request.path_dirs[2] === "first-come-first-served") {
+            return new HelloWorldPrioTestComponent().build(context);
+        }
+        return new HelloWorldComponent().build(context);
+    }
+    dom_ready(context: FrontworkContext): void {
+        if (context.request.path_dirs[2] === "first-come-first-served") {
+            new HelloWorldPrioTestComponent().dom_ready(context);
+        }
+        new HelloWorldComponent().dom_ready(context);
+    }
+}
+```
 
 ### Component
 Component contains 2 handler functions "build" and "dom_ready" 

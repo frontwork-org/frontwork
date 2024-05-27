@@ -1,10 +1,10 @@
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, Frontwork, DEBUG, LogType, FW } from "../frontwork.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainToRouteSelector, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, Frontwork, DEBUG, LogType, FW } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
 
 // TODO:: improve DOM Capabilities
 // class HeaderComponent implements Component {
-// 	build(context: FrontworkContext): FrontworkResponse {
+// 	build(context: FrontworkContext):_HTMLElement {
 // 		const header = document.createElement("header");
 // 		FW.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
 // 		FW.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
@@ -12,18 +12,37 @@ import { i18n } from "./test.i18n.ts";
 // 		FW.ensure_element_with_text("a", "a-german", "German", { href: "/german" }).append_to(header);
 // 		FW.ensure_element_with_text("a", "a-crash", "Crash", { href: "/crash" }).append_to(header);
 // 	}
-// 	dom_ready() {}
+// 	dom_ready(context: FrontworkContext, client: FrontworkClient) {}
 // }
 
 
 function render_header(): HTMLElement {
 	const header = document.createElement("header");
-	FW.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
-	FW.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
-	FW.ensure_element_with_text("a", "a-test3", "Test 3", { href: "/test3" }).append_to(header);
-	FW.ensure_element_with_text("a", "a-german", "German", { href: "/german" }).append_to(header);
-	FW.ensure_element_with_text("a", "a-crash", "Crash", { href: "/crash" }).append_to(header);
+	// FW.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
+	// FW.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
+	// FW.ensure_element_with_text("a", "a-test3", "Test 3", { href: "/test3" }).append_to(header);
+	// FW.ensure_element_with_text("a", "a-german", "German", { href: "/german" }).append_to(header);
+	// FW.ensure_element_with_text("a", "a-crash", "Crash", { href: "/crash" }).append_to(header);
 	return header;
+}
+
+class AnotherComponent implements Component {
+    build(context: FrontworkContext) {
+		const document_builder = new DocumentBuilder(context);
+		document_builder.document_body.appendChild( render_header() );
+		const main = document_builder.document_body.appendChild( document.createElement("main") );
+
+		const title1 = main.appendChild( document.createElement("h1") );
+		title1.innerText = context.i18n.get_translation("another_title1");
+		const description = main.appendChild( document.createElement("p") );
+		description.innerText = context.i18n.get_translation("another_text1");
+
+		return new FrontworkResponse(200, 
+			document_builder
+				.add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow")
+		);
+	}
+    dom_ready(): void {}
 }
 
 class TestComponent implements Component {
@@ -79,9 +98,6 @@ class Test2Component implements Component {
     build(context: FrontworkContext) {
 		const document_builder = new DocumentBuilder(context);
 		document_builder.document_body.appendChild( render_header() );
-		// TODO: Add helper functions to create elements
-		// Generel helper
-		// document getelementbyid === null? create element
 		const main = document_builder.document_body.appendChild( document.createElement("main") );
 
 		const title1 = main.appendChild( document.createElement("h1") );
@@ -124,12 +140,35 @@ class ElementTestComponent implements Component {
     dom_ready(): void {}
 }
 
-class HelloWorldComponent implements Component {
+class HelloWorldPrioTestComponent implements Component {
     build(context: FrontworkContext) {
-		const content = "hello "+context.request.path_dirs[2];
+		const content = "Hello this is indeed first come, first served basis";
 		return new FrontworkResponse(200, content);
 	}
-    dom_ready(): void {}
+    dom_ready(context: FrontworkContext): void {}
+}
+
+class HelloWorldComponent implements Component {
+    build(context: FrontworkContext) {
+		const content = "Hello "+context.request.path_dirs[2];
+		return new FrontworkResponse(200, content);
+	}
+    dom_ready(context: FrontworkContext): void {}
+}
+
+class CollisionHandlerComponent implements Component {
+    build(context: FrontworkContext) {
+		if (context.request.path_dirs[2] === "first-come-first-served") {
+			return new HelloWorldPrioTestComponent().build(context);
+		}
+		return new HelloWorldComponent().build(context);
+	}
+    dom_ready(context: FrontworkContext): void {
+		if (context.request.path_dirs[2] === "first-come-first-served") {
+			new HelloWorldPrioTestComponent().dom_ready(context);
+		}
+		new HelloWorldComponent().dom_ready(context);
+	}
 }
 
 class CrashComponent implements Component {
@@ -142,17 +181,20 @@ class CrashComponent implements Component {
 }
 
 
-const domain_routes: DomainRoutes[] = [
-	new DomainRoutes(/.*/, [
-		new Route("/", new TestComponent()),
-		new Route("/test2", new Test2Component()),
-		new Route("/test3", new Test3Component()),
-		new Route("/german", new TestGerman()),
-		new Route("/crash", new CrashComponent()),
-		new Route("/element_test", new ElementTestComponent()),
-		new Route("/hello/22222222", new HelloWorldComponent()),
-		new Route("/hello/*", new HelloWorldComponent()),
-	])
+const default_routes: Route[] = [
+	new Route("/", new TestComponent()),
+	new Route("/test2", new Test2Component()),
+	new Route("/test3", new Test3Component()),
+	new Route("/german", new TestGerman()),
+	new Route("/crash", new CrashComponent()),
+	new Route("/element_test", new ElementTestComponent()),
+	new Route("/hello/first-come-first-served", new HelloWorldPrioTestComponent()),
+	new Route("/hello/*", new HelloWorldComponent()),
+	new Route("/hi/*", new CollisionHandlerComponent()),
+];
+
+const another_routes: Route[] = [
+	new Route("/", new AnotherComponent()),
 ];
 
 const middleware = new FrontworkMiddleware({
@@ -171,7 +213,13 @@ export const APP_CONFIG: FrontworkInit = {
 	platform: EnvironmentPlatform.Web, 
 	stage: EnvironmentStage.Development,
 	port: 8080,
-	domain_routes: domain_routes,
+	domain_to_route_selector: (context: FrontworkContext) => {
+		const domain = context.request.host.split(":")[0];
+		console.log("domain", domain);
+		
+		if (domain === "127.0.0.1") return another_routes;
+		return default_routes;
+	},
 	middleware: middleware,
 	i18n: i18n,
 	build_on_page_load: false

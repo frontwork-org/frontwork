@@ -66,21 +66,24 @@ export class FrontworkTestworker extends Frontwork {
         return this;
     }
 
-    test_routes() {
-        this.assert_not_equals(this.domain_routes.length, 0);
-        for (let d = 0; d < this.domain_routes.length; d++) {
-            const domain_route = this.domain_routes[d];
-            for (let r = 0; r < domain_route.routes.length; r++) {
-                const route = domain_route.routes[r];
+    test_routes(domains: string[]) {
+        for (let d = 0; d < domains.length; d++) {
+            const domain_url = "http://127.0.0.1:"+this.port;
+            const domain_request = new FrontworkRequest("GET", domain_url, new Headers(), new PostScope([]));
+            const domain_context = { request: domain_request, i18n: this.i18n, platform: this.platform, stage: this.stage };
+            const routes = this.domain_to_route_selector(domain_context);
+
+            for (let r = 0; r < routes.length; r++) {
+                const route = routes[r];
                 if (route.path.indexOf('*') === -1) {
                     // Test only if the path is static
 
-                    const url = "http://127.0.0.1:"+this.port+route.path;
-                    const request = new FrontworkRequest("GET", url, new Headers(), new PostScope([]));
-                    const context = { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
+                    const route_url = domain_url+route.path;
+                    const route_request = new FrontworkRequest("GET", route_url, new Headers(), new PostScope([]));
+                    const route_context = { request: route_request, i18n: this.i18n, platform: this.platform, stage: this.stage };
     
                     this.assert_function(() => {
-                        route.component.build(context);
+                        route.component.build(route_context);
                     });
                 }
             }

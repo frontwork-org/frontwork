@@ -75,20 +75,20 @@ export const FW = {
 
 };
 
-declare global {
-    interface HTMLElement {
-        append_to(parent: HTMLElement): HTMLElement;
-    }
-}
+// declare global {
+//     interface HTMLElement {
+//         append_to(parent: HTMLElement): HTMLElement;
+//     }
+// }
 
-/**
- * Appends a child element to a parent element.
- * @param parent The parent HTML element.
- */
-HTMLElement.prototype.append_to = function (parent: HTMLElement): HTMLElement {
-    parent.appendChild(this);
-    return this;
-};
+// /**
+//  * Appends a child element to a parent element.
+//  * @param parent The parent HTML element.
+//  */
+// HTMLElement.prototype.append_to = function (parent: HTMLElement): HTMLElement {
+//     parent.appendChild(this);
+//     return this;
+// };
 
 
 export enum EnvironmentPlatform {
@@ -469,7 +469,7 @@ export interface DomReadyEvent {
 }
 
 export declare interface Component {
-    build(context: FrontworkContext): FrontworkResponse|null;
+    build(context: FrontworkContext): FrontworkResponse;
     dom_ready(context: FrontworkContext, client: FrontworkClient): void;
 }
 
@@ -478,10 +478,17 @@ export declare interface ComponentErrorHandler {
     dom_ready(context: FrontworkContext, client: FrontworkClient): void;
 }
 
+export declare interface ComponentBeforeRoutes {
+    build(context: FrontworkContext): FrontworkResponse|null;
+    dom_ready(context: FrontworkContext, client: FrontworkClient): void;
+}
+
 export declare interface ComponentAfterRoutes {
     build(context: FrontworkContext, route_result: RoutesResolverResult|null): FrontworkResponse|null;
     dom_ready(context: FrontworkContext, client: FrontworkClient): void;
 }
+
+
 
 let previous_route_id = 0;
 export class Route {
@@ -498,14 +505,8 @@ export class Route {
     }
 }
 
-export class DomainRoutes {
-    public domain: RegExp;
-    public routes: Route[] = [];
-
-    constructor(domain: RegExp, routes: Route[]) {
-        this.domain = domain;
-        this.routes = routes;
-    }
+export interface DomainToRouteSelector {
+    (context: FrontworkContext): Route[]
 }
 
 export interface FrontworkContext {
@@ -524,20 +525,20 @@ export interface RoutesResolverResult {
  *   @param {EnvironmentPlatform} platform - Web, Desktop or Android
  *   @param {EnvironmentStage} stage - Development, Staging or Production
  *   @param {number} port - Which port should Deno start the webservice
- *   @param {DomainRoutes[]} domain_routes - Array of routes with a domain as a parent
+ *   @param {DomainToRouteSelector[]} domain_to_route_selector - Function that selects which routes should work under a domain 
  *   @param {FrontworkMiddleware} middleware - Handler for every edge case like 404er, 500er. You can also execute code before and after a route executes.
  *   @param {i18n} I18n - Prepare always translations before hand to save time later. For every static string please use the context.i18n.get_translation() method.
  *   @param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
  */
 export interface FrontworkInit {
-    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, domain_routes: DomainRoutes[], middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
+    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
 }
 
 export class Frontwork {
     protected platform: EnvironmentPlatform;
     protected stage: EnvironmentStage
     protected port: number;
-	protected domain_routes: DomainRoutes[];
+	protected domain_to_route_selector: DomainToRouteSelector;
 	protected middleware: FrontworkMiddleware;
     protected i18n: I18n
 
@@ -545,43 +546,38 @@ export class Frontwork {
 		this.platform = init.platform;
 		this.stage = init.stage;
 		this.port = init.port;
-		this.domain_routes = init.domain_routes;
+		this.domain_to_route_selector = init.domain_to_route_selector;
 		this.middleware = init.middleware;
 		this.i18n = init.i18n;
         if(this.stage === EnvironmentStage.Development) DEBUG.verbose_logging = true;
 	}
 
 	protected routes_resolver(context: FrontworkContext): RoutesResolverResult|null {
-        for (let a = 0; a < this.domain_routes.length; a++) {
-            const domain_routes = this.domain_routes[a];
-            if (domain_routes.domain.test(context.request.host)) {
-                for (let b = 0; b < domain_routes.routes.length; b++) {
-                    const route = domain_routes.routes[b];
-                    const route_path_dirs = route.path.split("/");
+        const routes = this.domain_to_route_selector(context);
+        for (let b = 0; b < routes.length; b++) {
+            const route = routes[b];
+            const route_path_dirs = route.path.split("/");
 
+            if (context.request.path_dirs.length === route_path_dirs.length) {
+                for (let c = 0; c < route_path_dirs.length; c++) {
                     if (context.request.path_dirs.length === route_path_dirs.length) {
-                        for (let c = 0; c < route_path_dirs.length; c++) {
-                            if (context.request.path_dirs.length === route_path_dirs.length) {
-                                let found = true;
-                                for (let i = 0; i < route_path_dirs.length; i++) {
-                                    const route_path_dir = route_path_dirs[i];
-                                    if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i]) {
-                                        found = false;
-                                        break;
-                                    }
-                                }
-        
-                                if (found) {
-                                    try {
-                                        if(DEBUG.verbose_logging) context.request.log("ROUTE #" + route.id + " ("+route.path+")");
-                                        const response = route.component.build(context);
-                                        if(response !== null) return { response: response, dom_ready: route.component.dom_ready };
-                                        // We got here a deny from a Component, so lets try the next route
-                                    } catch (error) {
-                                        context.request.error("ROUTE #" + route.id + " ("+route.path+")", error);
-                                        return { response: this.middleware.error_handler.build(context), dom_ready: this.middleware.error_handler.dom_ready };
-                                    }
-                                }
+                        let found = true;
+                        for (let i = 0; i < route_path_dirs.length; i++) {
+                            const route_path_dir = route_path_dirs[i];
+                            if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i]) {
+                                found = false;
+                                break;
+                            }
+                        }
+
+                        if (found) {
+                            try {
+                                if(DEBUG.verbose_logging) context.request.log("ROUTE #" + route.id + " ("+route.path+")");
+                                const response = route.component.build(context);
+                                return { response: response, dom_ready: route.component.dom_ready };
+                            } catch (error) {
+                                context.request.error("ROUTE #" + route.id + " ("+route.path+")", error);
+                                return { response: this.middleware.error_handler.build(context), dom_ready: this.middleware.error_handler.dom_ready };
                             }
                         }
                     }
@@ -652,15 +648,15 @@ export class Frontwork {
 export interface FrontworkMiddlewareInit {
     error_handler?: ComponentErrorHandler|null;
 	not_found_handler?: Component|null;
-	before_routes?: Component|null;
-	after_routes?: Component|null;
+	before_routes?: ComponentBeforeRoutes|null;
+	after_routes?: ComponentAfterRoutes|null;
     redirect_lonely_slash?: boolean;
 }
 
 export class FrontworkMiddleware {
     error_handler: ComponentErrorHandler;
 	not_found_handler: Component;
-	before_routes: Component|null;
+	before_routes: ComponentBeforeRoutes|null;
 	after_routes: ComponentAfterRoutes|null;
     redirect_lonely_slash: boolean;
 

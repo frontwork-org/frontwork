@@ -92,43 +92,41 @@ export class FrontworkClient extends Frontwork {
         }
 
         
-        if (result.response !== null) {
-            if (result.response.status_code === 301) {
-                // redirect
-                const redirect_url = result.response.get_header("Location");
-                if (redirect_url === null) {
-                    DEBUG.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
-                    return null;
-                } else {
-                    if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
-                    this.page_change_to(redirect_url);
-                    return { url: this.request_url, is_redirect: true, status_code: result.response.status_code };
-                }
+        if (result.response.status_code === 301) {
+            // redirect
+            const redirect_url = result.response.get_header("Location");
+            if (redirect_url === null) {
+                DEBUG.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
+                return null;
+            } else {
+                if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
+                this.page_change_to(redirect_url);
+                return { url: this.request_url, is_redirect: true, status_code: result.response.status_code };
             }
+        }
 
-            const resolved_content = <DocumentBuilder> result.response.content;
-            if (typeof resolved_content.document_html !== "undefined") {
-    
-                if (do_building) {
-                    result.response.cookies.forEach(cookie => {
-                        if (cookie.http_only === false) {
-                            document.cookie = cookie.toString();
-                        }
-                    });
+        const resolved_content = <DocumentBuilder> result.response.content;
+        if (typeof resolved_content.document_html !== "undefined") {
 
-                    resolved_content.html_response();
+            if (do_building) {
+                result.response.cookies.forEach(cookie => {
+                    if (cookie.http_only === false) {
+                        document.cookie = cookie.toString();
+                    }
+                });
 
-                    html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.document_html.attributes);
-                    html_element_set_attributes(document.head, resolved_content.document_head.attributes);
-                    html_element_set_attributes(document.body, resolved_content.document_body.attributes);
-                
-                    document.head.innerHTML = resolved_content.document_head.innerHTML;
-                    document.body.innerHTML = resolved_content.document_body.innerHTML;
-                }
+                resolved_content.html_response();
+
+                html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.document_html.attributes);
+                html_element_set_attributes(document.head, resolved_content.document_head.attributes);
+                html_element_set_attributes(document.body, resolved_content.document_body.attributes);
             
-                if(result.dom_ready !== null) result.dom_ready(context, this);
-                return { url: this.request_url, is_redirect: false, status_code: result.response.status_code };
+                document.head.innerHTML = resolved_content.document_head.innerHTML;
+                document.body.innerHTML = resolved_content.document_body.innerHTML;
             }
+        
+            if(result.dom_ready !== null) result.dom_ready(context, this);
+            return { url: this.request_url, is_redirect: false, status_code: result.response.status_code };
         }
 
         return null;
@@ -158,7 +156,7 @@ export class FrontworkClient extends Frontwork {
 
 
 interface PageChangeResult {
-    response: FrontworkResponse | null;
+    response: FrontworkResponse;
     dom_ready: DomReadyEvent | null;
 }
 
