@@ -1,5 +1,5 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage, LogType, debug } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage, LogType, DEBUG } from "./frontwork.ts";
 import { key_value_list_to_array } from "./utils.ts";
 
 
@@ -55,7 +55,7 @@ class Asset {
             
             default: 
                 this.content_type = "unknown";
-                debug.reporter(LogType.Warn, "ASSET", "Unknown mime type for file extention '"+file_extention+"'. Please use only compatible and efficient file types for the web.", null) 
+                DEBUG.reporter(LogType.Warn, "ASSET", "Unknown mime type for file extention '"+file_extention+"'. Please use only compatible and efficient file types for the web.", null) 
                 break;
         }
 
@@ -123,7 +123,7 @@ export class FrontworkWebservice extends Frontwork {
                 response.headers.append("content-type", "text/css; charset=utf-8")
                 return response;
             } catch (error) {
-                debug.reporter(LogType.Error, "ASSET", "ERROR can not load style.css from '" + this.style_css_absolute_path + "'\n", error);
+                DEBUG.reporter(LogType.Error, "ASSET", "ERROR can not load style.css from '" + this.style_css_absolute_path + "'\n", error);
                 return null;
             }
         } else if(request.path === "/assets/main.js") {
@@ -133,7 +133,7 @@ export class FrontworkWebservice extends Frontwork {
                 response.headers.append("content-type", "text/javascript; charset=utf-8")
                 return response;
             } catch (error) {
-                debug.reporter(LogType.Error, "ASSET", "ERROR can not load main.js from '" + this.main_js_absolute_path + "'\n", error);
+                DEBUG.reporter(LogType.Error, "ASSET", "ERROR can not load main.js from '" + this.main_js_absolute_path + "'\n", error);
                 return null;
             }
         }

@@ -1,5 +1,5 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkInit, FrontworkRequest, LogType, PostScope, debug } from "./frontwork.ts";
+import { Frontwork, FrontworkInit, FrontworkRequest, LogType, PostScope, DEBUG } from "./frontwork.ts";
 import { green, red, yellow } from "https://deno.land/std@0.224.0/fmt/colors.ts";
 
 
@@ -12,8 +12,8 @@ export class FrontworkTestworker extends Frontwork {
     constructor(init: FrontworkInit) {
         super(init);
         console.info("Test worker started\n");
-        debug.verbose_logging = true;
-        debug.reporter = (log_type: LogType, category: string, text: string, error: Error|null) => {
+        DEBUG.verbose_logging = true;
+        DEBUG.reporter = (log_type: LogType, category: string, text: string, error: Error|null) => {
             if (log_type === LogType.Error) {
                 this.fail_count++;
                 if(error === null) console.error(text);

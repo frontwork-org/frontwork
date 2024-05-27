@@ -9,31 +9,30 @@ export enum LogType {
     Error,
 }
 
-class Debug {
+export const DEBUG =  {
     /**
-     * Choose on which DebugMode should the function debug.reporter be called.
+     * Choose on which DebugMode should the function DEBUG.reporter be called.
      * Error messages will always be reported
      */
-    verbose_logging: boolean = false;
+    verbose_logging: false,
     
     /**
-     * To enable a bug reporter for staging and production you can modify debug.reporter, that it sents a request to the backend
+     * To enable a bug reporter for staging and production you can modify DEBUG.reporter, that it sents a request to the backend
      * @param log_type: LogType 
      * @param category: string 
      * @param text: string
     */
-    reporter = (log_type: LogType, category: string, text: string, error: Error|null) => { 
+    reporter: function(log_type: LogType, category: string, text: string, error: Error|null) { 
         if (log_type === LogType.Error) {
             if(error === null) console.error(text);
             else console.error(text, error);
         } else if(log_type === LogType.Warn) {
             console.warn(text);
-        } else if(log_type === LogType.Info && debug.verbose_logging) {
+        } else if(log_type === LogType.Info && DEBUG.verbose_logging) {
             console.log(text);
         }
-    };
+    }
 }
-export const debug = new Debug();
 
 
 export enum EnvironmentPlatform {
@@ -60,11 +59,11 @@ export class I18n {
     }
 
     set_locale(locale: string) {
-        if(debug.verbose_logging) debug.reporter(LogType.Info, "I18n", "   Setting locale to \"" + locale + "\"", null);
+        if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "I18n", "   Setting locale to \"" + locale + "\"", null);
         const locale_found = this.locales.find(l => l.locale === locale);
 
         if(locale_found === undefined) {
-            debug.reporter(LogType.Error, "I18n", "Locale '"+locale+"' does not exist", null);
+            DEBUG.reporter(LogType.Error, "I18n", "Locale '"+locale+"' does not exist", null);
             return false;
         }
         
@@ -91,7 +90,7 @@ export class I18nLocale {
         const translation = this.translations.find(t => t.key === key);
 
         if(translation === undefined) {
-            debug.reporter(LogType.Error, "I18n", "The translation can not be retrieved because the specific key '"+key+"' for the locale '"+this.locale+"' does not exist.", null);
+            DEBUG.reporter(LogType.Error, "I18n", "The translation can not be retrieved because the specific key '"+key+"' for the locale '"+this.locale+"' does not exist.", null);
             return "";
         }
 
@@ -239,11 +238,11 @@ export class FrontworkRequest {
     }
 
     log(category: string) {
-        debug.reporter(LogType.Info, category, this.__request_text(category), null);
+        DEBUG.reporter(LogType.Info, category, this.__request_text(category), null);
     }
     
     error(category: string, error: Error) {
-        debug.reporter(LogType.Error, category, this.__request_text(category), error);
+        DEBUG.reporter(LogType.Error, category, this.__request_text(category), error);
     }
 }
 
@@ -395,7 +394,7 @@ export class FrontworkResponse {
 
 export class FrontworkResponseRedirect extends FrontworkResponse {
     constructor(redirect_path: string) {
-        if(debug.verbose_logging) debug.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> "+redirect_path, null);
+        if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> "+redirect_path, null);
         
         super(301, "redirecting...");
         this.add_header("Location", redirect_path);
@@ -490,7 +489,7 @@ export class Frontwork {
 		this.domain_routes = init.domain_routes;
 		this.middleware = init.middleware;
 		this.i18n = init.i18n;
-        if(this.stage === EnvironmentStage.Development) debug.verbose_logging = true;
+        if(this.stage === EnvironmentStage.Development) DEBUG.verbose_logging = true;
 	}
 
 	protected routes_resolver(context: FrontworkContext): RoutesResolverResult|null {

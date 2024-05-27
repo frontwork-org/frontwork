@@ -1,4 +1,4 @@
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, Frontwork, debug, LogType } from "../frontwork.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, Frontwork, DEBUG, LogType } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
 
@@ -93,7 +93,7 @@ class Test2Component implements Component {
 		const description = main.appendChild( document.createElement("p") );
 		description.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
 		
-		debug.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);
+		DEBUG.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);
 		return new FrontworkResponse(200, 
 			document_builder
 				.set_html_lang("en")
