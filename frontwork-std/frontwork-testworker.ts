@@ -68,10 +68,11 @@ export class FrontworkTestworker extends Frontwork {
 
     test_routes(domains: string[]) {
         for (let d = 0; d < domains.length; d++) {
-            const domain_url = "http://127.0.0.1:"+this.port;
+            const domain_url = "http://"+domains[d]+":"+this.port;
             const domain_request = new FrontworkRequest("GET", domain_url, new Headers(), new PostScope([]));
             const domain_context = { request: domain_request, i18n: this.i18n, platform: this.platform, stage: this.stage };
             const routes = this.domain_to_route_selector(domain_context);
+            
 
             for (let r = 0; r < routes.length; r++) {
                 const route = routes[r];

@@ -803,7 +803,6 @@ const APP_CONFIG = {
     port: 8080,
     domain_to_route_selector: (context)=>{
         const domain = context.request.host.split(":")[0];
-        console.log("domain", domain);
         if (domain === "127.0.0.1") return another_routes;
         return default_routes;
     },

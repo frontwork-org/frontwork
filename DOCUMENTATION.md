@@ -25,7 +25,7 @@ Example:
     /hello/*
 
 #### Routes collision
-To handle issue that a route like "/hello/*" make "/hello/world" never in use. It is a eayy fix by ordering the array of routes. The priority is first come, first served.
+To handle issue that a route like "/hello/*" make "/hello/world" never in use. It is a easy fix by ordering the array of routes. The priority is first come, first served.
 
 ##### Rare case in which the priority is not sufficient
 In this case we just create a new Component that acts as middleman.
@@ -66,9 +66,9 @@ Will be executed on error, expects to return a "FrontworkResponse".
 Will be executed if no route or middleware matches, expects to return a "Component".
 
 ### before routes / after routes
-It is possible to execute a function before and after routing. 
-By returning a "Component" you stop the execution.
-Or you return null to continue the execution.
+It is possible to execute a function before and after routing.   
+By returning a "Component" you stop the execution of a Route.  
+Or you return null to continue the execution of the Route.
 
 
 ## 5. Request & Scope
