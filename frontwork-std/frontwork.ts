@@ -238,7 +238,7 @@ export class FrontworkRequest {
     }
 
     log(category: string) {
-        DEBUG.reporter(LogType.Info, category, this.__request_text(category), null);
+        if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, category, this.__request_text(category), null);
     }
     
     error(category: string, error: Error) {
@@ -492,7 +492,7 @@ export class Frontwork {
 		this.domain_routes = init.domain_routes;
 		this.middleware = init.middleware;
 		this.i18n = init.i18n;
-        // if(this.stage === EnvironmentStage.Development) DEBUG.verbose_logging = true;
+        if(this.stage === EnvironmentStage.Development) DEBUG.verbose_logging = true;
 	}
 
 	protected routes_resolver(context: FrontworkContext): RoutesResolverResult|null {

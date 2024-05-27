@@ -100,7 +100,7 @@ export class FrontworkClient extends Frontwork {
                     DEBUG.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
                     return null;
                 } else {
-                    DEBUG.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
+                    if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
                     this.page_change_to(redirect_url);
                     return { url: this.request_url, is_redirect: true, status_code: result.response.status_code };
                 }
@@ -136,7 +136,7 @@ export class FrontworkClient extends Frontwork {
     
     // function replacement for window.location; accessible for the Component method dom_ready
     public page_change_to(url_or_path: string) {
-        DEBUG.reporter(LogType.Info, "PageChange", "page_change_to url_or_path: " + url_or_path, null);
+        if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "PageChange", "page_change_to url_or_path: " + url_or_path, null);
         let url;
         const test = url_or_path.indexOf("//");
         if (test === 0 || test === 5 || test === 6) { // if "//" OR "http://" OR "https://"
