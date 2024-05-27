@@ -34,7 +34,7 @@ function render_header(): HTMLElement {
 
 class TestComponent implements Component {
     build(context: FrontworkContext) {
-		const document_builder = new DocumentBuilder();
+		const document_builder = new DocumentBuilder(context);
 		document_builder.document_body.appendChild( render_header() );
 		const main = document_builder.document_body.appendChild( document.createElement("main") );
 
@@ -67,7 +67,6 @@ class TestComponent implements Component {
 
 		return new FrontworkResponse(200, 
 			document_builder
-				.set_html_lang(context.i18n.selected_locale.locale)
 				.add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow")
 		);
 	}
@@ -83,8 +82,8 @@ class TestGerman extends TestComponent implements Component {
 }
 
 class Test2Component implements Component {
-    build() {
-		const document_builder = new DocumentBuilder();
+    build(context: FrontworkContext) {
+		const document_builder = new DocumentBuilder(context);
 		document_builder.document_body.appendChild( render_header() );
 		const main = document_builder.document_body.appendChild( document.createElement("main") );
 
@@ -118,8 +117,8 @@ class Test3Component implements Component {
 
 
 class ElementTestComponent implements Component {
-    build() {
-		const document_builder = new DocumentBuilder();
+    build(context: FrontworkContext) {
+		const document_builder = new DocumentBuilder(context);
 		return new FrontworkResponse(200, 
 			document_builder
 				.set_html_lang("en")

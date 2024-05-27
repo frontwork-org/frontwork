@@ -182,7 +182,7 @@ export class FrontworkWebservice extends Frontwork {
             // Assets resolver
             const resolved_asset = this.assets_resolver(request);
             if(resolved_asset !== null) {
-                request.log("ASSET");
+                if(DEBUG.verbose_logging) request.log("ASSET");
                 return resolved_asset;
             }
 
@@ -190,16 +190,15 @@ export class FrontworkWebservice extends Frontwork {
             const context = { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
             const resolved_component = this.routes_resolver_with_middleware(context);
             
-            if(resolved_component !== null) {
-                const resolved_response = resolved_component;
-                if(resolved_response.response !== null) {
-                    return resolved_response.response.into_response();
-                }
+            const resolved_response = resolved_component;
+            if(resolved_response.response === null) {
+                if(DEBUG.verbose_logging) request.log("Frontwork ERROR. This should never happen.");
+                const not_found_response = <FrontworkResponse> this.middleware.not_found_handler.build(context);
+                return not_found_response.into_response();
+            } else {
+                return resolved_response.response.into_response();
             }
     
-            request.log("NOT_FOUND");
-            const not_found_response = <FrontworkResponse> this.middleware.not_found_handler.build(context);
-            return not_found_response.into_response();
         } catch (error) {
             console.error("ERROR in middleware.error_handler", error);
         }

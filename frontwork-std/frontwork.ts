@@ -247,16 +247,19 @@ export class FrontworkRequest {
 }
 
 export class DocumentBuilder {
+    readonly context: FrontworkContext;
     readonly doctype: string;
     readonly document_html: HTMLHtmlElement;
     readonly document_head: HTMLHeadElement;
     readonly document_body: HTMLBodyElement;
 
-    constructor(doctype?: string) {
-        this.doctype = doctype || "<!DOCTYPE html>";
+    constructor(context: FrontworkContext) {
+        this.context = context;
+        this.doctype = "<!DOCTYPE html>";
         this.document_html = <HTMLHtmlElement> document.createElement("html");
         this.document_head = <HTMLHeadElement> this.document_html.appendChild( document.createElement("head") );
         this.document_body = <HTMLBodyElement> this.document_html.appendChild( document.createElement("body") );
+        this.set_html_lang(context.i18n.selected_locale.locale);
     }
 
     set_html_lang(code: string): DocumentBuilder {
@@ -514,7 +517,7 @@ export class Frontwork {
         
                                 if (found) {
                                     try {
-                                        context.request.log("ROUTE #" + route.id + " ("+route.path+")");
+                                        if(DEBUG.verbose_logging) context.request.log("ROUTE #" + route.id + " ("+route.path+")");
                                         const response = route.component.build(context);
                                         if(response !== null) return { response: response, dom_ready: route.component.dom_ready };
                                         // We got here a deny from a Component, so lets try the next route
@@ -533,7 +536,7 @@ export class Frontwork {
         return null;
 	}
 
-	protected routes_resolver_with_middleware(context: FrontworkContext): RoutesResolverResult|null {
+	protected routes_resolver_with_middleware(context: FrontworkContext): RoutesResolverResult {
         // Middleware: redirect lonely slash
         if (this.middleware.redirect_lonely_slash && context.request.path_dirs.length > 2 && context.request.path_dirs[context.request.path_dirs.length -1] === "") {
             let new_path = "";
@@ -543,7 +546,7 @@ export class Frontwork {
                 }
             }
             
-            context.request.log("LONELY_SLASH_REDIRECT");
+            if(DEBUG.verbose_logging) context.request.log("LONELY_SLASH_REDIRECT");
             const redirect_component: RoutesResolverResult = {
                 response: new FrontworkResponseRedirect(new_path),
                 dom_ready: () => {}
@@ -553,7 +556,7 @@ export class Frontwork {
 
 		// Middleware: before Routes
         if (this.middleware.before_routes !== null) {
-            context.request.log("BEFORE_ROUTES");
+            if(DEBUG.verbose_logging) context.request.log("BEFORE_ROUTES");
             try {
                 const response = this.middleware.before_routes.build(context);
                 if(response !== null) return { response: response, dom_ready: this.middleware.before_routes.dom_ready };
@@ -568,7 +571,7 @@ export class Frontwork {
 
         // Middleware: after Routes
         if (this.middleware.after_routes !== null) {
-            context.request.log("AFTER_ROUTES");
+            if(DEBUG.verbose_logging) context.request.log("AFTER_ROUTES");
             try {
                 const response = this.middleware.after_routes.build(context, route_result);
                 if(response !== null) return { response: response, dom_ready: this.middleware.after_routes.dom_ready };
@@ -579,6 +582,7 @@ export class Frontwork {
         }
         
         if (route_result === null) {
+            if(DEBUG.verbose_logging) context.request.log("NOT_FOUND");
             const response = this.middleware.not_found_handler.build(context);
             if (response === null) {
                 return { response: new FrontworkResponse(404, "Page not found"), dom_ready: this.middleware.not_found_handler.dom_ready };
@@ -610,8 +614,8 @@ export class FrontworkMiddleware {
             this.error_handler = init.error_handler
         } else {
             this.error_handler = {
-                build: (): FrontworkResponse => {
-                    const document_builder = new DocumentBuilder();
+                build: (context: FrontworkContext): FrontworkResponse => {
+                    const document_builder = new DocumentBuilder(context);
                     const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
                     h1.innerText = "ERROR 500 - Internal server error";
 
