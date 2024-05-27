@@ -11,8 +11,8 @@ export enum LogType {
 
 export const DEBUG =  {
     /**
-     * Choose on which DebugMode should the function DEBUG.reporter be called.
-     * Error messages will always be reported
+     * IF true DEBUG.reporter will not be be called on LogType.Info.
+     * Warn and Error messages will always be reported.
      */
     verbose_logging: false,
     
@@ -28,7 +28,7 @@ export const DEBUG =  {
             else console.error(text, error);
         } else if(log_type === LogType.Warn) {
             console.warn(text);
-        } else if(log_type === LogType.Info && DEBUG.verbose_logging) {
+        } else if(log_type === LogType.Info) {
             console.log(text);
         }
     }
