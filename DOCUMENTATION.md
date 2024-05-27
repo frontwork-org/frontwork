@@ -3,22 +3,14 @@
 ## 1. Introduction
 Frontwork is a TypeScript Framework to develop Frontend applications for the web, desktop and android
 
-### Feature highlights
-- Serverside rendering by default
-    - Create serverside rendering code while you also create JS/TS Frontend code
-- Simple assets sender with the method setup_assets_resolver(assets_dir)
-- Routing System
-
-### Whats wrong with missing iOS and Mac support?
-I do not own any products of apple. If you are interested to support them, then create a pull request.  
-I don't like apple because their products are overpriced, the software is restricting the user, and the hardware is flawed by design.  
-Still, apple has a market share, thus Frontwork will support apple products in the future.
-
 
 ## 2. Getting Started
-For getting started you need to install the frontwork-cli tool "frontwork": cargo install frontwork
-    frontwork install
-    frontwork init
+For getting started you need to install the frontwork-cli tool "frontwork": 
+
+    cargo install frontwork  
+And then use `frontwork install` to install required dev-dependencies 
+
+To start a new project you can use `frontwork init` to use the current directory or `frontwork new` to create a new one.
 
 
 ## 3. Routing

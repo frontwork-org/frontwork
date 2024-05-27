@@ -33,7 +33,7 @@ fn print_help(no_error: bool, error_message: &str) {
     println!("  component new                   | create a new component");
     println!("  component remove                | remove a component");
     println!("  run                             | run the script of the entered name in package.json");
-    println!("  test                            | execute main.testworker.ts");
+    println!("  test                            | run main.testworker.ts");
     println!("  build                           | build the application to the dist folder. Optional use: --production or --staging");
     println!("  watch                           | start development server and build the application on changes");
     println!("");
