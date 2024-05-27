@@ -1,34 +1,28 @@
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, Frontwork, DEBUG, LogType } from "../frontwork.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, DomainRoutes, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, Frontwork, DEBUG, LogType, FW } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
 
+// TODO:: improve DOM Capabilities
+// class HeaderComponent implements Component {
+// 	build(context: FrontworkContext): FrontworkResponse {
+// 		const header = document.createElement("header");
+// 		FW.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
+// 		FW.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
+// 		FW.ensure_element_with_text("a", "a-test3", "Test 3", { href: "/test3" }).append_to(header);
+// 		FW.ensure_element_with_text("a", "a-german", "German", { href: "/german" }).append_to(header);
+// 		FW.ensure_element_with_text("a", "a-crash", "Crash", { href: "/crash" }).append_to(header);
+// 	}
+// 	dom_ready() {}
+// }
+
+
 function render_header(): HTMLElement {
 	const header = document.createElement("header");
-	const link1 = header.appendChild(document.createElement("a"));
-	link1.innerText = "Home";
-	link1.setAttribute("href", "/");
-	link1.setAttribute("style", "margin-right: 10px;");
-
-	const link2 = header.appendChild(document.createElement("a"));
-	link2.innerText = "Test 2";
-	link2.setAttribute("href", "/test2");
-	link2.setAttribute("style", "margin-right: 10px;");
-
-	const link3 = header.appendChild(document.createElement("a"));
-	link3.innerText = "Test 3";
-	link3.setAttribute("href", "/test3");
-	link3.setAttribute("style", "margin-right: 10px;");
-
-	const link_german = header.appendChild(document.createElement("a"));
-	link_german.innerText = "German";
-	link_german.setAttribute("href", "/german");
-	link_german.setAttribute("style", "margin-right: 10px;");
-
-	const link_crash = header.appendChild(document.createElement("a"));
-	link_crash.innerText = "Crash";
-	link_crash.setAttribute("href", "/crash");
-	link_crash.setAttribute("style", "margin-right: 10px;");
-	
+	FW.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
+	FW.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
+	FW.ensure_element_with_text("a", "a-test3", "Test 3", { href: "/test3" }).append_to(header);
+	FW.ensure_element_with_text("a", "a-german", "German", { href: "/german" }).append_to(header);
+	FW.ensure_element_with_text("a", "a-crash", "Crash", { href: "/crash" }).append_to(header);
 	return header;
 }
 
@@ -85,6 +79,9 @@ class Test2Component implements Component {
     build(context: FrontworkContext) {
 		const document_builder = new DocumentBuilder(context);
 		document_builder.document_body.appendChild( render_header() );
+		// TODO: Add helper functions to create elements
+		// Generel helper
+		// document getelementbyid === null? create element
 		const main = document_builder.document_body.appendChild( document.createElement("main") );
 
 		const title1 = main.appendChild( document.createElement("h1") );
@@ -95,7 +92,6 @@ class Test2Component implements Component {
 		DEBUG.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);
 		return new FrontworkResponse(200, 
 			document_builder
-				.set_html_lang("en")
 				.add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow")
 		);
 	}

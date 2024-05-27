@@ -35,6 +35,62 @@ export const DEBUG =  {
 }
 
 
+/**
+ * Utility functions for DOM element manipulation.
+ */
+export const FW = {
+    /**
+     * Ensures the existence of an HTML element by ID. Creates a new element if it doesn't exist.
+     * @param tag The tag name of the element to create if it doesn't exist.
+     * @param id The ID of the element to search for or create. Must be unique!
+     * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
+     * @returns The HTML element with the specified ID.
+     */
+    ensure_element(tag: string, id: string, attributes?: { [key: string]: string }): HTMLElement {
+        let element = document.getElementById(id);
+        if (!element) {
+            element = document.createElement(tag);
+            if (attributes) {
+                for (const key in attributes) {
+                    element.setAttribute(key, attributes[key]);
+                }
+            }
+        }
+        return element;
+    },
+
+    /**
+     * Creates a new HTML element with text content and optional attributes.
+     * @param tag The tag name of the element.
+     * @param id The ID of the element to search for or create. Must be unique!
+     * @param text The text content of the element.     
+     * @param attributes Optional. Example: { class: "container", "data-role": "content" }
+     * @returns The newly created HTML element.
+     */
+    ensure_element_with_text(tag: string, id: string, text: string, attributes?: { [key: string]: string }): HTMLElement {
+        const element = this.ensure_element(tag, id, attributes);
+        element.innerText = text;
+        return element;
+    },
+
+};
+
+declare global {
+    interface HTMLElement {
+        append_to(parent: HTMLElement): HTMLElement;
+    }
+}
+
+/**
+ * Appends a child element to a parent element.
+ * @param parent The parent HTML element.
+ */
+HTMLElement.prototype.append_to = function (parent: HTMLElement): HTMLElement {
+    parent.appendChild(this);
+    return this;
+};
+
+
 export enum EnvironmentPlatform {
     Web,
     Desktop,

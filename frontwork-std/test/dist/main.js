@@ -76,6 +76,29 @@ const DEBUG = {
         }
     }
 };
+const FW = {
+    ensure_element (tag, id, attributes) {
+        let element = document.getElementById(id);
+        if (!element) {
+            element = document.createElement(tag);
+            if (attributes) {
+                for(const key in attributes){
+                    element.setAttribute(key, attributes[key]);
+                }
+            }
+        }
+        return element;
+    },
+    ensure_element_with_text (tag, id, text, attributes) {
+        const element = this.ensure_element(tag, id, attributes);
+        element.innerText = text;
+        return element;
+    }
+};
+HTMLElement.prototype.append_to = function(parent) {
+    parent.appendChild(this);
+    return this;
+};
 var EnvironmentPlatform;
 (function(EnvironmentPlatform) {
     EnvironmentPlatform[EnvironmentPlatform["Web"] = 0] = "Web";
@@ -667,26 +690,21 @@ const i18n = new I18n([
 ]);
 function render_header() {
     const header = document.createElement("header");
-    const link1 = header.appendChild(document.createElement("a"));
-    link1.innerText = "Home";
-    link1.setAttribute("href", "/");
-    link1.setAttribute("style", "margin-right: 10px;");
-    const link2 = header.appendChild(document.createElement("a"));
-    link2.innerText = "Test 2";
-    link2.setAttribute("href", "/test2");
-    link2.setAttribute("style", "margin-right: 10px;");
-    const link3 = header.appendChild(document.createElement("a"));
-    link3.innerText = "Test 3";
-    link3.setAttribute("href", "/test3");
-    link3.setAttribute("style", "margin-right: 10px;");
-    const link_german = header.appendChild(document.createElement("a"));
-    link_german.innerText = "German";
-    link_german.setAttribute("href", "/german");
-    link_german.setAttribute("style", "margin-right: 10px;");
-    const link_crash = header.appendChild(document.createElement("a"));
-    link_crash.innerText = "Crash";
-    link_crash.setAttribute("href", "/crash");
-    link_crash.setAttribute("style", "margin-right: 10px;");
+    FW.ensure_element_with_text("a", "a-home", "Home", {
+        href: "/"
+    }).append_to(header);
+    FW.ensure_element_with_text("a", "a-test2", "Test 2", {
+        href: "/test2"
+    }).append_to(header);
+    FW.ensure_element_with_text("a", "a-test3", "Test 3", {
+        href: "/test3"
+    }).append_to(header);
+    FW.ensure_element_with_text("a", "a-german", "German", {
+        href: "/german"
+    }).append_to(header);
+    FW.ensure_element_with_text("a", "a-crash", "Crash", {
+        href: "/crash"
+    }).append_to(header);
     return header;
 }
 class TestComponent {
@@ -737,7 +755,7 @@ class Test2Component {
         const description = main.appendChild(document.createElement("p"));
         description.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
         DEBUG.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);
-        return new FrontworkResponse(200, document_builder.set_html_lang("en").add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow"));
+        return new FrontworkResponse(200, document_builder.add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow"));
     }
     dom_ready(context, client) {
         console.log("FrontworkContext", context);
