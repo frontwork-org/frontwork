@@ -1,24 +1,26 @@
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, DEBUG, LogType, FW, HTMLElementWrapper, DocumentBuilderInterface } from "../frontwork.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, DEBUG, LogType, FW, HTMLElementWrapper } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
 
 // TODO:: improve DOM Capabilities
-class MyMainDocumentBuilder extends DocumentBuilder {
-	build(_context: FrontworkContext): FrontworkResponse {
-		const header = FW.create_element<HTMLElement>("header");
-		FW.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
-		FW.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
-		FW.ensure_element_with_text("a", "a-test3", "Test 3", { href: "/test3" }).append_to(header);
-		FW.ensure_element_with_text("a", "a-german", "German", { href: "/german" }).append_to(header);
-		FW.ensure_element_with_text("a", "a-crash", "Crash", { href: "/crash" }).append_to(header);
-		return new FrontworkResponse(500, this);
-	}
-	dom_ready(context: FrontworkContext, client: FrontworkClient) {}
-}
+// class MyMainDocumentBuilder extends DocumentBuilder {
+// 	constructor(context: FrontworkContext) {
+// 		super(context);
+// 		const header = FW.create_element<HTMLElement>("header");
+// 		FW.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
+// 		FW.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
+// 		FW.ensure_element_with_text("a", "a-test3", "Test 3", { href: "/test3" }).append_to(header);
+// 		FW.ensure_element_with_text("a", "a-german", "German", { href: "/german" }).append_to(header);
+// 		FW.ensure_element_with_text("a", "a-crash", "Crash", { href: "/crash" }).append_to(header);
+// 		this.body_append(header);
+// 	}
+// }
 
 
 function render_header(): HTMLElementWrapper<HTMLElement> {
-	const header = FW.create_element("header");
+	const header = FW.ensure_element_with_text("header", "header", "Home", { href: "/" })
+	console.log("header", header);
+	
 	FW.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
 	FW.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
 	FW.ensure_element_with_text("a", "a-test3", "Test 3", { href: "/test3" }).append_to(header);
@@ -27,26 +29,19 @@ function render_header(): HTMLElementWrapper<HTMLElement> {
 	return header;
 }
 
-class AnotherComponent extends DocumentBuilder {
-    build(context: FrontworkContext) {
+class AnotherComponent implements Component {
+    build(context: FrontworkContext): FrontworkResponse {
 		const document_builder = new DocumentBuilder(context);
-		document_builder.document_body.appendChild( render_header().element );
-		const main = document_builder.document_body.appendChild( document.createElement("main") );
-
-		const title1 = main.appendChild( document.createElement("h1") );
-		title1.innerText = context.i18n.get_translation("another_title1");
-		const description = main.appendChild( document.createElement("p") );
-		description.innerText = context.i18n.get_translation("another_text1");
-
-		return new FrontworkResponse(200, 
-			document_builder
-				.add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow")
-		);
+		const main = FW.create_element<HTMLElement>("main");
+		document_builder.body_append(main);
+		FW.ensure_element_with_text<HTMLElement>("h1", "another_title1", context.i18n.get_translation("another_title1"));
+		FW.ensure_element_with_text<HTMLElement>("p", "another_text1", context.i18n.get_translation("another_text1"));
+		return new FrontworkResponse(200, document_builder);
 	}
     dom_ready(): void {}
 }
 
-class TestComponent extends DocumentBuilder {
+class TestComponent implements Component {
     build(context: FrontworkContext) {
 		const document_builder = new DocumentBuilder(context);
 		document_builder.document_body.appendChild( render_header().element );
@@ -95,7 +90,7 @@ class TestGerman extends TestComponent {
     dom_ready(): void {}
 }
 
-class Test2Component extends DocumentBuilder {
+class Test2Component implements Component {
     build(context: FrontworkContext) {
 		const document_builder = new DocumentBuilder(context);
 		document_builder.document_body.appendChild( render_header().element );
@@ -121,7 +116,7 @@ class Test2Component extends DocumentBuilder {
 	}
 }
 
-class Test3Component extends DocumentBuilder {
+class Test3Component implements Component {
     build() {
 		return new FrontworkResponseRedirect("/");	
 	}
@@ -129,7 +124,7 @@ class Test3Component extends DocumentBuilder {
 }
 
 
-class ElementTestComponent extends DocumentBuilder {
+class ElementTestComponent implements Component {
     build(context: FrontworkContext) {
 		const document_builder = new DocumentBuilder(context);
 		return new FrontworkResponse(200, 
@@ -141,7 +136,7 @@ class ElementTestComponent extends DocumentBuilder {
     dom_ready(): void {}
 }
 
-class HelloWorldPrioTestComponent extends DocumentBuilder {
+class HelloWorldPrioTestComponent implements Component {
     build(context: FrontworkContext) {
 		const content = "Hello this is indeed first come, first served basis";
 		return new FrontworkResponse(200, content);
@@ -149,7 +144,7 @@ class HelloWorldPrioTestComponent extends DocumentBuilder {
     dom_ready(context: FrontworkContext): void {}
 }
 
-class HelloWorldComponent extends DocumentBuilder {
+class HelloWorldComponent implements Component {
     build(context: FrontworkContext) {
 		const content = "Hello "+context.request.path_dirs[2];
 		return new FrontworkResponse(200, content);
@@ -157,22 +152,22 @@ class HelloWorldComponent extends DocumentBuilder {
     dom_ready(context: FrontworkContext): void {}
 }
 
-class CollisionHandlerComponent extends DocumentBuilder {
+class CollisionHandlerComponent implements Component {
     build(context: FrontworkContext) {
 		if (context.request.path_dirs[2] === "first-come-first-served") {
-			return new HelloWorldPrioTestComponent(context).build(context);
+			return new HelloWorldPrioTestComponent().build(context);
 		}
-		return new HelloWorldComponent(context).build(context);
+		return new HelloWorldComponent().build(context);
 	}
     dom_ready(context: FrontworkContext): void {
 		if (context.request.path_dirs[2] === "first-come-first-served") {
-			new HelloWorldPrioTestComponent(context).dom_ready(context);
+			new HelloWorldPrioTestComponent().dom_ready(context);
 		}
-		new HelloWorldComponent(context).dom_ready(context);
+		new HelloWorldComponent().dom_ready(context);
 	}
 }
 
-class CrashComponent extends DocumentBuilder {
+class CrashComponent implements Component {
     build() {
 		throw new Error("Crash Test");
 		// deno-lint-ignore no-unreachable

@@ -43,6 +43,7 @@ export class HTMLElementWrapper<T extends HTMLElement> {
 
     constructor(element: T) {
         this.element = element;
+        console.log("this.element", this.element);
     }
 
     append_to(parent: HTMLElementWrapper<HTMLElement>): this {
@@ -100,7 +101,7 @@ export const FW = {
      */
     ensure_element_with_text<T extends HTMLElement>(tag: string, id: string, text: string, attributes?: { [key: string]: string }): HTMLElementWrapper<T> {
         let element = document.getElementById(id);
-        if (!element) {
+        if (element === null) {
             element = document.createElement(tag);
             element.id = id;
             if (attributes) {
@@ -108,8 +109,10 @@ export const FW = {
                     element.setAttribute(key, attributes[key]);
                 }
             }
+            console.log("ensure_element_with_text element", document.createElement(tag), tag, element);
         }
         element.innerText = text;
+        
         return new HTMLElementWrapper<T>(element as T);
     },
 
@@ -395,8 +398,6 @@ export interface DocumentBuilderInterface {
     readonly document_html: HTMLHtmlElement;
     readonly document_head: HTMLHeadElement;
     readonly document_body: HTMLBodyElement;
-    build(context: FrontworkContext): FrontworkResponse;
-    dom_ready(context: FrontworkContext, client: FrontworkClient): void;
     head_append_tag(tag: string, attributes?: { [key: string]: string }): void;
     add_head_meta_data(title: string, description: string, robots: string): DocumentBuilder;
     body_append(wr: HTMLElementWrapper<HTMLElement>): void;
@@ -421,13 +422,6 @@ export class DocumentBuilder implements DocumentBuilderInterface {
         this.set_html_lang(context.i18n.selected_locale.locale);
     }
     
-	build(context: FrontworkContext): FrontworkResponse {
-        return new FrontworkResponse(500, this);
-	}
-	dom_ready(context: FrontworkContext, client: FrontworkClient): void {
-		throw new Error('Method not implemented.');
-	}
-
     head_append_tag(tag: string, attributes?: { [key: string]: string }) {
         const element = document.createElement(tag);
         if (attributes) {
@@ -523,10 +517,6 @@ export class FrontworkResponseRedirect extends FrontworkResponse {
     }
 }
 
-export interface FrontworkResponseEvent {
-    (request: FrontworkRequest): FrontworkResponse
-}
-
 export interface DomReadyEvent {
     (context: FrontworkContext, client: FrontworkClient): void
 }
@@ -557,11 +547,11 @@ let previous_route_id = 0;
 export class Route {
     public id: number;
     public path: string;
-    public document_builder: new (context: FrontworkContext) => DocumentBuilder;
+    public component: new (context: FrontworkContext) => Component;
 
-    constructor(path: string, document_builder: new (context: FrontworkContext) => DocumentBuilder) {
+    constructor(path: string, component: new (context: FrontworkContext) => Component) {
         this.path = path;
-        this.document_builder = document_builder;
+        this.component = component;
         this.id = previous_route_id;
         previous_route_id += 1;
     }
@@ -635,7 +625,7 @@ export class Frontwork {
                         if (found) {
                             try {
                                 if(DEBUG.verbose_logging) context.request.log("ROUTE #" + route.id + " ("+route.path+")");
-                                const cdata = new route.document_builder(context);
+                                const cdata = new route.component(context);
                                 return { response: cdata.build(context), dom_ready: cdata.dom_ready };
                             } catch (error) {
                                 context.request.error("ROUTE #" + route.id + " ("+route.path+")", error);
