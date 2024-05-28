@@ -181,7 +181,7 @@ class CrashComponent extends DocumentBuilder {
     dom_ready(): void {}
 }
 
-
+//TODO: Benchmark current vs () => new TestComponent()
 const default_routes: Route[] = [
 	new Route("/", TestComponent),
 	new Route("/test2", Test2Component),
