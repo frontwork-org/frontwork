@@ -120,7 +120,7 @@ class I18nLocale {
     get_translation(key) {
         const translation = this.translations.find((t)=>t.key === key);
         if (translation === undefined) {
-            DEBUG.reporter(LogType.Error, "I18n", "The translation can not be retrieved because the specific key '" + key + "' for the locale '" + this.locale + "' does not exist.", null);
+            DEBUG.reporter(LogType.Error, "I18n", "    Missing translation (key: '" + key + "') for the locale '" + this.locale + "'.", null);
             return "";
         }
         return translation.translation;
@@ -645,8 +645,8 @@ class FrontworkClient extends Frontwork {
         return false;
     }
 }
-const __default = JSON.parse("[\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Page\" }\n    ,{ \"key\": \"text1\", \"translation\": \"This is a test page for the Frontwork framework.\" }\n    ,{ \"key\": \"title2\", \"translation\": \"Test Form\" }\n    ,{ \"key\": \"another_title1\", \"translation\": \"Hello from 127.0.0.1\" }\n    ,{ \"key\": \"another_text1\", \"translation\": \"Yes you can have different domains :)\" }\n]");
-const __default1 = JSON.parse("[\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Seite\" }\n    ,{ \"key\": \"text1\", \"translation\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\" }\n    ,{ \"key\": \"title2\", \"translation\": \"Test Formular\" }\n]");
+const __default = JSON.parse("[\r\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Page\" }\r\n    ,{ \"key\": \"text1\", \"translation\": \"This is a test page for the Frontwork framework.\" }\r\n    ,{ \"key\": \"title2\", \"translation\": \"Test Form\" }\r\n    ,{ \"key\": \"another_title1\", \"translation\": \"Hello from 127.0.0.1\" }\r\n    ,{ \"key\": \"another_text1\", \"translation\": \"Yes you can have different domains :)\" }\r\n]");
+const __default1 = JSON.parse("[\r\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Seite\" }\r\n    ,{ \"key\": \"text1\", \"translation\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\" }\r\n    ,{ \"key\": \"title2\", \"translation\": \"Test Formular\" }\r\n]");
 const i18n = new I18n([
     new I18nLocale("en", __default),
     new I18nLocale("de", __default1)
