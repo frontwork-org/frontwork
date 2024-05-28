@@ -115,7 +115,7 @@ export class FrontworkClient extends Frontwork {
                     }
                 });
 
-                resolved_content.html_response();
+                resolved_content.html();
 
                 html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.document_html.attributes);
                 html_element_set_attributes(document.head, resolved_content.document_head.attributes);

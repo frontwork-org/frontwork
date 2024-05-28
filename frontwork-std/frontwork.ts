@@ -38,6 +38,19 @@ export const DEBUG =  {
 /**
  * Utility functions for DOM element manipulation.
  */
+export class HTMLElementWrapper<T extends HTMLElement> {
+    public element: T;
+
+    constructor(element: T) {
+        this.element = element;
+    }
+
+    append_to(parent: HTMLElementWrapper<HTMLElement>): this {
+        parent.element.appendChild(this.element);
+        return this;
+    }
+}
+
 export const FW = {
     /**
      * Ensures the existence of an HTML element by ID. Creates a new element if it doesn't exist.
@@ -46,17 +59,35 @@ export const FW = {
      * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
      * @returns The HTML element with the specified ID.
      */
-    ensure_element(tag: string, id: string, attributes?: { [key: string]: string }): HTMLElement {
+    create_element<T extends HTMLElement>(tag: string, attributes?: { [key: string]: string }): HTMLElementWrapper<T> {
+        const element = document.createElement(tag);
+        if (attributes) {
+            for (const key in attributes) {
+                element.setAttribute(key, attributes[key]);
+            }
+        }
+        return new HTMLElementWrapper<T>(element as T);
+    },
+
+    /**
+     * Ensures the existence of an HTML element by ID. Creates a new element if it doesn't exist.
+     * @param tag The tag name of the element to create if it doesn't exist.
+     * @param id The ID of the element to search for or create. Must be unique!
+     * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
+     * @returns The HTML element with the specified ID.
+     */
+    ensure_element<T extends HTMLElement>(tag: string, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<T> {
         let element = document.getElementById(id);
         if (!element) {
             element = document.createElement(tag);
+            element.id = id;
             if (attributes) {
                 for (const key in attributes) {
                     element.setAttribute(key, attributes[key]);
                 }
             }
         }
-        return element;
+        return new HTMLElementWrapper<T>(element as T);
     },
 
     /**
@@ -67,28 +98,22 @@ export const FW = {
      * @param attributes Optional. Example: { class: "container", "data-role": "content" }
      * @returns The newly created HTML element.
      */
-    ensure_element_with_text(tag: string, id: string, text: string, attributes?: { [key: string]: string }): HTMLElement {
-        const element = this.ensure_element(tag, id, attributes);
+    ensure_element_with_text<T extends HTMLElement>(tag: string, id: string, text: string, attributes?: { [key: string]: string }): HTMLElementWrapper<T> {
+        let element = document.getElementById(id);
+        if (!element) {
+            element = document.createElement(tag);
+            element.id = id;
+            if (attributes) {
+                for (const key in attributes) {
+                    element.setAttribute(key, attributes[key]);
+                }
+            }
+        }
         element.innerText = text;
-        return element;
+        return new HTMLElementWrapper<T>(element as T);
     },
 
 };
-
-// declare global {
-//     interface HTMLElement {
-//         append_to(parent: HTMLElement): HTMLElement;
-//     }
-// }
-
-// /**
-//  * Appends a child element to a parent element.
-//  * @param parent The parent HTML element.
-//  */
-// HTMLElement.prototype.append_to = function (parent: HTMLElement): HTMLElement {
-//     parent.appendChild(this);
-//     return this;
-// };
 
 
 export enum EnvironmentPlatform {
@@ -302,7 +327,85 @@ export class FrontworkRequest {
     }
 }
 
-export class DocumentBuilder {
+
+export class FrontworkResponse {
+    status_code: number;
+    mime_type = "text/html";
+    // content: DocumentBuilderInterface|Blob|string;
+    content: DocumentBuilderInterface|string;
+    headers: string[][] = [];
+    cookies: Cookie[] = [];
+
+    constructor(status_code: number, content: DocumentBuilderInterface|string) {
+        this.status_code = status_code;
+        this.content = content;
+    }
+
+    set_mime_type(mime_type: string) {
+        this.mime_type = mime_type;
+        return this;
+    }
+
+    add_header(name: string, value: string) {
+        this.headers.push([name, value]);
+        return this;
+    }
+
+    get_header(name: string) {
+        for (const header of this.headers) {
+            if (header[0] === name) {
+                return header[1];
+            }
+        }
+        return null;
+    }
+
+    set_cookie(cookie: Cookie) {
+        for (let i = 0; i < this.cookies.length; i++) {
+            if (this.cookies[i].name === cookie.name) {
+                this.cookies[i] = cookie;
+                return this;
+            }
+        }
+        this.cookies.push(cookie);
+        return this;
+    }
+
+    into_response(): Response {
+        const response = new Response(this.content.toString(), { status: this.status_code });
+        response.headers.set('content-type', this.mime_type);
+
+        for (let i = 0; i < this.headers.length; i++) {
+            const header = this.headers[i];
+            response.headers.set(header[0], header[1]);
+        }
+
+        for (let i = 0; i < this.cookies.length; i++) {
+            const cookie = this.cookies[i];
+            response.headers.append('set-cookie', cookie.to_string());
+        }
+
+        return response;
+    }
+}
+
+export interface DocumentBuilderInterface {
+    readonly context: FrontworkContext;
+    readonly doctype: string;
+    readonly document_html: HTMLHtmlElement;
+    readonly document_head: HTMLHeadElement;
+    readonly document_body: HTMLBodyElement;
+    build(context: FrontworkContext): FrontworkResponse;
+    dom_ready(context: FrontworkContext, client: FrontworkClient): void;
+    head_append_tag(tag: string, attributes?: { [key: string]: string }): void;
+    add_head_meta_data(title: string, description: string, robots: string): DocumentBuilder;
+    body_append(wr: HTMLElementWrapper<HTMLElement>): void;
+    set_html_lang(code: string): DocumentBuilder;
+    html(): void;
+    toString(): string;
+}
+
+export class DocumentBuilder implements DocumentBuilderInterface {
     readonly context: FrontworkContext;
     readonly doctype: string;
     readonly document_html: HTMLHtmlElement;
@@ -317,10 +420,22 @@ export class DocumentBuilder {
         this.document_body = <HTMLBodyElement> this.document_html.appendChild( document.createElement("body") );
         this.set_html_lang(context.i18n.selected_locale.locale);
     }
+    
+	build(context: FrontworkContext): FrontworkResponse {
+        return new FrontworkResponse(500, this);
+	}
+	dom_ready(context: FrontworkContext, client: FrontworkClient): void {
+		throw new Error('Method not implemented.');
+	}
 
-    set_html_lang(code: string): DocumentBuilder {
-        this.document_html.setAttribute("lang", code);
-        return this;
+    head_append_tag(tag: string, attributes?: { [key: string]: string }) {
+        const element = document.createElement(tag);
+        if (attributes) {
+            for (const key in attributes) {
+                element.setAttribute(key, attributes[key]);
+            }
+        }
+        this.document_head.append(element);
     }
 
     add_head_meta_data(title: string, description: string, robots: string): DocumentBuilder {
@@ -367,7 +482,16 @@ export class DocumentBuilder {
         return this;
     }
 
-    html_response() {
+    body_append(wr: HTMLElementWrapper<HTMLElement>) {
+        this.document_body.append(wr.element);
+    }
+
+    set_html_lang(code: string): DocumentBuilder {
+        this.document_html.setAttribute("lang", code);
+        return this;
+    }
+
+    html() {
         // force adding style.css to the end of the head
         const style_css = this.document_head.appendChild( document.createElement("link") );
         style_css.setAttribute("rel", "stylesheet");
@@ -383,71 +507,10 @@ export class DocumentBuilder {
     }
 
     toString() {
-        const html_response = <HTMLElement> this.html_response();
+        const html_response = <HTMLElement> this.html();
 
         return this.doctype + '\n' 
             + html_response.outerHTML;
-    }
-}
-
-export class FrontworkResponse {
-    status_code: number;
-    mime_type = "text/html";
-    content: DocumentBuilder|Blob|string;
-    headers: string[][] = [];
-    cookies: Cookie[] = [];
-
-    constructor(status_code: number, content: DocumentBuilder|Blob|string) {
-        this.status_code = status_code;
-        this.content = content;
-    }
-
-    set_mime_type(mime_type: string) {
-        this.mime_type = mime_type;
-        return this;
-    }
-
-    add_header(name: string, value: string) {
-        this.headers.push([name, value]);
-        return this;
-    }
-
-    get_header(name: string) {
-        for (const header of this.headers) {
-            if (header[0] === name) {
-                return header[1];
-            }
-        }
-        return null;
-    }
-
-    set_cookie(cookie: Cookie) {
-        for (let i = 0; i < this.cookies.length; i++) {
-            if (this.cookies[i].name === cookie.name) {
-                this.cookies[i] = cookie;
-                return this;
-            }
-        }
-        this.cookies.push(cookie);
-        return this;
-    }
-
-    into_response(): Response {
-        const content_text = typeof this.content === "object" ? this.content.toString() : this.content;
-        const response = new Response(content_text, { status: this.status_code });
-        response.headers.set('content-type', this.mime_type);
-
-        for (let i = 0; i < this.headers.length; i++) {
-            const header = this.headers[i];
-            response.headers.set(header[0], header[1]);
-        }
-
-        for (let i = 0; i < this.cookies.length; i++) {
-            const cookie = this.cookies[i];
-            response.headers.append('set-cookie', cookie.to_string());
-        }
-
-        return response;
     }
 }
 
@@ -473,17 +536,17 @@ export declare interface Component {
     dom_ready(context: FrontworkContext, client: FrontworkClient): void;
 }
 
-export declare interface ComponentErrorHandler {
+export declare interface ErrorHandler {
     build(context: FrontworkContext): FrontworkResponse;
     dom_ready(context: FrontworkContext, client: FrontworkClient): void;
 }
 
-export declare interface ComponentBeforeRoutes {
+export declare interface BeforeRoutes {
     build(context: FrontworkContext): FrontworkResponse|null;
     dom_ready(context: FrontworkContext, client: FrontworkClient): void;
 }
 
-export declare interface ComponentAfterRoutes {
+export declare interface AfterRoutes {
     build(context: FrontworkContext, route_result: RoutesResolverResult|null): FrontworkResponse|null;
     dom_ready(context: FrontworkContext, client: FrontworkClient): void;
 }
@@ -494,12 +557,11 @@ let previous_route_id = 0;
 export class Route {
     public id: number;
     public path: string;
-    component: Component;
+    public document_builder: new (context: FrontworkContext) => DocumentBuilder;
 
-    constructor(path: string, component: Component) {
+    constructor(path: string, document_builder: new (context: FrontworkContext) => DocumentBuilder) {
         this.path = path;
-        this.component = component;
-
+        this.document_builder = document_builder;
         this.id = previous_route_id;
         previous_route_id += 1;
     }
@@ -526,7 +588,7 @@ export interface RoutesResolverResult {
  *   @param {EnvironmentStage} stage - Development, Staging or Production
  *   @param {number} port - Which port should Deno start the webservice
  *   @param {DomainToRouteSelector[]} domain_to_route_selector - Function that selects which routes should work under a domain 
- *   @param {FrontworkMiddleware} middleware - Handler for every edge case like 404er, 500er. You can also execute code before and after a route executes.
+ *   @param {FrontworkMiddleware} middleware - Handler for every edge case like 404er, 500er. You can also execute code before a route executes.
  *   @param {i18n} I18n - Prepare always translations before hand to save time later. For every static string please use the context.i18n.get_translation() method.
  *   @param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
  */
@@ -573,8 +635,8 @@ export class Frontwork {
                         if (found) {
                             try {
                                 if(DEBUG.verbose_logging) context.request.log("ROUTE #" + route.id + " ("+route.path+")");
-                                const response = route.component.build(context);
-                                return { response: response, dom_ready: route.component.dom_ready };
+                                const cdata = new route.document_builder(context);
+                                return { response: cdata.build(context), dom_ready: cdata.dom_ready };
                             } catch (error) {
                                 context.request.error("ROUTE #" + route.id + " ("+route.path+")", error);
                                 return { response: this.middleware.error_handler.build(context), dom_ready: this.middleware.error_handler.dom_ready };
@@ -646,53 +708,23 @@ export class Frontwork {
 }
 
 export interface FrontworkMiddlewareInit {
-    error_handler?: ComponentErrorHandler|null;
-	not_found_handler?: Component|null;
-	before_routes?: ComponentBeforeRoutes|null;
-	after_routes?: ComponentAfterRoutes|null;
+    error_handler: ErrorHandler;
+	not_found_handler: Component;
+	before_routes?: BeforeRoutes|null;
+	after_routes?: AfterRoutes|null;
     redirect_lonely_slash?: boolean;
 }
 
 export class FrontworkMiddleware {
-    error_handler: ComponentErrorHandler;
+    error_handler: ErrorHandler;
 	not_found_handler: Component;
-	before_routes: ComponentBeforeRoutes|null;
-	after_routes: ComponentAfterRoutes|null;
+	before_routes: BeforeRoutes|null;
+	after_routes: AfterRoutes|null;
     redirect_lonely_slash: boolean;
 
-	constructor(init?: FrontworkMiddlewareInit) {
-        // Middleware: error
-        if (init && init.error_handler) {
-            this.error_handler = init.error_handler
-        } else {
-            this.error_handler = {
-                build: (context: FrontworkContext): FrontworkResponse => {
-                    const document_builder = new DocumentBuilder(context);
-                    const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
-                    h1.innerText = "ERROR 500 - Internal server error";
-
-                    return new FrontworkResponse(500,
-                        document_builder
-                            .set_html_lang("en")
-                            .add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
-                    );
-                },
-                dom_ready: () => {}
-            }
-        }
-
-        // Middleware: not found
-        if (init && init.not_found_handler) {
-            this.not_found_handler = init.not_found_handler;
-        } else {
-            this.not_found_handler = {
-                build: (): FrontworkResponse => {
-                    return new FrontworkResponse(404, "ERROR 404 - Page not found");
-                },
-                dom_ready: () => {}
-            }
-        }
-        
+	constructor(init: FrontworkMiddlewareInit) {
+        this.error_handler = init.error_handler
+        this.not_found_handler = init.not_found_handler;
         this.before_routes = init && init.before_routes? init.before_routes : null;
         this.after_routes = init && init.after_routes? init.after_routes : null;
         this.redirect_lonely_slash = init && init.redirect_lonely_slash? init.redirect_lonely_slash : true;
