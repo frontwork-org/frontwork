@@ -146,7 +146,7 @@ export class I18nLocale {
         const translation = this.translations.find(t => t.key === key);
 
         if(translation === undefined) {
-            DEBUG.reporter(LogType.Error, "I18n", "The translation can not be retrieved because the specific key '"+key+"' for the locale '"+this.locale+"' does not exist.", null);
+            DEBUG.reporter(LogType.Error, "I18n", "    Missing translation (key: '"+key+"') for the locale '"+this.locale+"'.", null);
             return "";
         }
 
