@@ -1,4 +1,5 @@
-import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkResponse, DomReadyEvent, FrontworkInit, EnvironmentStage, LogType, DEBUG } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkInit, EnvironmentStage, LogType, DEBUG } from "./frontwork.ts";
+import { BeforeRoutes, Component, FrontworkContext } from './lib.ts';
 import { html_element_set_attributes } from "./utils.ts";
 
 
@@ -78,42 +79,53 @@ export class FrontworkClient extends Frontwork {
         const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope([]));
         const context =  { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
 
-        let result: PageChangeResult;
-        try {
-            const resolved_component = this.routes_resolver_with_middleware(context);
-            if (resolved_component) {
-                result = { response: resolved_component.response, dom_ready: resolved_component.dom_ready };
-            } else {
-                result = { response: this.middleware.not_found_handler.build(context), dom_ready: this.middleware.not_found_handler.dom_ready };
-            }
-        } catch (error) {
-            const error_handler_result = this.middleware.error_handler.build(context);
-            result = { response: error_handler_result, dom_ready: this.middleware.error_handler.dom_ready };
-        }
 
-        
-        if (result.response.status_code === 301) {
-            // redirect
-            const redirect_url = result.response.get_header("Location");
-            if (redirect_url === null) {
-                DEBUG.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
-                return null;
-            } else {
-                if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
-                this.page_change_to(redirect_url);
-                return { url: this.request_url, is_redirect: true, status_code: result.response.status_code };
+        // Middleware: before Routes
+        let before_routes: BeforeRoutes|null = null;
+
+        if (this.middleware.before_routes !== null) {
+            if(DEBUG.verbose_logging) context.request.log("BEFORE_ROUTES");
+            try {
+                before_routes = this.middleware.before_routes;
+            } catch (error) {
+                context.request.error("BEFORE_ROUTES", error);
+                const error_handler = this.middleware.error_handler;
+                before_routes = {
+                    build(context: FrontworkContext) { return error_handler(context); },
+                    dom_ready() {}
+                }
             }
         }
 
-        const resolved_content = <DocumentBuilder> result.response.content;
-        if (typeof resolved_content.document_html !== "undefined") {
+        let route: Component|null = null;
 
-            if (do_building) {
-                result.response.cookies.forEach(cookie => {
-                    if (cookie.http_only === false) {
-                        document.cookie = cookie.toString();
-                    }
-                });
+        if (do_building) {
+            const before_routes_result = before_routes? before_routes.build(context) : null;
+            route = this.routes_resolver(context)
+            const response = before_routes_result === null? route.build(context) : before_routes_result;
+            
+            response.cookies.forEach(cookie => {
+                if (cookie.http_only === false) {
+                    document.cookie = cookie.toString();
+                }
+            });
+
+            if (response.status_code === 301) {
+                // redirect
+                const redirect_url = response.get_header("Location");
+                if (redirect_url === null) {
+                    DEBUG.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
+                    return null;
+                } else {
+                    if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
+                    this.page_change_to(redirect_url);
+                    return { url: this.request_url, is_redirect: true, status_code: response.status_code };
+                }
+            }
+    
+
+            const resolved_content = <DocumentBuilder> response.content;
+            if (typeof resolved_content.document_html !== "undefined") {
 
                 resolved_content.html();
 
@@ -123,12 +135,13 @@ export class FrontworkClient extends Frontwork {
             
                 document.head.innerHTML = resolved_content.document_head.innerHTML;
                 document.body.innerHTML = resolved_content.document_body.innerHTML;
+            
+                return { url: this.request_url, is_redirect: false, status_code: response.status_code };
             }
-        
-            if(result.dom_ready !== null) result.dom_ready(context, this);
-            return { url: this.request_url, is_redirect: false, status_code: result.response.status_code };
         }
-
+        
+        if(before_routes !== null) before_routes.dom_ready(context, this);
+        if(route !== null) route.dom_ready(context, this);
         return null;
     }
     
@@ -154,11 +167,6 @@ export class FrontworkClient extends Frontwork {
     }
 }
 
-
-interface PageChangeResult {
-    response: FrontworkResponse;
-    dom_ready: DomReadyEvent | null;
-}
 
 class PageChangeSavestate {
     url: string;

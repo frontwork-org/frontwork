@@ -17,25 +17,34 @@ import { i18n } from "./test.i18n.ts";
 // }
 
 
-function render_header(): HTMLElementWrapper<HTMLElement> {
-	const header = FW.ensure_element_with_text("header", "header", "Home", { href: "/" })
+function render_header() {
+	const header = FW.create_element("header");
 	console.log("header", header);
 	
-	FW.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
+	const title1 = FW.create_element("h1").append_to(header);
+	title1.element.innerText = "TEST from header";
+	
+	const title2 = FW.ensure_element("h2", "title222", { class: "das ist eine class" }).append_to(header);
+	title2.element.innerText = "TEST2 from header";
+	
+
+	const a = FW.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
+	header.element.append(a.element)
 	FW.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
 	FW.ensure_element_with_text("a", "a-test3", "Test 3", { href: "/test3" }).append_to(header);
 	FW.ensure_element_with_text("a", "a-german", "German", { href: "/german" }).append_to(header);
 	FW.ensure_element_with_text("a", "a-crash", "Crash", { href: "/crash" }).append_to(header);
+
 	return header;
 }
 
 class AnotherComponent implements Component {
     build(context: FrontworkContext): FrontworkResponse {
 		const document_builder = new DocumentBuilder(context);
-		const main = FW.create_element<HTMLElement>("main");
-		document_builder.body_append(main);
-		FW.ensure_element_with_text<HTMLElement>("h1", "another_title1", context.i18n.get_translation("another_title1"));
-		FW.ensure_element_with_text<HTMLElement>("p", "another_text1", context.i18n.get_translation("another_text1"));
+		// const main = FW.create_element("main");
+		// document_builder.body_append(main);
+		// FW.ensure_element_with_text<HTMLElement>("h1", "another_title1", context.i18n.get_translation("another_title1"));
+		// FW.ensure_element_with_text<HTMLElement>("p", "another_text1", context.i18n.get_translation("another_text1"));
 		return new FrontworkResponse(200, document_builder);
 	}
     dom_ready(): void {}
@@ -44,7 +53,12 @@ class AnotherComponent implements Component {
 class TestComponent implements Component {
     build(context: FrontworkContext) {
 		const document_builder = new DocumentBuilder(context);
-		document_builder.document_body.appendChild( render_header().element );
+		const header = render_header();
+		console.log("------------------------------------------");
+		console.log("header.element.outerHTML", header.element.outerHTML);
+		console.log("------------------------------------------");
+		
+		document_builder.document_body.appendChild( header.element );
 		const main = document_builder.document_body.appendChild( document.createElement("main") );
 
 		const title1 = main.appendChild( document.createElement("h1") );
@@ -201,19 +215,16 @@ const middleware = new FrontworkMiddleware({
 		},
 		dom_ready: () => { }
 	},
-	error_handler: {
-		build: (context: FrontworkContext): FrontworkResponse => {
-			const document_builder = new DocumentBuilder(context);
-			const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
-			h1.innerText = "ERROR 500 - Internal server error";
+	error_handler: (context: FrontworkContext): FrontworkResponse => {
+		const document_builder = new DocumentBuilder(context);
+		const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
+		h1.innerText = "ERROR 500 - Internal server error";
 
-			return new FrontworkResponse(500,
-				document_builder
-					.set_html_lang("en")
-					.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
-			);
-		},
-		dom_ready: () => {}
+		return new FrontworkResponse(500,
+			document_builder
+				.set_html_lang("en")
+				.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
+		);
 	},
 	not_found_handler: {
 		build: (context: FrontworkContext): FrontworkResponse => {

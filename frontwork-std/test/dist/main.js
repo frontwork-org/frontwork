@@ -80,7 +80,6 @@ class HTMLElementWrapper {
     element;
     constructor(element){
         this.element = element;
-        console.log("this.element", this.element);
     }
     append_to(parent) {
         parent.element.appendChild(this.element);
@@ -88,6 +87,7 @@ class HTMLElementWrapper {
     }
 }
 const FW = {
+    is_client_side: true,
     create_element (tag, attributes) {
         const element = document.createElement(tag);
         if (attributes) {
@@ -98,17 +98,11 @@ const FW = {
         return new HTMLElementWrapper(element);
     },
     ensure_element (tag, id, attributes) {
-        let element = document.getElementById(id);
-        if (!element) {
-            element = document.createElement(tag);
-            element.id = id;
-            if (attributes) {
-                for(const key in attributes){
-                    element.setAttribute(key, attributes[key]);
-                }
-            }
-        }
-        return new HTMLElementWrapper(element);
+        const elem = document.getElementById(id);
+        if (elem !== null) return new HTMLElementWrapper(elem);
+        const elem2 = FW.create_element(tag, attributes);
+        elem2.element.id = id;
+        return elem2;
     },
     ensure_element_with_text (tag, id, text, attributes) {
         let element = document.getElementById(id);
@@ -120,7 +114,6 @@ const FW = {
                     element.setAttribute(key, attributes[key]);
                 }
             }
-            console.log("ensure_element_with_text element", document.createElement(tag), tag, element);
         }
         element.innerText = text;
         return new HTMLElementWrapper(element);
@@ -382,6 +375,7 @@ class DocumentBuilder {
         const main_js = this.document_body.appendChild(document.createElement("script"));
         main_js.setAttribute("src", "/assets/main.js");
         main_js.setAttribute("type", "text/javascript");
+        console.log("document_html.outerHTML", this.document_html.outerHTML);
         return this.document_html;
     }
     toString() {
@@ -443,16 +437,15 @@ class Frontwork {
                         if (found) {
                             try {
                                 if (DEBUG.verbose_logging) context.request.log("ROUTE #" + route.id + " (" + route.path + ")");
-                                const cdata = new route.component(context);
-                                return {
-                                    response: cdata.build(context),
-                                    dom_ready: cdata.dom_ready
-                                };
+                                return new route.component(context);
                             } catch (error) {
                                 context.request.error("ROUTE #" + route.id + " (" + route.path + ")", error);
+                                const error_handler = this.middleware.error_handler;
                                 return {
-                                    response: this.middleware.error_handler.build(context),
-                                    dom_ready: this.middleware.error_handler.dom_ready
+                                    build (context) {
+                                        return error_handler(context);
+                                    },
+                                    dom_ready () {}
                                 };
                             }
                         }
@@ -460,84 +453,29 @@ class Frontwork {
                 }
             }
         }
-        return null;
-    }
-    routes_resolver_with_middleware(context) {
-        if (this.middleware.redirect_lonely_slash && context.request.path_dirs.length > 2 && context.request.path_dirs[context.request.path_dirs.length - 1] === "") {
-            let new_path = "";
-            for(let i = 0; i < context.request.path_dirs.length - 1; i++){
-                if (context.request.path_dirs[i] !== "") {
-                    new_path += "/" + context.request.path_dirs[i];
-                }
-            }
-            if (DEBUG.verbose_logging) context.request.log("LONELY_SLASH_REDIRECT");
-            const redirect_component = {
-                response: new FrontworkResponseRedirect(new_path),
-                dom_ready: ()=>{}
-            };
-            return redirect_component;
-        }
-        if (this.middleware.before_routes !== null) {
-            if (DEBUG.verbose_logging) context.request.log("BEFORE_ROUTES");
-            try {
-                const response = this.middleware.before_routes.build(context);
-                if (response !== null) return {
-                    response: response,
-                    dom_ready: this.middleware.before_routes.dom_ready
-                };
-            } catch (error) {
-                context.request.error("BEFORE_ROUTES", error);
-                return {
-                    response: this.middleware.error_handler.build(context),
-                    dom_ready: this.middleware.error_handler.dom_ready
-                };
-            }
-        }
-        const route_result = this.routes_resolver(context);
-        if (this.middleware.after_routes !== null) {
-            if (DEBUG.verbose_logging) context.request.log("AFTER_ROUTES");
-            try {
-                const response = this.middleware.after_routes.build(context, route_result);
-                if (response !== null) return {
-                    response: response,
-                    dom_ready: this.middleware.after_routes.dom_ready
-                };
-            } catch (error) {
-                context.request.error("AFTER_ROUTES", error);
-                return {
-                    response: this.middleware.error_handler.build(context),
-                    dom_ready: this.middleware.error_handler.dom_ready
-                };
-            }
-        }
-        if (route_result === null) {
-            if (DEBUG.verbose_logging) context.request.log("NOT_FOUND");
-            const response = this.middleware.not_found_handler.build(context);
-            if (response === null) {
-                return {
-                    response: new FrontworkResponse(404, "Page not found"),
-                    dom_ready: this.middleware.not_found_handler.dom_ready
-                };
-            }
+        if (DEBUG.verbose_logging) context.request.log("NOT_FOUND");
+        try {
+            return this.middleware.not_found_handler;
+        } catch (error) {
+            const error_handler = this.middleware.error_handler;
             return {
-                response: response,
-                dom_ready: this.middleware.not_found_handler.dom_ready
+                build (context) {
+                    return error_handler(context);
+                },
+                dom_ready () {}
             };
         }
-        return route_result;
     }
 }
 class FrontworkMiddleware {
     error_handler;
     not_found_handler;
     before_routes;
-    after_routes;
     redirect_lonely_slash;
     constructor(init){
         this.error_handler = init.error_handler;
         this.not_found_handler = init.not_found_handler;
         this.before_routes = init && init.before_routes ? init.before_routes : null;
-        this.after_routes = init && init.after_routes ? init.after_routes : null;
         this.redirect_lonely_slash = init && init.redirect_lonely_slash ? init.redirect_lonely_slash : true;
     }
 }
@@ -603,64 +541,64 @@ class FrontworkClient extends Frontwork {
             platform: this.platform,
             stage: this.stage
         };
-        let result;
-        try {
-            const resolved_component = this.routes_resolver_with_middleware(context);
-            if (resolved_component) {
-                result = {
-                    response: resolved_component.response,
-                    dom_ready: resolved_component.dom_ready
-                };
-            } else {
-                result = {
-                    response: this.middleware.not_found_handler.build(context),
-                    dom_ready: this.middleware.not_found_handler.dom_ready
-                };
-            }
-        } catch (error) {
-            const error_handler_result = this.middleware.error_handler.build(context);
-            result = {
-                response: error_handler_result,
-                dom_ready: this.middleware.error_handler.dom_ready
-            };
-        }
-        if (result.response.status_code === 301) {
-            const redirect_url = result.response.get_header("Location");
-            if (redirect_url === null) {
-                DEBUG.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
-                return null;
-            } else {
-                if (DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
-                this.page_change_to(redirect_url);
-                return {
-                    url: this.request_url,
-                    is_redirect: true,
-                    status_code: result.response.status_code
+        let before_routes = null;
+        if (this.middleware.before_routes !== null) {
+            if (DEBUG.verbose_logging) context.request.log("BEFORE_ROUTES");
+            try {
+                before_routes = this.middleware.before_routes;
+            } catch (error) {
+                context.request.error("BEFORE_ROUTES", error);
+                const error_handler = this.middleware.error_handler;
+                before_routes = {
+                    build (context) {
+                        return error_handler(context);
+                    },
+                    dom_ready () {}
                 };
             }
         }
-        const resolved_content = result.response.content;
-        if (typeof resolved_content.document_html !== "undefined") {
-            if (do_building) {
-                result.response.cookies.forEach((cookie)=>{
-                    if (cookie.http_only === false) {
-                        document.cookie = cookie.toString();
-                    }
-                });
+        let route = null;
+        if (do_building) {
+            const before_routes_result = before_routes ? before_routes.build(context) : null;
+            route = this.routes_resolver(context);
+            const response = before_routes_result === null ? route.build(context) : before_routes_result;
+            response.cookies.forEach((cookie)=>{
+                if (cookie.http_only === false) {
+                    document.cookie = cookie.toString();
+                }
+            });
+            if (response.status_code === 301) {
+                const redirect_url = response.get_header("Location");
+                if (redirect_url === null) {
+                    DEBUG.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
+                    return null;
+                } else {
+                    if (DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
+                    this.page_change_to(redirect_url);
+                    return {
+                        url: this.request_url,
+                        is_redirect: true,
+                        status_code: response.status_code
+                    };
+                }
+            }
+            const resolved_content = response.content;
+            if (typeof resolved_content.document_html !== "undefined") {
                 resolved_content.html();
                 html_element_set_attributes(document.children[0], resolved_content.document_html.attributes);
                 html_element_set_attributes(document.head, resolved_content.document_head.attributes);
                 html_element_set_attributes(document.body, resolved_content.document_body.attributes);
                 document.head.innerHTML = resolved_content.document_head.innerHTML;
                 document.body.innerHTML = resolved_content.document_body.innerHTML;
+                return {
+                    url: this.request_url,
+                    is_redirect: false,
+                    status_code: response.status_code
+                };
             }
-            if (result.dom_ready !== null) result.dom_ready(context, this);
-            return {
-                url: this.request_url,
-                is_redirect: false,
-                status_code: result.response.status_code
-            };
         }
+        if (before_routes !== null) before_routes.dom_ready(context, this);
+        if (route !== null) route.dom_ready(context, this);
         return null;
     }
     page_change_to(url_or_path) {
@@ -685,20 +623,25 @@ class FrontworkClient extends Frontwork {
         return false;
     }
 }
-const __default = JSON.parse("[\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Page\" }\n    ,{ \"key\": \"text1\", \"translation\": \"This is a test page for the Frontwork framework.\" }\n    ,{ \"key\": \"title2\", \"translation\": \"Test Form\" }\n    ,{ \"key\": \"another_title1\", \"translation\": \"Hello from 127.0.0.1\" }\n    ,{ \"key\": \"another_text1\", \"translation\": \"Yes you can have different domains :)\" }\n]");
-const __default1 = JSON.parse("[\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Seite\" }\n    ,{ \"key\": \"text1\", \"translation\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\" }\n    ,{ \"key\": \"title2\", \"translation\": \"Test Formular\" }\n]");
+const __default = JSON.parse("[\r\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Page\" }\r\n    ,{ \"key\": \"text1\", \"translation\": \"This is a test page for the Frontwork framework.\" }\r\n    ,{ \"key\": \"title2\", \"translation\": \"Test Form\" }\r\n    ,{ \"key\": \"another_title1\", \"translation\": \"Hello from 127.0.0.1\" }\r\n    ,{ \"key\": \"another_text1\", \"translation\": \"Yes you can have different domains :)\" }\r\n]");
+const __default1 = JSON.parse("[\r\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Seite\" }\r\n    ,{ \"key\": \"text1\", \"translation\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\" }\r\n    ,{ \"key\": \"title2\", \"translation\": \"Test Formular\" }\r\n]");
 const i18n = new I18n([
     new I18nLocale("en", __default),
     new I18nLocale("de", __default1)
 ]);
 function render_header() {
-    const header = FW.ensure_element_with_text("header", "header", "Home", {
-        href: "/"
-    });
+    const header = FW.create_element("header");
     console.log("header", header);
-    FW.ensure_element_with_text("a", "a-home", "Home", {
+    const title1 = FW.create_element("h1").append_to(header);
+    title1.element.innerText = "TEST from header";
+    const title2 = FW.ensure_element("h2", "title222", {
+        class: "das ist eine class"
+    }).append_to(header);
+    title2.element.innerText = "TEST2 from header";
+    const a = FW.ensure_element_with_text("a", "a-home", "Home", {
         href: "/"
     }).append_to(header);
+    header.element.append(a.element);
     FW.ensure_element_with_text("a", "a-test2", "Test 2", {
         href: "/test2"
     }).append_to(header);
@@ -716,10 +659,6 @@ function render_header() {
 class AnotherComponent {
     build(context) {
         const document_builder = new DocumentBuilder(context);
-        const main = FW.create_element("main");
-        document_builder.body_append(main);
-        FW.ensure_element_with_text("h1", "another_title1", context.i18n.get_translation("another_title1"));
-        FW.ensure_element_with_text("p", "another_text1", context.i18n.get_translation("another_text1"));
         return new FrontworkResponse(200, document_builder);
     }
     dom_ready() {}
@@ -727,7 +666,11 @@ class AnotherComponent {
 class TestComponent {
     build(context) {
         const document_builder = new DocumentBuilder(context);
-        document_builder.document_body.appendChild(render_header().element);
+        const header = render_header();
+        console.log("------------------------------------------");
+        console.log("header.element.outerHTML", header.element.outerHTML);
+        console.log("------------------------------------------");
+        document_builder.document_body.appendChild(header.element);
         const main = document_builder.document_body.appendChild(document.createElement("main"));
         const title1 = main.appendChild(document.createElement("h1"));
         title1.innerText = context.i18n.get_translation("title1");
@@ -852,14 +795,11 @@ const middleware = new FrontworkMiddleware({
         },
         dom_ready: ()=>{}
     },
-    error_handler: {
-        build: (context)=>{
-            const document_builder = new DocumentBuilder(context);
-            const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
-            h1.innerText = "ERROR 500 - Internal server error";
-            return new FrontworkResponse(500, document_builder.set_html_lang("en").add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow"));
-        },
-        dom_ready: ()=>{}
+    error_handler: (context)=>{
+        const document_builder = new DocumentBuilder(context);
+        const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
+        h1.innerText = "ERROR 500 - Internal server error";
+        return new FrontworkResponse(500, document_builder.set_html_lang("en").add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow"));
     },
     not_found_handler: {
         build: (context)=>{

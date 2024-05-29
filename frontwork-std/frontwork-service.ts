@@ -1,6 +1,15 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage, LogType, DEBUG } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage, LogType, DEBUG, FW, HTMLElementWrapper, FrontworkResponseRedirect } from "./frontwork.ts";
 import { key_value_list_to_array } from "./utils.ts";
+
+// FW Overwrites for Deno
+FW.is_client_side = false;
+FW.ensure_element = function<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
+    const elem2 = FW.create_element(tag, attributes);
+    elem2.element.id = id;
+    return elem2;
+};
+console.log("FW.is_client_side", FW.is_client_side)
 
 
 class Asset {
@@ -192,19 +201,23 @@ export class FrontworkWebservice extends Frontwork {
                 return resolved_asset;
             }
 
+            
+            // Middleware: redirect lonely slash
+            if (this.middleware.redirect_lonely_slash && request.path_dirs.length > 2 && request.path_dirs[request.path_dirs.length -1] === "") {
+                let new_path = "";
+                for (let i = 0; i < request.path_dirs.length - 1; i++) {
+                    if (request.path_dirs[i] !== "") {
+                        new_path += "/" + request.path_dirs[i];
+                    }
+                }
+                
+                if(DEBUG.verbose_logging) request.log("LONELY_SLASH_REDIRECT");
+                return new FrontworkResponseRedirect(new_path).into_response();
+            }
+
             // Route
             const context = { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
-            const resolved_component = this.routes_resolver_with_middleware(context);
-            
-            const resolved_response = resolved_component;
-            if(resolved_response.response === null) {
-                if(DEBUG.verbose_logging) request.log("Frontwork ERROR. This should never happen.");
-                const not_found_response = <FrontworkResponse> this.middleware.not_found_handler.build(context);
-                return not_found_response.into_response();
-            } else {
-                return resolved_response.response.into_response();
-            }
-    
+            return this.routes_resolver(context).build(context).into_response();
         } catch (error) {
             console.error("ERROR in middleware.error_handler", error);
         }
