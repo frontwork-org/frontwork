@@ -1,20 +1,20 @@
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, DEBUG, LogType, FW, HTMLElementWrapper } from "../frontwork.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
+
 
 class MyMainDocumentBuilder extends DocumentBuilder {
 	main: HTMLElementWrapper<HTMLElement>;
 
 	constructor(context: FrontworkContext) {
 		super(context);
-		const header = FW.create_element("header");
-		FW.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
-		FW.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
-		FW.ensure_element_with_text("a", "a-test3", "Test 3", { href: "/test3" }).append_to(header);
-		FW.ensure_element_with_text("a", "a-german", "German", { href: "/german" }).append_to(header);
-		FW.ensure_element_with_text("a", "a-crash", "Crash", { href: "/crash" }).append_to(header);
-		this.body_append(header);
-		this.main = this.body_append(FW.create_element("main"));
+		const header = this.body_append( context.create_element("header") );
+		context.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
+		context.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
+		context.ensure_element_with_text("a", "a-test3", "Test 3", { href: "/test3" }).append_to(header);
+		context.ensure_element_with_text("a", "a-german", "German", { href: "/german" }).append_to(header);
+		context.ensure_element_with_text("a", "a-crash", "Crash", { href: "/crash" }).append_to(header);
+		this.main = this.body_append(context.create_element("main"));
 	}
 }
 
@@ -22,9 +22,9 @@ class MyMainDocumentBuilder extends DocumentBuilder {
 class AnotherComponent implements Component {
     build(context: FrontworkContext): FrontworkResponse {
 		const document_builder = new DocumentBuilder(context);
-		const main = document_builder.body_append( FW.create_element("main") );
-		FW.ensure_element_with_text("h1", "another_title1", context.i18n.get_translation("another_title1")).append_to(main);
-		FW.ensure_element_with_text("p", "another_text1", context.i18n.get_translation("another_text1")).append_to(main);
+		const main = document_builder.body_append( context.create_element("main") );
+		context.ensure_element_with_text("h1", "another_title1", context.i18n.get_translation("another_title1")).append_to(main);
+		context.ensure_element_with_text("p", "another_text1", context.i18n.get_translation("another_text1")).append_to(main);
 		return new FrontworkResponse(200, document_builder);
 	}
     dom_ready(): void {}
@@ -34,20 +34,20 @@ class TestComponent implements Component {
     build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
 
-		const title = FW.ensure_element_with_text("h1", "title1", context.i18n.get_translation("title1")).append_to(document_builder.main)
-		const description = FW.ensure_element_with_text("p", "description", context.i18n.get_translation("text1")).append_to(document_builder.main)
+		const title = context.ensure_element_with_text("h1", "title1", context.i18n.get_translation("title1")).append_to(document_builder.main)
+		const description = context.ensure_element_with_text("p", "description", context.i18n.get_translation("text1")).append_to(document_builder.main)
 		
-		const section_form = FW.create_element("section").append_to(document_builder.main);
-		FW.ensure_element_with_text("h2", "h1", context.i18n.get_translation("title2")).append_to(section_form);
+		const section_form = context.create_element("section").append_to(document_builder.main);
+		context.ensure_element_with_text("h2", "h1", context.i18n.get_translation("title2")).append_to(section_form);
 
 		//TODO: Test forms
-		const form = FW.ensure_element("form", "test_form", { action: "", method: "post" }).append_to(section_form);
+		const form = context.ensure_element("form", "test_form", { action: "", method: "post" }).append_to(section_form);
 		
 		for (let i = 0; i < 3; i++) {
-			FW.ensure_element("input", "input"+i, { type: "text", name: "text"+i, value: "asdsad" }).append_to(form);
+			context.ensure_element("input", "input"+i, { type: "text", name: "text"+i, value: "asdsad" }).append_to(form);
 		}
 		
-		FW.ensure_element_with_text("button", "submit_button", "Submit", { type: "submit", name: "action", value: "sent" }).append_to(form);
+		context.ensure_element_with_text("button", "submit_button", "Submit", { type: "submit", name: "action", value: "sent" }).append_to(form);
 
 		return new FrontworkResponse(200, 
 			document_builder
@@ -69,11 +69,11 @@ class Test2Component implements Component {
     build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
 
-		const title1 = FW.ensure_element_with_text("h1", "h1", "Test Page 2").append_to(document_builder.main);
-		const description = FW.ensure_element("p", "description").append_to(document_builder.main);
+		const title1 = context.ensure_element_with_text("h1", "h1", "Test Page 2").append_to(document_builder.main);
+		const description = context.ensure_element("p", "description").append_to(document_builder.main);
 		description.element.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
 		
-		DEBUG.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);
+		FW.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);
 		return new FrontworkResponse(200, 
 			document_builder
 				.add_head_meta_data(title1.element.innerText, description.element.innerText, "noindex,nofollow")
@@ -99,7 +99,6 @@ class ElementTestComponent implements Component {
 		const document_builder = new MyMainDocumentBuilder(context);
 		return new FrontworkResponse(200, 
 			document_builder
-				.set_html_lang("en")
 				.add_head_meta_data("element_test", "element_test", "noindex,nofollow")
 		);
 	}
@@ -149,12 +148,11 @@ class CrashComponent implements Component {
 class NotFoundComponent implements Component {
     build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
-		const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
+		const h1 = context.document_body.appendChild(document.createElement("h1"));
 		h1.innerText = "ERROR 404 - Not found";
 
 		return new FrontworkResponse(404,
 			document_builder
-				.set_html_lang("en")
 				.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
 		);
 	}
@@ -186,12 +184,11 @@ const middleware = new FrontworkMiddleware({
 	},
 	error_handler: (context: FrontworkContext): FrontworkResponse => {
 		const document_builder = new MyMainDocumentBuilder(context);
-		const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
+		const h1 = context.document_body.appendChild(document.createElement("h1"));
 		h1.innerText = "ERROR 500 - Internal server error";
 
 		return new FrontworkResponse(500,
 			document_builder
-				.set_html_lang("en")
 				.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
 		);
 	},

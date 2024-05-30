@@ -1,5 +1,5 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkInit, FrontworkRequest, LogType, PostScope, DEBUG } from "./frontwork.ts";
+import { Frontwork, FrontworkInit, FrontworkRequest, LogType, PostScope, FW, FrontworkContext } from "./frontwork.ts";
 import { green, red, yellow } from "https://deno.land/std@0.224.0/fmt/colors.ts";
 
 
@@ -12,8 +12,8 @@ export class FrontworkTestworker extends Frontwork {
     constructor(init: FrontworkInit) {
         super(init);
         console.info("Test worker started\n");
-        DEBUG.verbose_logging = true;
-        DEBUG.reporter = (log_type: LogType, category: string, text: string, error: Error|null) => {
+        FW.verbose_logging = true;
+        FW.reporter = (log_type: LogType, category: string, text: string, error: Error|null) => {
             if (log_type === LogType.Error) {
                 this.fail_count++;
                 if(error === null) console.error(text);
@@ -70,7 +70,8 @@ export class FrontworkTestworker extends Frontwork {
         for (let d = 0; d < domains.length; d++) {
             const domain_url = "http://"+domains[d]+":"+this.port;
             const domain_request = new FrontworkRequest("GET", domain_url, new Headers(), new PostScope([]));
-            const domain_context = { request: domain_request, i18n: this.i18n, platform: this.platform, stage: this.stage };
+            const domain_context = new FrontworkContext(this.platform, this.stage, this.i18n, domain_request, true);
+
             const routes = this.domain_to_route_selector(domain_context);
             
 
@@ -81,7 +82,8 @@ export class FrontworkTestworker extends Frontwork {
 
                     const route_url = domain_url+route.path;
                     const route_request = new FrontworkRequest("GET", route_url, new Headers(), new PostScope([]));
-                    const route_context = { request: route_request, i18n: this.i18n, platform: this.platform, stage: this.stage };
+                    const route_context = new FrontworkContext(this.platform, this.stage, this.i18n, route_request, true);
+
     
                     this.assert_function(() => {
                         // Middleware: before Routes

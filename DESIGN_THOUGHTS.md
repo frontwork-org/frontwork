@@ -24,9 +24,9 @@ Thus all events needs to be added in dom_ready().
 
 ## Issue with DOM queries
 If the client has already a page rendered and now it will render the same page, all DOM queries will be related to old state and thus if you ask if an element already exists it will say yes even it is not in the new state.  
-So we have to provide custom functions to query the DOM. By default it will query document.body, but on page change it will query context.html.body
+So we have to provide custom functions to query the DOM. By default it will query document.body, but on page change it will query context.document_body
 
-For easy access to these functions I put them inside FrontworkContext, that way it has an easy access to context.html.body.
+For easy access to these functions I put them inside FrontworkContext, that way it has an easy access to context.document_body.
 
 ### Same case with error_handler and before_route
 It could be possible that there are already some elements created. To fix this the error_handler will only be a build function that returns a FrontworkResponse.

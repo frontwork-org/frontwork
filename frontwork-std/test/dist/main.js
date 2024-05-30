@@ -63,7 +63,8 @@ var LogType;
     LogType[LogType["Warn"] = 1] = "Warn";
     LogType[LogType["Error"] = 2] = "Error";
 })(LogType || (LogType = {}));
-const DEBUG = {
+const FW = {
+    is_client_side: true,
     verbose_logging: false,
     reporter: function(log_type, category, text, error) {
         if (log_type === LogType.Error) {
@@ -86,39 +87,6 @@ class HTMLElementWrapper {
         return this;
     }
 }
-const FW = {
-    is_client_side: true,
-    create_element (tag, attributes) {
-        const element = document.createElement(tag);
-        if (attributes) {
-            for(const key in attributes){
-                element.setAttribute(key, attributes[key]);
-            }
-        }
-        return new HTMLElementWrapper(element);
-    },
-    ensure_element (tag, id, attributes) {
-        const elem = document.getElementById(id);
-        if (elem !== null) return new HTMLElementWrapper(elem);
-        const elem2 = FW.create_element(tag, attributes);
-        elem2.element.id = id;
-        return elem2;
-    },
-    ensure_element_with_text (tag, id, text, attributes) {
-        let element = document.getElementById(id);
-        if (element === null) {
-            element = document.createElement(tag);
-            element.id = id;
-            if (attributes) {
-                for(const key in attributes){
-                    element.setAttribute(key, attributes[key]);
-                }
-            }
-        }
-        element.innerText = text;
-        return new HTMLElementWrapper(element);
-    }
-};
 var EnvironmentPlatform;
 (function(EnvironmentPlatform) {
     EnvironmentPlatform[EnvironmentPlatform["Web"] = 0] = "Web";
@@ -140,10 +108,10 @@ class I18n {
         this.selected_locale = locales[0];
     }
     set_locale(locale) {
-        if (DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "I18n", "   Setting locale to \"" + locale + "\"", null);
+        if (FW.verbose_logging) FW.reporter(LogType.Info, "I18n", "   Setting locale to \"" + locale + "\"", null);
         const locale_found = this.locales.find((l)=>l.locale === locale);
         if (locale_found === undefined) {
-            DEBUG.reporter(LogType.Error, "I18n", "Locale '" + locale + "' does not exist", null);
+            FW.reporter(LogType.Error, "I18n", "Locale '" + locale + "' does not exist", null);
             return false;
         }
         this.selected_locale = locale_found;
@@ -163,7 +131,7 @@ class I18nLocale {
     get_translation(id) {
         const translation = this.translations[id];
         if (translation === undefined) {
-            DEBUG.reporter(LogType.Error, "I18n", "    Missing translation (id: '" + id + "') for the locale '" + this.locale + "'.", null);
+            FW.reporter(LogType.Error, "I18n", "    Missing translation (id: '" + id + "') for the locale '" + this.locale + "'.", null);
             return "";
         }
         return translation;
@@ -242,10 +210,10 @@ class FrontworkRequest {
         return text;
     }
     log(category) {
-        if (DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, category, this.__request_text(category), null);
+        if (FW.verbose_logging) FW.reporter(LogType.Info, category, this.__request_text(category), null);
     }
     error(category, error) {
-        DEBUG.reporter(LogType.Error, category, this.__request_text(category), error);
+        FW.reporter(LogType.Error, category, this.__request_text(category), error);
     }
 }
 class FrontworkResponse {
@@ -306,15 +274,9 @@ class FrontworkResponse {
 class DocumentBuilder {
     context;
     doctype;
-    document_html;
-    document_head;
-    document_body;
     constructor(context){
         this.context = context;
         this.doctype = "<!DOCTYPE html>";
-        this.document_html = document.createElement("html");
-        this.document_head = this.document_html.appendChild(document.createElement("head"));
-        this.document_body = this.document_html.appendChild(document.createElement("body"));
         this.set_html_lang(context.i18n.selected_locale.locale);
     }
     head_append_tag(tag, attributes) {
@@ -324,59 +286,60 @@ class DocumentBuilder {
                 element.setAttribute(key, attributes[key]);
             }
         }
-        this.document_head.append(element);
+        this.context.document_head.append(element);
+        return this;
     }
     add_head_meta_data(title, description, robots) {
-        const meta_chatset = this.document_head.appendChild(document.createElement("meta"));
+        const meta_chatset = this.context.document_head.appendChild(document.createElement("meta"));
         meta_chatset.setAttribute("charset", "UTF-8");
-        const meta_viewport = this.document_head.appendChild(document.createElement("meta"));
+        const meta_viewport = this.context.document_head.appendChild(document.createElement("meta"));
         meta_viewport.setAttribute("name", "viewport");
         meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
-        const meta_title = this.document_head.appendChild(document.createElement("title"));
+        const meta_title = this.context.document_head.appendChild(document.createElement("title"));
         meta_title.innerHTML = title;
-        const meta_description = this.document_head.appendChild(document.createElement("meta"));
+        const meta_description = this.context.document_head.appendChild(document.createElement("meta"));
         meta_description.setAttribute("name", "description");
         meta_description.setAttribute("content", description);
-        const meta_robots = this.document_head.appendChild(document.createElement("meta"));
+        const meta_robots = this.context.document_head.appendChild(document.createElement("meta"));
         meta_robots.setAttribute("name", "robots");
         meta_robots.setAttribute("content", robots);
         return this;
     }
     add_head_meta_opengraph_website(title, description, url, image_url) {
-        const meta_og_type = this.document_head.appendChild(document.createElement("meta"));
+        const meta_og_type = this.context.document_head.appendChild(document.createElement("meta"));
         meta_og_type.setAttribute("property", "og:type");
         meta_og_type.setAttribute("content", "website");
-        const meta_og_url = this.document_head.appendChild(document.createElement("meta"));
+        const meta_og_url = this.context.document_head.appendChild(document.createElement("meta"));
         meta_og_url.setAttribute("property", "og:url");
         meta_og_url.setAttribute("content", url);
-        const meta_og_title = this.document_head.appendChild(document.createElement("meta"));
+        const meta_og_title = this.context.document_head.appendChild(document.createElement("meta"));
         meta_og_title.setAttribute("property", "og:title");
         meta_og_title.setAttribute("content", title);
-        const meta_og_description = this.document_head.appendChild(document.createElement("meta"));
+        const meta_og_description = this.context.document_head.appendChild(document.createElement("meta"));
         meta_og_description.setAttribute("property", "og:description");
         meta_og_description.setAttribute("content", description);
-        const meta_og_image = this.document_head.appendChild(document.createElement("meta"));
+        const meta_og_image = this.context.document_head.appendChild(document.createElement("meta"));
         meta_og_image.setAttribute("property", "og:image");
         meta_og_image.setAttribute("content", image_url);
         return this;
     }
-    body_append(wr) {
-        this.document_body.append(wr.element);
-        return wr;
-    }
     set_html_lang(code) {
-        this.document_html.setAttribute("lang", code);
+        this.context.document_html.setAttribute("lang", code);
         return this;
     }
+    body_append(wr) {
+        this.context.document_body.append(wr.element);
+        return wr;
+    }
     html() {
-        const style_css = this.document_head.appendChild(document.createElement("link"));
+        const style_css = this.context.document_head.appendChild(document.createElement("link"));
         style_css.setAttribute("rel", "stylesheet");
         style_css.setAttribute("href", "/assets/style.css");
         style_css.setAttribute("type", "text/css");
-        const main_js = this.document_body.appendChild(document.createElement("script"));
+        const main_js = this.context.document_body.appendChild(document.createElement("script"));
         main_js.setAttribute("src", "/assets/main.js");
         main_js.setAttribute("type", "text/javascript");
-        return this.document_html;
+        return this.context.document_html;
     }
     toString() {
         const html_response = this.html();
@@ -385,7 +348,7 @@ class DocumentBuilder {
 }
 class FrontworkResponseRedirect extends FrontworkResponse {
     constructor(redirect_path){
-        if (DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> " + redirect_path, null);
+        if (FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> " + redirect_path, null);
         super(301, "redirecting...");
         this.add_header("Location", redirect_path);
     }
@@ -402,6 +365,51 @@ class Route {
         previous_route_id += 1;
     }
 }
+class FrontworkContext {
+    platform;
+    stage;
+    i18n;
+    request;
+    do_building;
+    document_html;
+    document_head;
+    document_body;
+    constructor(platform, stage, i18n, request, do_building){
+        this.platform = platform;
+        this.stage = stage;
+        this.i18n = i18n;
+        this.request = request;
+        this.do_building = do_building;
+        this.document_html = document.createElement("html");
+        this.document_head = this.document_html.appendChild(document.createElement("head"));
+        this.document_body = this.document_html.appendChild(document.createElement("body"));
+    }
+    create_element(tag, attributes) {
+        const element = document.createElement(tag);
+        if (attributes) {
+            for(const key in attributes){
+                element.setAttribute(key, attributes[key]);
+            }
+        }
+        return new HTMLElementWrapper(element);
+    }
+    ensure_element(tag, id, attributes) {
+        console.log(this);
+        const elem = this.do_building ? document.getElementById(id) : this.document_html.ownerDocument.getElementById(id);
+        if (elem !== null) return new HTMLElementWrapper(elem);
+        const elem2 = this.create_element(tag, attributes);
+        elem2.element.id = id;
+        return elem2;
+    }
+    ensure_element_with_text(tag, id, text, attributes) {
+        const elem = document.getElementById(id);
+        if (elem !== null) return new HTMLElementWrapper(elem);
+        const elem2 = this.create_element(tag, attributes);
+        elem2.element.id = id;
+        elem2.element.innerText = text;
+        return elem2;
+    }
+}
 class Frontwork {
     platform;
     stage;
@@ -416,7 +424,7 @@ class Frontwork {
         this.domain_to_route_selector = init.domain_to_route_selector;
         this.middleware = init.middleware;
         this.i18n = init.i18n;
-        if (this.stage === EnvironmentStage.Development) DEBUG.verbose_logging = true;
+        if (this.stage === EnvironmentStage.Development) FW.verbose_logging = true;
     }
     route_resolver(context) {
         const routes = this.domain_to_route_selector(context);
@@ -435,7 +443,7 @@ class Frontwork {
                             }
                         }
                         if (found) {
-                            if (DEBUG.verbose_logging) context.request.log("ROUTE #" + route.id + " (" + route.path + ")");
+                            if (FW.verbose_logging) context.request.log("ROUTE #" + route.id + " (" + route.path + ")");
                             return route;
                         }
                     }
@@ -460,7 +468,7 @@ class Frontwork {
                 };
             }
         }
-        if (DEBUG.verbose_logging) context.request.log("NOT_FOUND");
+        if (FW.verbose_logging) context.request.log("NOT_FOUND");
         try {
             const component = new this.middleware.not_found_handler(context);
             return {
@@ -551,12 +559,7 @@ class FrontworkClient extends Frontwork {
     page_change(savestate, do_building) {
         this.request_url = savestate.url;
         const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope([]));
-        const context = {
-            request: request,
-            i18n: this.i18n,
-            platform: this.platform,
-            stage: this.stage
-        };
+        const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, do_building);
         const route = this.route_resolver(context);
         try {
             this.middleware.before_route.build(context);
@@ -575,10 +578,10 @@ class FrontworkClient extends Frontwork {
             if (response.status_code === 301 || response.status_code === 302) {
                 const redirect_url = response.get_header("Location");
                 if (redirect_url === null) {
-                    DEBUG.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
+                    FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
                     return null;
                 } else {
-                    if (DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
+                    if (FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
                     this.page_change_to(redirect_url);
                     return {
                         url: this.request_url,
@@ -588,13 +591,13 @@ class FrontworkClient extends Frontwork {
                 }
             }
             const resolved_content = response.content;
-            if (typeof resolved_content.document_html !== "undefined") {
+            if (typeof resolved_content.context.document_html !== "undefined") {
                 resolved_content.html();
-                html_element_set_attributes(document.children[0], resolved_content.document_html.attributes);
-                html_element_set_attributes(document.head, resolved_content.document_head.attributes);
-                html_element_set_attributes(document.body, resolved_content.document_body.attributes);
-                document.head.innerHTML = resolved_content.document_head.innerHTML;
-                document.body.innerHTML = resolved_content.document_body.innerHTML;
+                html_element_set_attributes(document.children[0], resolved_content.context.document_html.attributes);
+                html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
+                html_element_set_attributes(document.body, resolved_content.context.document_body.attributes);
+                document.head.innerHTML = resolved_content.context.document_head.innerHTML;
+                document.body.innerHTML = resolved_content.context.document_body.innerHTML;
                 reb_result.dom_ready(context, this);
                 return {
                     url: this.request_url,
@@ -613,7 +616,7 @@ class FrontworkClient extends Frontwork {
         return null;
     }
     page_change_to(url_or_path) {
-        if (DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "PageChange", "page_change_to url_or_path: " + url_or_path, null);
+        if (FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_to url_or_path: " + url_or_path, null);
         let url;
         const test = url_or_path.indexOf("//");
         if (test === 0 || test === 5 || test === 6) {
@@ -634,8 +637,8 @@ class FrontworkClient extends Frontwork {
         return false;
     }
 }
-const __default = JSON.parse("{\r\n     \"title1\": \"Frontwork Test Page\"\r\n    ,\"text1\": \"This is a test page for the Frontwork framework.\"\r\n    ,\"title2\": \"Test Form\"\r\n    ,\"another_title1\": \"Hello from 127.0.0.1\"\r\n    ,\"another_text1\": \"Yes you can have different domains :)\"\r\n}");
-const __default1 = JSON.parse("{\r\n    \"title1\": \"Frontwork Test Seite\"\r\n   ,\"text1\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\"\r\n   ,\"title2\": \"Test Formular\"\r\n}");
+const __default = JSON.parse("{\n     \"title1\": \"Frontwork Test Page\"\n    ,\"text1\": \"This is a test page for the Frontwork framework.\"\n    ,\"title2\": \"Test Form\"\n    ,\"another_title1\": \"Hello from 127.0.0.1\"\n    ,\"another_text1\": \"Yes you can have different domains :)\"\n}");
+const __default1 = JSON.parse("{\n    \"title1\": \"Frontwork Test Seite\"\n   ,\"text1\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\"\n   ,\"title2\": \"Test Formular\"\n}");
 const i18n = new I18n([
     new I18nLocale("en", __default),
     new I18nLocale("de", __default1)
@@ -644,32 +647,31 @@ class MyMainDocumentBuilder extends DocumentBuilder {
     main;
     constructor(context){
         super(context);
-        const header = FW.create_element("header");
-        FW.ensure_element_with_text("a", "a-home", "Home", {
+        const header = this.body_append(context.create_element("header"));
+        context.ensure_element_with_text("a", "a-home", "Home", {
             href: "/"
         }).append_to(header);
-        FW.ensure_element_with_text("a", "a-test2", "Test 2", {
+        context.ensure_element_with_text("a", "a-test2", "Test 2", {
             href: "/test2"
         }).append_to(header);
-        FW.ensure_element_with_text("a", "a-test3", "Test 3", {
+        context.ensure_element_with_text("a", "a-test3", "Test 3", {
             href: "/test3"
         }).append_to(header);
-        FW.ensure_element_with_text("a", "a-german", "German", {
+        context.ensure_element_with_text("a", "a-german", "German", {
             href: "/german"
         }).append_to(header);
-        FW.ensure_element_with_text("a", "a-crash", "Crash", {
+        context.ensure_element_with_text("a", "a-crash", "Crash", {
             href: "/crash"
         }).append_to(header);
-        this.body_append(header);
-        this.main = this.body_append(FW.create_element("main"));
+        this.main = this.body_append(context.create_element("main"));
     }
 }
 class AnotherComponent {
     build(context) {
         const document_builder = new DocumentBuilder(context);
-        const main = document_builder.body_append(FW.create_element("main"));
-        FW.ensure_element_with_text("h1", "another_title1", context.i18n.get_translation("another_title1")).append_to(main);
-        FW.ensure_element_with_text("p", "another_text1", context.i18n.get_translation("another_text1")).append_to(main);
+        const main = document_builder.body_append(context.create_element("main"));
+        context.ensure_element_with_text("h1", "another_title1", context.i18n.get_translation("another_title1")).append_to(main);
+        context.ensure_element_with_text("p", "another_text1", context.i18n.get_translation("another_text1")).append_to(main);
         return new FrontworkResponse(200, document_builder);
     }
     dom_ready() {}
@@ -677,22 +679,22 @@ class AnotherComponent {
 class TestComponent {
     build(context) {
         const document_builder = new MyMainDocumentBuilder(context);
-        const title = FW.ensure_element_with_text("h1", "title1", context.i18n.get_translation("title1")).append_to(document_builder.main);
-        const description = FW.ensure_element_with_text("p", "description", context.i18n.get_translation("text1")).append_to(document_builder.main);
-        const section_form = FW.create_element("section").append_to(document_builder.main);
-        FW.ensure_element_with_text("h2", "h1", context.i18n.get_translation("title2")).append_to(section_form);
-        const form = FW.ensure_element("form", "test_form", {
+        const title = context.ensure_element_with_text("h1", "title1", context.i18n.get_translation("title1")).append_to(document_builder.main);
+        const description = context.ensure_element_with_text("p", "description", context.i18n.get_translation("text1")).append_to(document_builder.main);
+        const section_form = context.create_element("section").append_to(document_builder.main);
+        context.ensure_element_with_text("h2", "h1", context.i18n.get_translation("title2")).append_to(section_form);
+        const form = context.ensure_element("form", "test_form", {
             action: "",
             method: "post"
         }).append_to(section_form);
         for(let i = 0; i < 3; i++){
-            FW.ensure_element("input", "input" + i, {
+            context.ensure_element("input", "input" + i, {
                 type: "text",
                 name: "text" + i,
                 value: "asdsad"
             }).append_to(form);
         }
-        FW.ensure_element_with_text("button", "submit_button", "Submit", {
+        context.ensure_element_with_text("button", "submit_button", "Submit", {
             type: "submit",
             name: "action",
             value: "sent"
@@ -711,10 +713,10 @@ class TestGerman extends TestComponent {
 class Test2Component {
     build(context) {
         const document_builder = new MyMainDocumentBuilder(context);
-        const title1 = FW.ensure_element_with_text("h1", "h1", "Test Page 2").append_to(document_builder.main);
-        const description = FW.ensure_element("p", "description").append_to(document_builder.main);
+        const title1 = context.ensure_element_with_text("h1", "h1", "Test Page 2").append_to(document_builder.main);
+        const description = context.ensure_element("p", "description").append_to(document_builder.main);
         description.element.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
-        DEBUG.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);
+        FW.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);
         return new FrontworkResponse(200, document_builder.add_head_meta_data(title1.element.innerText, description.element.innerText, "noindex,nofollow"));
     }
     dom_ready(context, client) {
@@ -732,7 +734,7 @@ class Test3Component {
 class ElementTestComponent {
     build(context) {
         const document_builder = new MyMainDocumentBuilder(context);
-        return new FrontworkResponse(200, document_builder.set_html_lang("en").add_head_meta_data("element_test", "element_test", "noindex,nofollow"));
+        return new FrontworkResponse(200, document_builder.add_head_meta_data("element_test", "element_test", "noindex,nofollow"));
     }
     dom_ready() {}
 }
@@ -774,9 +776,9 @@ class CrashComponent {
 class NotFoundComponent {
     build(context) {
         const document_builder = new MyMainDocumentBuilder(context);
-        const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
+        const h1 = context.document_body.appendChild(document.createElement("h1"));
         h1.innerText = "ERROR 404 - Not found";
-        return new FrontworkResponse(404, document_builder.set_html_lang("en").add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow"));
+        return new FrontworkResponse(404, document_builder.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow"));
     }
     dom_ready() {}
 }
@@ -803,9 +805,9 @@ const middleware = new FrontworkMiddleware({
     },
     error_handler: (context)=>{
         const document_builder = new MyMainDocumentBuilder(context);
-        const h1 = document_builder.document_body.appendChild(document.createElement("h1"));
+        const h1 = context.document_body.appendChild(document.createElement("h1"));
         h1.innerText = "ERROR 500 - Internal server error";
-        return new FrontworkResponse(500, document_builder.set_html_lang("en").add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow"));
+        return new FrontworkResponse(500, document_builder.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow"));
     },
     not_found_handler: NotFoundComponent
 });

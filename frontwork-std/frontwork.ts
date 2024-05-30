@@ -9,15 +9,20 @@ export enum LogType {
     Error,
 }
 
-export const DEBUG =  {
+export const FW =  {
     /**
-     * IF true DEBUG.reporter will not be be called on LogType.Info.
+     * Is false if frontwork-service.ts has been imported
+     */
+    is_client_side: true,
+    
+    /**
+     * IF true FW.reporter will not be be called on LogType.Info.
      * Warn and Error messages will always be reported.
      */
     verbose_logging: false,
     
     /**
-     * To enable a bug reporter for staging and production you can modify DEBUG.reporter, that it sents a request to the backend
+     * To enable a bug reporter for staging and production you can modify FW.reporter, that it sents a request to the backend
      * @param log_type: LogType 
      * @param category: string 
      * @param text: string
@@ -52,70 +57,6 @@ export class HTMLElementWrapper<T extends HTMLElement> {
     }
 }
 
-//TODO: Move methods into DocumentBuilder. Make ensure_element_with_text getting text from context.i18n with id
-export const FW = {
-    /**
-     * Is false if frontwork-service.ts has been imported
-     */
-    is_client_side: true,
-
-    /**
-     * Ensures the existence of an HTML element by ID. Creates a new element if it doesn't exist.
-     * @param tag The tag name of the element to create if it doesn't exist.
-     * @param id The ID of the element to search for or create. Must be unique!
-     * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
-     * @returns The HTML element with the specified ID.
-     */
-    create_element<K extends keyof HTMLElementTagNameMap>(tag: K, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
-        const element = document.createElement(tag);
-        if (attributes) {
-            for (const key in attributes) {
-                element.setAttribute(key, attributes[key]);
-            }
-        }
-        return new HTMLElementWrapper(element);
-    },
-
-    /**
-     * Ensures the existence of an HTML element by ID. Creates a new element if it doesn't exist.
-     * @param tag The tag name of the element to create if it doesn't exist.
-     * @param id The ID of the element to search for or create. Must be unique!
-     * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
-     * @returns The HTML element with the specified ID.
-     */
-    ensure_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
-        const elem = document.getElementById(id);
-        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K]);
-        
-        const elem2 = FW.create_element(tag, attributes);
-        elem2.element.id = id;
-        return elem2;
-    },
-
-    /**
-     * Creates a new HTML element with text content and optional attributes.
-     * @param tag The tag name of the element.
-     * @param id The ID of the element to search for or create. Must be unique!
-     * @param text The text content of the element.     
-     * @param attributes Optional. Example: { class: "container", "data-role": "content" }
-     * @returns The newly created HTML element.
-     */
-    ensure_element_with_text<T extends HTMLElement>(tag: string, id: string, text: string, attributes?: { [key: string]: string }): HTMLElementWrapper<T> {
-        let element = document.getElementById(id);
-        if (element === null) {
-            element = document.createElement(tag);
-            element.id = id;
-            if (attributes) {
-                for (const key in attributes) {
-                    element.setAttribute(key, attributes[key]);
-                }
-            }
-        }
-        element.innerText = text;
-        return new HTMLElementWrapper<T>(element as T);
-    },
-
-};
 
 
 export enum EnvironmentPlatform {
@@ -142,11 +83,11 @@ export class I18n {
     }
 
     set_locale(locale: string) {
-        if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "I18n", "   Setting locale to \"" + locale + "\"", null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "I18n", "   Setting locale to \"" + locale + "\"", null);
         const locale_found = this.locales.find(l => l.locale === locale);
 
         if(locale_found === undefined) {
-            DEBUG.reporter(LogType.Error, "I18n", "Locale '"+locale+"' does not exist", null);
+            FW.reporter(LogType.Error, "I18n", "Locale '"+locale+"' does not exist", null);
             return false;
         }
         
@@ -173,7 +114,7 @@ export class I18nLocale {
         const translation = this.translations[id];
 
         if(translation === undefined) {
-            DEBUG.reporter(LogType.Error, "I18n", "    Missing translation (id: '"+id+"') for the locale '"+this.locale+"'.", null);
+            FW.reporter(LogType.Error, "I18n", "    Missing translation (id: '"+id+"') for the locale '"+this.locale+"'.", null);
             return "";
         }
 
@@ -312,11 +253,11 @@ export class FrontworkRequest {
     }
 
     log(category: string) {
-        if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, category, this.__request_text(category), null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, category, this.__request_text(category), null);
     }
     
     error(category: string, error: Error) {
-        DEBUG.reporter(LogType.Error, category, this.__request_text(category), error);
+        FW.reporter(LogType.Error, category, this.__request_text(category), error);
     }
 }
 
@@ -385,9 +326,6 @@ export class FrontworkResponse {
 export interface DocumentBuilderInterface {
     readonly context: FrontworkContext;
     readonly doctype: string;
-    readonly document_html: HTMLHtmlElement;
-    readonly document_head: HTMLHeadElement;
-    readonly document_body: HTMLBodyElement;
     head_append_tag(tag: string, attributes?: { [key: string]: string }): void;
     add_head_meta_data(title: string, description: string, robots: string): DocumentBuilder;
     body_append(wr: HTMLElementWrapper<HTMLElement>): void;
@@ -399,19 +337,18 @@ export interface DocumentBuilderInterface {
 export class DocumentBuilder implements DocumentBuilderInterface {
     readonly context: FrontworkContext;
     readonly doctype: string;
-    readonly document_html: HTMLHtmlElement;
-    readonly document_head: HTMLHeadElement;
-    readonly document_body: HTMLBodyElement;
+    
 
     constructor(context: FrontworkContext) {
         this.context = context;
         this.doctype = "<!DOCTYPE html>";
-        this.document_html = document.createElement("html");
-        this.document_head = this.document_html.appendChild( document.createElement("head") );
-        this.document_body = this.document_html.appendChild( document.createElement("body") );
         this.set_html_lang(context.i18n.selected_locale.locale);
     }
-    
+
+    //
+    // Head methods
+    //
+
     head_append_tag(tag: string, attributes?: { [key: string]: string }) {
         const element = document.createElement(tag);
         if (attributes) {
@@ -419,76 +356,85 @@ export class DocumentBuilder implements DocumentBuilderInterface {
                 element.setAttribute(key, attributes[key]);
             }
         }
-        this.document_head.append(element);
+        this.context.document_head.append(element);
+        return this;
     }
 
     add_head_meta_data(title: string, description: string, robots: string): DocumentBuilder {
-        const meta_chatset = this.document_head.appendChild( document.createElement("meta") );
+        const meta_chatset = this.context.document_head.appendChild( document.createElement("meta") );
         meta_chatset.setAttribute("charset", "UTF-8");
-        const meta_viewport = this.document_head.appendChild( document.createElement("meta") );
+        const meta_viewport = this.context.document_head.appendChild( document.createElement("meta") );
         meta_viewport.setAttribute("name", "viewport");
         meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
         
-        const meta_title = this.document_head.appendChild( document.createElement("title") );
+        const meta_title = this.context.document_head.appendChild( document.createElement("title") );
         meta_title.innerHTML = title;
         
-        const meta_description = this.document_head.appendChild( document.createElement("meta") );
+        const meta_description = this.context.document_head.appendChild( document.createElement("meta") );
         meta_description.setAttribute("name", "description");
         meta_description.setAttribute("content", description);
         
-        const meta_robots = this.document_head.appendChild( document.createElement("meta") );
+        const meta_robots = this.context.document_head.appendChild( document.createElement("meta") );
         meta_robots.setAttribute("name", "robots");
         meta_robots.setAttribute("content", robots);
         return this;
     }
 
     add_head_meta_opengraph_website(title: string, description: string, url: string, image_url: string): DocumentBuilder {
-        const meta_og_type = this.document_head.appendChild( document.createElement("meta") );
+        const meta_og_type = this.context.document_head.appendChild( document.createElement("meta") );
         meta_og_type.setAttribute("property", "og:type");
         meta_og_type.setAttribute("content", "website");
 
-        const meta_og_url = this.document_head.appendChild( document.createElement("meta") );
+        const meta_og_url = this.context.document_head.appendChild( document.createElement("meta") );
         meta_og_url.setAttribute("property", "og:url");
         meta_og_url.setAttribute("content", url);
 
-        const meta_og_title = this.document_head.appendChild( document.createElement("meta") );
+        const meta_og_title = this.context.document_head.appendChild( document.createElement("meta") );
         meta_og_title.setAttribute("property", "og:title");
         meta_og_title.setAttribute("content", title);
 
-        const meta_og_description = this.document_head.appendChild( document.createElement("meta") );
+        const meta_og_description = this.context.document_head.appendChild( document.createElement("meta") );
         meta_og_description.setAttribute("property", "og:description");
         meta_og_description.setAttribute("content", description);
 
-        const meta_og_image = this.document_head.appendChild( document.createElement("meta") );
+        const meta_og_image = this.context.document_head.appendChild( document.createElement("meta") );
         meta_og_image.setAttribute("property", "og:image");
         meta_og_image.setAttribute("content", image_url);
 
         return this;
     }
 
-    body_append(wr: HTMLElementWrapper<HTMLElement>) {
-        this.document_body.append(wr.element);
-        return wr;
-    }
+    //
+    // Body methods
+    //
 
     set_html_lang(code: string): DocumentBuilder {
-        this.document_html.setAttribute("lang", code);
+        this.context.document_html.setAttribute("lang", code);
         return this;
     }
 
+    body_append(wr: HTMLElementWrapper<HTMLElement>) {
+        this.context.document_body.append(wr.element);
+        return wr;
+    }
+
+    //
+    // Build methods
+    //
+
     html() {
         // force adding style.css to the end of the head
-        const style_css = this.document_head.appendChild( document.createElement("link") );
+        const style_css = this.context.document_head.appendChild( document.createElement("link") );
         style_css.setAttribute("rel", "stylesheet");
         style_css.setAttribute("href", "/assets/style.css");
         style_css.setAttribute("type", "text/css");
 
         // force adding main.js to the end of the body
-        const main_js = this.document_body.appendChild( document.createElement("script") );
+        const main_js = this.context.document_body.appendChild( document.createElement("script") );
         main_js.setAttribute("src", "/assets/main.js");
         main_js.setAttribute("type", "text/javascript");
 
-        return this.document_html;
+        return this.context.document_html;
     }
 
     toString() {
@@ -501,7 +447,7 @@ export class DocumentBuilder implements DocumentBuilderInterface {
 
 export class FrontworkResponseRedirect extends FrontworkResponse {
     constructor(redirect_path: string) {
-        if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> "+redirect_path, null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> "+redirect_path, null);
         
         super(301, "redirecting...");
         this.add_header("Location", redirect_path);
@@ -549,11 +495,84 @@ export interface DomainToRouteSelector {
     (context: FrontworkContext): Route[]
 }
 
-export interface FrontworkContext {
+export class FrontworkContext {
     readonly platform: EnvironmentPlatform;
     readonly stage: EnvironmentStage;
     readonly i18n: I18n;
     readonly request: FrontworkRequest;
+    readonly do_building: boolean;
+
+    readonly document_html: HTMLHtmlElement;
+    readonly document_head: HTMLHeadElement;
+    readonly document_body: HTMLBodyElement;
+
+    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, i18n: I18n,request: FrontworkRequest, do_building: boolean) {
+        this.platform = platform;
+        this.stage = stage;
+        this.i18n = i18n;
+        this.request = request;
+        this.do_building = do_building;
+
+        this.document_html = document.createElement("html");
+        this.document_head = this.document_html.appendChild( document.createElement("head") );
+        this.document_body = this.document_html.appendChild( document.createElement("body") );
+    }
+
+
+    /**
+     * Creates an HTML element.
+     * @param tag The tag name of the element to create if it doesn't exist.
+     * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
+     * @returns HTMLElementWrapper
+     */
+    create_element<K extends keyof HTMLElementTagNameMap>(tag: K, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
+        const element = document.createElement(tag);
+        if (attributes) {
+            for (const key in attributes) {
+                element.setAttribute(key, attributes[key]);
+            }
+        }
+        return new HTMLElementWrapper(element);
+    }
+
+    /**
+     * Ensures the existence of an HTML element by ID. Creates a new element if it doesn't exist.
+     * @param tag The tag name of the element to create if it doesn't exist.
+     * @param id The ID of the element to search for or create. Must be unique!
+     * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
+     * @returns The HTML element with the specified ID.
+     */
+    ensure_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
+        //document.body.querySelector("#title1")
+        //FIXME: New Element gets created even it already exists
+        console.log(this);
+    
+        const elem = this.do_building? document.getElementById(id) : this.document_html.ownerDocument.getElementById(id);
+        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K]);
+        
+        const elem2 = this.create_element(tag, attributes);
+        elem2.element.id = id;
+        return elem2;
+    }
+
+    /**
+     * Creates a new HTML element with text content and optional attributes.
+     * @param tag The tag name of the element.
+     * @param id The ID of the element to search for or create. Must be unique!
+     * @param text The text content of the element.     
+     * @param attributes Optional. Example: { class: "container", "data-role": "content" }
+     * @returns The newly created HTML element.
+     */
+    ensure_element_with_text<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, text: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
+        const elem = document.getElementById(id);
+        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K]);
+        
+        const elem2 = this.create_element(tag, attributes);
+        elem2.element.id = id;
+        elem2.element.innerText = text;
+        return elem2;
+    }
+
 }
 
 
@@ -585,7 +604,7 @@ export class Frontwork {
 		this.domain_to_route_selector = init.domain_to_route_selector;
 		this.middleware = init.middleware;
 		this.i18n = init.i18n;
-        if(this.stage === EnvironmentStage.Development) DEBUG.verbose_logging = true;
+        if(this.stage === EnvironmentStage.Development) FW.verbose_logging = true;
 	}
 
 	protected route_resolver(context: FrontworkContext): Route|null {
@@ -608,7 +627,7 @@ export class Frontwork {
                         }
 
                         if (found) {
-                            if(DEBUG.verbose_logging) context.request.log("ROUTE #" + route.id + " ("+route.path+")");
+                            if(FW.verbose_logging) context.request.log("ROUTE #" + route.id + " ("+route.path+")");
                             return route;
                         }
                     }
@@ -632,7 +651,7 @@ export class Frontwork {
         }
 
         // Middleware: Not found
-        if(DEBUG.verbose_logging) context.request.log("NOT_FOUND");
+        if(FW.verbose_logging) context.request.log("NOT_FOUND");
         try {
             const component = new this.middleware.not_found_handler(context);
             return { reponse: component.build(context), dom_ready: component.dom_ready };

@@ -1,5 +1,5 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage, LogType, DEBUG, FW, HTMLElementWrapper, FrontworkResponseRedirect } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage, LogType, FW, FrontworkResponseRedirect, FrontworkContext } from "./frontwork.ts";
 import { key_value_list_to_array } from "./utils.ts";
 
 
@@ -55,7 +55,7 @@ class Asset {
             
             default: 
                 this.content_type = "unknown";
-                DEBUG.reporter(LogType.Warn, "ASSET", "Unknown mime type for file extention '"+file_extention+"'. Please use only compatible and efficient file types for the web.", null) 
+                FW.reporter(LogType.Warn, "ASSET", "Unknown mime type for file extention '"+file_extention+"'. Please use only compatible and efficient file types for the web.", null) 
                 break;
         }
 
@@ -123,7 +123,7 @@ export class FrontworkWebservice extends Frontwork {
                 response.headers.append("content-type", "text/css; charset=utf-8")
                 return response;
             } catch (error) {
-                DEBUG.reporter(LogType.Error, "ASSET", "ERROR can not load style.css from '" + this.style_css_absolute_path + "'\n", error);
+                FW.reporter(LogType.Error, "ASSET", "ERROR can not load style.css from '" + this.style_css_absolute_path + "'\n", error);
                 return null;
             }
         } else if(request.path === "/assets/main.js") {
@@ -133,7 +133,7 @@ export class FrontworkWebservice extends Frontwork {
                 response.headers.append("content-type", "text/javascript; charset=utf-8")
                 return response;
             } catch (error) {
-                DEBUG.reporter(LogType.Error, "ASSET", "ERROR can not load main.js from '" + this.main_js_absolute_path + "'\n", error);
+                FW.reporter(LogType.Error, "ASSET", "ERROR can not load main.js from '" + this.main_js_absolute_path + "'\n", error);
                 return null;
             }
         }
@@ -146,7 +146,7 @@ export class FrontworkWebservice extends Frontwork {
                     response.headers.append("content-type", asset.content_type)
                     return response;
                 } catch (error) {
-                    DEBUG.reporter(LogType.Error, "ASSET", "ERROR can not load asset from '" + asset.absolute_path + "'\n", error);
+                    FW.reporter(LogType.Error, "ASSET", "ERROR can not load asset from '" + asset.absolute_path + "'\n", error);
                     return null;
                 }
             }
@@ -188,7 +188,7 @@ export class FrontworkWebservice extends Frontwork {
             // Assets resolver
             const resolved_asset = this.assets_resolver(request);
             if(resolved_asset !== null) {
-                if(DEBUG.verbose_logging) request.log("ASSET");
+                if(FW.verbose_logging) request.log("ASSET");
                 return resolved_asset;
             }
 
@@ -202,11 +202,11 @@ export class FrontworkWebservice extends Frontwork {
                     }
                 }
                 
-                if(DEBUG.verbose_logging) request.log("LONELY_SLASH_REDIRECT");
+                if(FW.verbose_logging) request.log("LONELY_SLASH_REDIRECT");
                 return new FrontworkResponseRedirect(new_path).into_response();
             }
 
-            const context = { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
+            const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, true);
             const route = this.route_resolver(context);
             
             // Before Route

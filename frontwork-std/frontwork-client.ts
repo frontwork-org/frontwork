@@ -1,4 +1,4 @@
-import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkInit, EnvironmentStage, LogType, DEBUG, BeforeRouteEvent, Route, DomReadyEvent, BuildEvent } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkInit, EnvironmentStage, LogType, FW, BeforeRouteEvent, Route, DomReadyEvent, BuildEvent, FrontworkContext } from "./frontwork.ts";
 import { html_element_set_attributes } from "./utils.ts";
 
 
@@ -76,7 +76,7 @@ export class FrontworkClient extends Frontwork {
         this.request_url = savestate.url;
         
         const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope([]));
-        const context =  { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
+        const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, do_building);
         const route: Route|null = this.route_resolver(context);
 
 
@@ -103,10 +103,10 @@ export class FrontworkClient extends Frontwork {
                 // redirect
                 const redirect_url = response.get_header("Location");
                 if (redirect_url === null) {
-                    DEBUG.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
+                    FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
                     return null;
                 } else {
-                    if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
+                    if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
                     this.page_change_to(redirect_url);
                     return { url: this.request_url, is_redirect: true, status_code: response.status_code };
                 }
@@ -114,15 +114,15 @@ export class FrontworkClient extends Frontwork {
     
 
             const resolved_content = <DocumentBuilder> response.content;
-            if (typeof resolved_content.document_html !== "undefined") {
+            if (typeof resolved_content.context.document_html !== "undefined") {
                 resolved_content.html();
 
-                html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.document_html.attributes);
-                html_element_set_attributes(document.head, resolved_content.document_head.attributes);
-                html_element_set_attributes(document.body, resolved_content.document_body.attributes);
+                html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.context.document_html.attributes);
+                html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
+                html_element_set_attributes(document.body, resolved_content.context.document_body.attributes);
             
-                document.head.innerHTML = resolved_content.document_head.innerHTML;
-                document.body.innerHTML = resolved_content.document_body.innerHTML;
+                document.head.innerHTML = resolved_content.context.document_head.innerHTML;
+                document.body.innerHTML = resolved_content.context.document_body.innerHTML;
             
                 reb_result.dom_ready(context, this);
                 return { url: this.request_url, is_redirect: false, status_code: response.status_code };
@@ -141,7 +141,7 @@ export class FrontworkClient extends Frontwork {
     
     // function replacement for window.location; accessible for the Component method dom_ready
     public page_change_to(url_or_path: string) {
-        if(DEBUG.verbose_logging) DEBUG.reporter(LogType.Info, "PageChange", "page_change_to url_or_path: " + url_or_path, null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_to url_or_path: " + url_or_path, null);
         let url;
         const test = url_or_path.indexOf("//");
         if (test === 0 || test === 5 || test === 6) { // if "//" OR "http://" OR "https://"
