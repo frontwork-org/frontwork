@@ -28,9 +28,9 @@ So we have to provide custom functions to query the DOM. By default it will quer
 
 For easy access to these functions I put them inside FrontworkContext, that way it has an easy access to context.html.body.
 
-### Same case with error_handler and before_routes
+### Same case with error_handler and before_route
 It could be possible that there are already some elements created. To fix this the error_handler will only be a build function that returns a FrontworkResponse.
-For before_routes it is an intented behaviour.
+For before_route it is an intended behaviour that its build function gets executed on the first page load. Its build function is only to configure FrontworkContext before a route or not_found_handler is loaded.
 
 ## An HtmlElement attribute in Component
 May develop bad habits to use the constructor for rendering

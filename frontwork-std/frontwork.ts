@@ -476,6 +476,7 @@ export class DocumentBuilder implements DocumentBuilderInterface {
 
     body_append(wr: HTMLElementWrapper<HTMLElement>) {
         this.document_body.append(wr.element);
+        return wr;
     }
 
     set_html_lang(code: string): DocumentBuilder {
@@ -495,7 +496,6 @@ export class DocumentBuilder implements DocumentBuilderInterface {
         main_js.setAttribute("src", "/assets/main.js");
         main_js.setAttribute("type", "text/javascript");
 
-        console.log("document_html.outerHTML", this.document_html.outerHTML);
         return this.document_html;
     }
 
@@ -516,22 +516,26 @@ export class FrontworkResponseRedirect extends FrontworkResponse {
     }
 }
 
+export interface BuildEvent {
+    (context: FrontworkContext): FrontworkResponse
+}
+
 export interface DomReadyEvent {
     (context: FrontworkContext, client: FrontworkClient): void
 }
 
 export declare interface Component {
-    build(context: FrontworkContext): FrontworkResponse;
-    dom_ready(context: FrontworkContext, client: FrontworkClient): void;
+    build: BuildEvent;
+    dom_ready: DomReadyEvent;
 }
 
 export interface ErrorHandler {
     (context: FrontworkContext): FrontworkResponse;
 }
 
-export declare interface BeforeRoutes {
-    build(context: FrontworkContext): FrontworkResponse|null;
-    dom_ready(context: FrontworkContext, client: FrontworkClient): void;
+export declare interface BeforeRouteEvent {
+    build(context: FrontworkContext): void;
+    dom_ready: DomReadyEvent;
 }
 
 
@@ -560,10 +564,6 @@ export interface FrontworkContext {
     readonly request: FrontworkRequest;
 }
 
-export interface RoutesResolverResult {
-    response: FrontworkResponse;
-    dom_ready(context: FrontworkContext, client: FrontworkClient): void;
-}
 
 /**
  *   @param {EnvironmentPlatform} platform - Web, Desktop or Android
@@ -596,8 +596,7 @@ export class Frontwork {
         if(this.stage === EnvironmentStage.Development) DEBUG.verbose_logging = true;
 	}
 
-    // TODO: Return only route for better debug
-	protected routes_resolver(context: FrontworkContext): Component {
+	protected route_resolver(context: FrontworkContext): Route|null {
         // Routes
         const routes = this.domain_to_route_selector(context);
         for (let b = 0; b < routes.length; b++) {
@@ -617,33 +616,37 @@ export class Frontwork {
                         }
 
                         if (found) {
-                            try {
-                                if(DEBUG.verbose_logging) context.request.log("ROUTE #" + route.id + " ("+route.path+")");
-                                return new route.component(context);
-                            } catch (error) {
-                                context.request.error("ROUTE #" + route.id + " ("+route.path+")", error);
-                                const error_handler = this.middleware.error_handler;
-                                return {
-                                    build(context) { return error_handler(context); },
-                                    dom_ready() {}
-                                }
-                            }
+                            if(DEBUG.verbose_logging) context.request.log("ROUTE #" + route.id + " ("+route.path+")");
+                            return route;
                         }
                     }
                 }
             }
         }
 
+        return null;
+	}
+
+	protected route_execute_build(context: FrontworkContext, route: Route|null): {reponse: FrontworkResponse, dom_ready: DomReadyEvent} {
+        // Route
+        if (route) {
+            try {
+                const component = new route.component(context);
+                return { reponse: component.build(context), dom_ready: component.dom_ready };
+            } catch (error) {
+                context.request.error("ROUTE #" + route.id + " ("+route.path+")", error);
+                return { reponse: this.middleware.error_handler_component.build(context), dom_ready: this.middleware.error_handler_component.dom_ready };
+            }
+        }
+
         // Middleware: Not found
         if(DEBUG.verbose_logging) context.request.log("NOT_FOUND");
         try {
-            return this.middleware.not_found_handler;
+            const component = new this.middleware.not_found_handler(context);
+            return { reponse: component.build(context), dom_ready: component.dom_ready };
         } catch (error) {
-            const error_handler = this.middleware.error_handler;
-            return {
-                build(context) { return error_handler(context); },
-                dom_ready() {}
-            }
+            context.request.error("NOT_FOUND", error);
+            return { reponse: this.middleware.error_handler_component.build(context), dom_ready: this.middleware.error_handler_component.dom_ready };
         }
 	}
 
@@ -651,21 +654,27 @@ export class Frontwork {
 
 export interface FrontworkMiddlewareInit {
     error_handler: ErrorHandler;
-	not_found_handler: Component;
-	before_routes?: BeforeRoutes|null;
+	not_found_handler: new (context: FrontworkContext) => Component;
+	before_route: BeforeRouteEvent;
     redirect_lonely_slash?: boolean;
 }
 
 export class FrontworkMiddleware {
-    error_handler: ErrorHandler;
-	not_found_handler: Component;
-	before_routes: BeforeRoutes|null;
-    redirect_lonely_slash: boolean;
+    protected error_handler: ErrorHandler;
+    /** The error handler should only have a response. The Component is only for internal use. */
+    readonly error_handler_component: Component;
+	readonly not_found_handler: new (context: FrontworkContext) => Component;
+	readonly before_route: BeforeRouteEvent;
+    readonly redirect_lonely_slash: boolean;
 
 	constructor(init: FrontworkMiddlewareInit) {
         this.error_handler = init.error_handler
+        this.error_handler_component = {
+            build(context: FrontworkContext) { return init.error_handler(context); },
+            dom_ready() {}
+        }
         this.not_found_handler = init.not_found_handler;
-        this.before_routes = init && init.before_routes? init.before_routes : null;
+        this.before_route = init.before_route;
         this.redirect_lonely_slash = init && init.redirect_lonely_slash? init.redirect_lonely_slash : true;
 	}
 }

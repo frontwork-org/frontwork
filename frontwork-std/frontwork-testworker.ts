@@ -84,7 +84,11 @@ export class FrontworkTestworker extends Frontwork {
                     const route_context = { request: route_request, i18n: this.i18n, platform: this.platform, stage: this.stage };
     
                     this.assert_function(() => {
-                        route.component.build(route_context);
+                        // Middleware: before Routes
+                        this.middleware.before_route.build(route_context);
+
+                        // Route
+                        new route.component(route_context).build(route_context);
                     });
                 }
             }

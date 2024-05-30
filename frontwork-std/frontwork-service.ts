@@ -2,15 +2,6 @@ import { } from "./dom.ts";
 import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage, LogType, DEBUG, FW, HTMLElementWrapper, FrontworkResponseRedirect } from "./frontwork.ts";
 import { key_value_list_to_array } from "./utils.ts";
 
-// FW Overwrites for Deno
-FW.is_client_side = false;
-FW.ensure_element = function<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
-    const elem2 = FW.create_element(tag, attributes);
-    elem2.element.id = id;
-    return elem2;
-};
-console.log("FW.is_client_side", FW.is_client_side)
-
 
 class Asset {
     absolute_path: string;
@@ -215,9 +206,13 @@ export class FrontworkWebservice extends Frontwork {
                 return new FrontworkResponseRedirect(new_path).into_response();
             }
 
-            // Route
             const context = { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
-            return this.routes_resolver(context).build(context).into_response();
+            const route = this.route_resolver(context);
+            
+            // Before Route
+
+            // Route or Not found
+            return this.route_execute_build(context, route).reponse.into_response();
         } catch (error) {
             console.error("ERROR in middleware.error_handler", error);
         }

@@ -1,5 +1,4 @@
-import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkInit, EnvironmentStage, LogType, DEBUG } from "./frontwork.ts";
-import { BeforeRoutes, Component, FrontworkContext } from './lib.ts';
+import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkInit, EnvironmentStage, LogType, DEBUG, BeforeRouteEvent, Route, DomReadyEvent, BuildEvent } from "./frontwork.ts";
 import { html_element_set_attributes } from "./utils.ts";
 
 
@@ -24,7 +23,7 @@ export class FrontworkClient extends Frontwork {
             const target = event.target as HTMLAnchorElement;
             if (target.tagName === 'A') {
                 if (this.page_change_to(target.href)) {
-                    // only prevent default if page_change_to fails. It fails if the link is external or unkown.
+                    // only prevent default if page_change_to fails. It fails if the link is external or unknown.
                     event.preventDefault();
                 }
             }
@@ -78,31 +77,21 @@ export class FrontworkClient extends Frontwork {
         
         const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope([]));
         const context =  { request: request, i18n: this.i18n, platform: this.platform, stage: this.stage };
+        const route: Route|null = this.route_resolver(context);
 
 
-        // Middleware: before Routes
-        let before_routes: BeforeRoutes|null = null;
-
-        if (this.middleware.before_routes !== null) {
-            if(DEBUG.verbose_logging) context.request.log("BEFORE_ROUTES");
-            try {
-                before_routes = this.middleware.before_routes;
-            } catch (error) {
-                context.request.error("BEFORE_ROUTES", error);
-                const error_handler = this.middleware.error_handler;
-                before_routes = {
-                    build(context: FrontworkContext) { return error_handler(context); },
-                    dom_ready() {}
-                }
-            }
+        // Middleware: before Route
+        try {
+            this.middleware.before_route.build(context);
+            this.middleware.before_route.dom_ready(context, this);
+        } catch (error) {
+            context.request.error("before_route", error);
         }
 
-        let route: Component|null = null;
 
         if (do_building) {
-            const before_routes_result = before_routes? before_routes.build(context) : null;
-            route = this.routes_resolver(context)
-            const response = before_routes_result === null? route.build(context) : before_routes_result;
+            const reb_result = this.route_execute_build(context, this.route_resolver(context));
+            const response = reb_result.reponse;
             
             response.cookies.forEach(cookie => {
                 if (cookie.http_only === false) {
@@ -110,7 +99,7 @@ export class FrontworkClient extends Frontwork {
                 }
             });
 
-            if (response.status_code === 301) {
+            if (response.status_code === 301 || response.status_code === 302) {
                 // redirect
                 const redirect_url = response.get_header("Location");
                 if (redirect_url === null) {
@@ -126,7 +115,6 @@ export class FrontworkClient extends Frontwork {
 
             const resolved_content = <DocumentBuilder> response.content;
             if (typeof resolved_content.document_html !== "undefined") {
-
                 resolved_content.html();
 
                 html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.document_html.attributes);
@@ -136,12 +124,18 @@ export class FrontworkClient extends Frontwork {
                 document.head.innerHTML = resolved_content.document_head.innerHTML;
                 document.body.innerHTML = resolved_content.document_body.innerHTML;
             
+                reb_result.dom_ready(context, this);
                 return { url: this.request_url, is_redirect: false, status_code: response.status_code };
+            }
+        } else {
+            if (route) {
+                const route_component = new route.component(context);
+                route_component.dom_ready(context, this);
+            } else {
+                new this.middleware.not_found_handler(context).dom_ready(context, this);
             }
         }
         
-        if(before_routes !== null) before_routes.dom_ready(context, this);
-        if(route !== null) route.dom_ready(context, this);
         return null;
     }
     
