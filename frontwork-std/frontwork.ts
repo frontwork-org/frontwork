@@ -52,6 +52,7 @@ export class HTMLElementWrapper<T extends HTMLElement> {
     }
 }
 
+//TODO: Move methods into DocumentBuilder. Make ensure_element_with_text getting text from context.i18n with id
 export const FW = {
     /**
      * Is false if frontwork-service.ts has been imported
