@@ -160,13 +160,13 @@ class I18nLocale {
         this.locale = locale;
         this.translations = translations;
     }
-    get_translation(key) {
-        const translation = this.translations.find((t)=>t.key === key);
+    get_translation(id) {
+        const translation = this.translations[id];
         if (translation === undefined) {
-            DEBUG.reporter(LogType.Error, "I18n", "    Missing translation (key: '" + key + "') for the locale '" + this.locale + "'.", null);
+            DEBUG.reporter(LogType.Error, "I18n", "    Missing translation (id: '" + id + "') for the locale '" + this.locale + "'.", null);
             return "";
         }
-        return translation.translation;
+        return translation;
     }
 }
 class Scope {
@@ -634,8 +634,8 @@ class FrontworkClient extends Frontwork {
         return false;
     }
 }
-const __default = JSON.parse("[\r\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Page\" }\r\n    ,{ \"key\": \"text1\", \"translation\": \"This is a test page for the Frontwork framework.\" }\r\n    ,{ \"key\": \"title2\", \"translation\": \"Test Form\" }\r\n    ,{ \"key\": \"another_title1\", \"translation\": \"Hello from 127.0.0.1\" }\r\n    ,{ \"key\": \"another_text1\", \"translation\": \"Yes you can have different domains :)\" }\r\n]");
-const __default1 = JSON.parse("[\r\n    { \"key\": \"title1\", \"translation\": \"Frontwork Test Seite\" }\r\n    ,{ \"key\": \"text1\", \"translation\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\" }\r\n    ,{ \"key\": \"title2\", \"translation\": \"Test Formular\" }\r\n]");
+const __default = JSON.parse("{\r\n     \"title1\": \"Frontwork Test Page\"\r\n    ,\"text1\": \"This is a test page for the Frontwork framework.\"\r\n    ,\"title2\": \"Test Form\"\r\n    ,\"another_title1\": \"Hello from 127.0.0.1\"\r\n    ,\"another_text1\": \"Yes you can have different domains :)\"\r\n}");
+const __default1 = JSON.parse("{\r\n    \"title1\": \"Frontwork Test Seite\"\r\n   ,\"text1\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\"\r\n   ,\"title2\": \"Test Formular\"\r\n}");
 const i18n = new I18n([
     new I18nLocale("en", __default),
     new I18nLocale("de", __default1)

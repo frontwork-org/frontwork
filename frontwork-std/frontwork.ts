@@ -162,35 +162,26 @@ export class I18n {
 
 export class I18nLocale {
     locale: string;
-    translations: I18nLocaleTranslation[];
+    translations: I18nLocaleTranslation;
 
-    constructor(locale: string, translations: I18nLocaleTranslation[]) {
+    constructor(locale: string, translations: I18nLocaleTranslation) {
         this.locale = locale;
         this.translations = translations;
     }
 
-    get_translation(key: string): string {
-        const translation = this.translations.find(t => t.key === key);
+    get_translation(id: string): string {
+        const translation = this.translations[id];
 
         if(translation === undefined) {
-            DEBUG.reporter(LogType.Error, "I18n", "    Missing translation (key: '"+key+"') for the locale '"+this.locale+"'.", null);
+            DEBUG.reporter(LogType.Error, "I18n", "    Missing translation (id: '"+id+"') for the locale '"+this.locale+"'.", null);
             return "";
         }
 
-        return translation.translation;
+        return translation;
     }
 }
 
-export class I18nLocaleTranslation {
-    key: string;
-    translation: string;
-
-    constructor(key: string, translation: string) {
-        this.key = key;
-        this.translation = translation;
-    }
-}
-
+export type I18nLocaleTranslation = { [key: string]: string };
 
 
 class Scope {
