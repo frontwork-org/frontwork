@@ -2,4 +2,11 @@
     "title1": "Frontwork Test Seite"
    ,"text1": "Dies ist eine deutsche Test Seite für das Frontwork framework."
    ,"title2": "Test Formular"
+
+   ,"a-home": "Startseite"
+    ,"a-test2": "Testseite2"
+    ,"a-test3": "Testseite3"
+    ,"a-german": "Deutsch"
+    ,"a-crash": "Absturz"
+    ,"submit_button": "Senden"
 }

@@ -114,7 +114,7 @@ export class I18nLocale {
         const translation = this.translations[id];
 
         if(translation === undefined) {
-            FW.reporter(LogType.Error, "I18n", "    Missing translation (id: '"+id+"') for the locale '"+this.locale+"'.", null);
+            FW.reporter(LogType.Error, "I18n", "    Missing translation for the locale '"+this.locale+"': ,\""+id+"\": \"translated_text\"", null);
             return "";
         }
 
@@ -543,11 +543,7 @@ export class FrontworkContext {
      * @returns The HTML element with the specified ID.
      */
     ensure_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
-        //document.body.querySelector("#title1")
-        //FIXME: New Element gets created even it already exists
-        console.log(this);
-    
-        const elem = this.do_building? document.getElementById(id) : this.document_html.ownerDocument.getElementById(id);
+        const elem = this.do_building? this.document_html.querySelector("#"+id) : document.getElementById(id);
         if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K]);
         
         const elem2 = this.create_element(tag, attributes);
@@ -556,20 +552,20 @@ export class FrontworkContext {
     }
 
     /**
-     * Creates a new HTML element with text content and optional attributes.
+     * Ensures the existence of an HTML element by ID. Creates a new element and appends I18n text if it doesn't exist
      * @param tag The tag name of the element.
      * @param id The ID of the element to search for or create. Must be unique!
      * @param text The text content of the element.     
      * @param attributes Optional. Example: { class: "container", "data-role": "content" }
      * @returns The newly created HTML element.
      */
-    ensure_element_with_text<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, text: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
-        const elem = document.getElementById(id);
+    ensure_text_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
+        const elem = this.do_building? this.document_html.querySelector("#"+id) : document.getElementById(id);
         if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K]);
         
         const elem2 = this.create_element(tag, attributes);
         elem2.element.id = id;
-        elem2.element.innerText = text;
+        elem2.element.innerText = this.i18n.get_translation(id);
         return elem2;
     }
 

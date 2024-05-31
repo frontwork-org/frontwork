@@ -9,11 +9,11 @@ class MyMainDocumentBuilder extends DocumentBuilder {
 	constructor(context: FrontworkContext) {
 		super(context);
 		const header = this.body_append( context.create_element("header") );
-		context.ensure_element_with_text("a", "a-home", "Home", { href: "/" }).append_to(header);
-		context.ensure_element_with_text("a", "a-test2", "Test 2", { href: "/test2" }).append_to(header);
-		context.ensure_element_with_text("a", "a-test3", "Test 3", { href: "/test3" }).append_to(header);
-		context.ensure_element_with_text("a", "a-german", "German", { href: "/german" }).append_to(header);
-		context.ensure_element_with_text("a", "a-crash", "Crash", { href: "/crash" }).append_to(header);
+		context.ensure_text_element("a", "a-home", { href: "/" }).append_to(header);
+		context.ensure_text_element("a", "a-test2",{ href: "/test2" }).append_to(header);
+		context.ensure_text_element("a", "a-test3",{ href: "/test3" }).append_to(header);
+		context.ensure_text_element("a", "a-german", { href: "/german" }).append_to(header);
+		context.ensure_text_element("a", "a-crash", { href: "/crash" }).append_to(header);
 		this.main = this.body_append(context.create_element("main"));
 	}
 }
@@ -23,8 +23,8 @@ class AnotherComponent implements Component {
     build(context: FrontworkContext): FrontworkResponse {
 		const document_builder = new DocumentBuilder(context);
 		const main = document_builder.body_append( context.create_element("main") );
-		context.ensure_element_with_text("h1", "another_title1", context.i18n.get_translation("another_title1")).append_to(main);
-		context.ensure_element_with_text("p", "another_text1", context.i18n.get_translation("another_text1")).append_to(main);
+		context.ensure_text_element("h1", "another_title1").append_to(main);
+		context.ensure_text_element("p", "another_text1").append_to(main);
 		return new FrontworkResponse(200, document_builder);
 	}
     dom_ready(): void {}
@@ -34,20 +34,22 @@ class TestComponent implements Component {
     build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
 
-		const title = context.ensure_element_with_text("h1", "title1", context.i18n.get_translation("title1")).append_to(document_builder.main)
-		const description = context.ensure_element_with_text("p", "description", context.i18n.get_translation("text1")).append_to(document_builder.main)
+		const title = context.ensure_text_element("h1", "title1").append_to(document_builder.main)
+		const description = context.ensure_text_element("p", "text1").append_to(document_builder.main)
 		
 		const section_form = context.create_element("section").append_to(document_builder.main);
-		context.ensure_element_with_text("h2", "h1", context.i18n.get_translation("title2")).append_to(section_form);
+		context.ensure_text_element("h2", "title2").append_to(section_form);
 
 		//TODO: Test forms
 		const form = context.ensure_element("form", "test_form", { action: "", method: "post" }).append_to(section_form);
+		console.log(form.element.innerHTML);
 		
+
 		for (let i = 0; i < 3; i++) {
 			context.ensure_element("input", "input"+i, { type: "text", name: "text"+i, value: "asdsad" }).append_to(form);
 		}
 		
-		context.ensure_element_with_text("button", "submit_button", "Submit", { type: "submit", name: "action", value: "sent" }).append_to(form);
+		context.ensure_text_element("button", "submit_button", { type: "submit", name: "action", value: "sent" }).append_to(form);
 
 		return new FrontworkResponse(200, 
 			document_builder
@@ -69,7 +71,7 @@ class Test2Component implements Component {
     build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
 
-		const title1 = context.ensure_element_with_text("h1", "h1", "Test Page 2").append_to(document_builder.main);
+		const title1 = context.ensure_text_element("h1", "test-page2").append_to(document_builder.main);
 		const description = context.ensure_element("p", "description").append_to(document_builder.main);
 		description.element.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
 		

@@ -131,7 +131,7 @@ class I18nLocale {
     get_translation(id) {
         const translation = this.translations[id];
         if (translation === undefined) {
-            FW.reporter(LogType.Error, "I18n", "    Missing translation (id: '" + id + "') for the locale '" + this.locale + "'.", null);
+            FW.reporter(LogType.Error, "I18n", "    Missing translation for the locale '" + this.locale + "': ,\"" + id + "\": \"translated_text\"", null);
             return "";
         }
         return translation;
@@ -394,19 +394,18 @@ class FrontworkContext {
         return new HTMLElementWrapper(element);
     }
     ensure_element(tag, id, attributes) {
-        console.log(this);
-        const elem = this.do_building ? document.getElementById(id) : this.document_html.ownerDocument.getElementById(id);
+        const elem = this.do_building ? this.document_html.querySelector("#" + id) : document.getElementById(id);
         if (elem !== null) return new HTMLElementWrapper(elem);
         const elem2 = this.create_element(tag, attributes);
         elem2.element.id = id;
         return elem2;
     }
-    ensure_element_with_text(tag, id, text, attributes) {
-        const elem = document.getElementById(id);
+    ensure_text_element(tag, id, attributes) {
+        const elem = this.do_building ? this.document_html.querySelector("#" + id) : document.getElementById(id);
         if (elem !== null) return new HTMLElementWrapper(elem);
         const elem2 = this.create_element(tag, attributes);
         elem2.element.id = id;
-        elem2.element.innerText = text;
+        elem2.element.innerText = this.i18n.get_translation(id);
         return elem2;
     }
 }
@@ -637,8 +636,8 @@ class FrontworkClient extends Frontwork {
         return false;
     }
 }
-const __default = JSON.parse("{\n     \"title1\": \"Frontwork Test Page\"\n    ,\"text1\": \"This is a test page for the Frontwork framework.\"\n    ,\"title2\": \"Test Form\"\n    ,\"another_title1\": \"Hello from 127.0.0.1\"\n    ,\"another_text1\": \"Yes you can have different domains :)\"\n}");
-const __default1 = JSON.parse("{\n    \"title1\": \"Frontwork Test Seite\"\n   ,\"text1\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\"\n   ,\"title2\": \"Test Formular\"\n}");
+const __default = JSON.parse("{\n     \"title1\": \"Frontwork Test Page\"\n    ,\"text1\": \"This is a test page for the Frontwork framework.\"\n    ,\"title2\": \"Test Form\"\n    ,\"test-page2\": \"Test Page 2\"\n    ,\"another_title1\": \"Hello from 127.0.0.1\"\n    ,\"another_text1\": \"Yes you can have different domains :)\"\n\n    ,\"a-home\": \"Home\"\n    ,\"a-test2\": \"Test2\"\n    ,\"a-test3\": \"Test3\"\n    ,\"a-german\": \"German\"\n    ,\"a-crash\": \"Crash\"\n    ,\"submit_button\": \"Submit\"\n\n}");
+const __default1 = JSON.parse("{\n    \"title1\": \"Frontwork Test Seite\"\n   ,\"text1\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\"\n   ,\"title2\": \"Test Formular\"\n\n   ,\"a-home\": \"Startseite\"\n    ,\"a-test2\": \"Testseite2\"\n    ,\"a-test3\": \"Testseite3\"\n    ,\"a-german\": \"Deutsch\"\n    ,\"a-crash\": \"Absturz\"\n    ,\"submit_button\": \"Senden\"\n}");
 const i18n = new I18n([
     new I18nLocale("en", __default),
     new I18nLocale("de", __default1)
@@ -648,19 +647,19 @@ class MyMainDocumentBuilder extends DocumentBuilder {
     constructor(context){
         super(context);
         const header = this.body_append(context.create_element("header"));
-        context.ensure_element_with_text("a", "a-home", "Home", {
+        context.ensure_text_element("a", "a-home", {
             href: "/"
         }).append_to(header);
-        context.ensure_element_with_text("a", "a-test2", "Test 2", {
+        context.ensure_text_element("a", "a-test2", {
             href: "/test2"
         }).append_to(header);
-        context.ensure_element_with_text("a", "a-test3", "Test 3", {
+        context.ensure_text_element("a", "a-test3", {
             href: "/test3"
         }).append_to(header);
-        context.ensure_element_with_text("a", "a-german", "German", {
+        context.ensure_text_element("a", "a-german", {
             href: "/german"
         }).append_to(header);
-        context.ensure_element_with_text("a", "a-crash", "Crash", {
+        context.ensure_text_element("a", "a-crash", {
             href: "/crash"
         }).append_to(header);
         this.main = this.body_append(context.create_element("main"));
@@ -670,8 +669,8 @@ class AnotherComponent {
     build(context) {
         const document_builder = new DocumentBuilder(context);
         const main = document_builder.body_append(context.create_element("main"));
-        context.ensure_element_with_text("h1", "another_title1", context.i18n.get_translation("another_title1")).append_to(main);
-        context.ensure_element_with_text("p", "another_text1", context.i18n.get_translation("another_text1")).append_to(main);
+        context.ensure_text_element("h1", "another_title1").append_to(main);
+        context.ensure_text_element("p", "another_text1").append_to(main);
         return new FrontworkResponse(200, document_builder);
     }
     dom_ready() {}
@@ -679,14 +678,15 @@ class AnotherComponent {
 class TestComponent {
     build(context) {
         const document_builder = new MyMainDocumentBuilder(context);
-        const title = context.ensure_element_with_text("h1", "title1", context.i18n.get_translation("title1")).append_to(document_builder.main);
-        const description = context.ensure_element_with_text("p", "description", context.i18n.get_translation("text1")).append_to(document_builder.main);
+        const title = context.ensure_text_element("h1", "title1").append_to(document_builder.main);
+        const description = context.ensure_text_element("p", "text1").append_to(document_builder.main);
         const section_form = context.create_element("section").append_to(document_builder.main);
-        context.ensure_element_with_text("h2", "h1", context.i18n.get_translation("title2")).append_to(section_form);
+        context.ensure_text_element("h2", "title2").append_to(section_form);
         const form = context.ensure_element("form", "test_form", {
             action: "",
             method: "post"
         }).append_to(section_form);
+        console.log(form.element.innerHTML);
         for(let i = 0; i < 3; i++){
             context.ensure_element("input", "input" + i, {
                 type: "text",
@@ -694,7 +694,7 @@ class TestComponent {
                 value: "asdsad"
             }).append_to(form);
         }
-        context.ensure_element_with_text("button", "submit_button", "Submit", {
+        context.ensure_text_element("button", "submit_button", {
             type: "submit",
             name: "action",
             value: "sent"
@@ -713,7 +713,7 @@ class TestGerman extends TestComponent {
 class Test2Component {
     build(context) {
         const document_builder = new MyMainDocumentBuilder(context);
-        const title1 = context.ensure_element_with_text("h1", "h1", "Test Page 2").append_to(document_builder.main);
+        const title1 = context.ensure_text_element("h1", "test-page2").append_to(document_builder.main);
         const description = context.ensure_element("p", "description").append_to(document_builder.main);
         description.element.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
         FW.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);

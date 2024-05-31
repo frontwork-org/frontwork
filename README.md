@@ -17,7 +17,7 @@ To start a new project you can use `frontwork init` to use the current directory
 ## CLI Tool
 | Command | Description |
 |--------|--------|
-| frontwork install                         | install required dependencies to develop with FrontWork (Deno)   |
+| frontwork install                         | install required dependencies to develop with Frontwork (Deno)   |
 | frontwork init                            | create a new project in the current directory |
 | frontwork new                             | create a new folder in the current directory and then execute init |
 | frontwork component new                   | create a new component |

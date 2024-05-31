@@ -22,12 +22,12 @@ fn print_help(no_error: bool, error_message: &str) {
     if no_error {
         println!("The usage of arguments has been entered wrong because {}. \nPlease follow the following usage:", error_message);
     } else {
-        println!("FrontWork by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors");
+        println!("Frontwork by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors");
         println!("-- The TypeScript Framework using Deno & Webassembly --");
         println!("\n Usage:");
     }
     println!("  -h or --help                    | this help message");
-    println!("  install                         | install required dependencies to develop with FrontWork");
+    println!("  install                         | install required dependencies to develop with Frontwork");
     println!("  init                            | create a new project in the current directory");
     println!("  new                             | create a new folder in the current directory and then execute init");
     println!("  component new                   | create a new component");
