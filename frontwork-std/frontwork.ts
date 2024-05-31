@@ -11,7 +11,7 @@ export enum LogType {
 
 export const FW =  {
     /**
-     * Is false if frontwork-service.ts has been imported
+     * Is false if dom.ts / frontwork-service.ts / frontwork-testworker.ts has been imported
      */
     is_client_side: true,
     
@@ -28,7 +28,17 @@ export const FW =  {
      * @param text: string
      * //TODO: Add Context
     */
-    reporter: function(log_type: LogType, category: string, text: string, error: Error|null) { 
+    reporter: function(log_type: LogType, category: string, text: string, error: Error|null) {
+        if (FW.verbose_logging && FW.is_client_side) {
+            fetch(location.protocol+"//"+location.host+"//dr", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                  },
+                body: JSON.stringify({ report_text: text })
+            });
+        }
+
         if (log_type === LogType.Error) {
             if(error === null) console.error(text);
             else console.error(text, error);
@@ -124,27 +134,66 @@ export class I18nLocale {
 
 export type I18nLocaleTranslation = { [key: string]: string };
 
+export type ScopeItems = { [key: string]: string };
 
 class Scope {
-    items: { key: string, value: string }[];
-    constructor(items: { key: string, value: string }[]) {
+    items: ScopeItems;
+    constructor(items: ScopeItems) {
         this.items = items;
     }
 
     get(key: string): string|null {
-        for (let i = 0; i < this.items.length; i++) {
-            const item = this.items[i];
-            if(item.key === key) {
-                return item.value;
-            }
-        }
-        return null;
+        const value = this.items[key]
+        if(value === undefined) return null;
+        // for (let i = 0; i < this.items.length; i++) {
+        //     const item = this.items[i];
+        //     if(item.key === key) {
+        //         return item.value;
+        //     }
+        // }
+        return value;
     }
 }
 
-export class GetScope extends Scope { constructor(items: { key: string, value: string }[]) { super(items); } }
-export class PostScope extends Scope { constructor(items: { key: string, value: string }[]) { super(items); } }
-export class CookiesScope extends Scope { constructor(items: { key: string, value: string }[]) { super(items); } }
+export class GetScope extends Scope { constructor(items: ScopeItems) { super(items); } }
+export class PostScope extends Scope {
+    constructor(items: ScopeItems) { super(items); }
+	
+    /** Retrieve the POST data from a Request object and set it to PostScope.items */
+    async from_request(_request: Request) {
+        let content_type = _request.headers.get("content-type");
+        if (content_type !== null) {
+            content_type = content_type.split(";")[0];
+            
+            if (_request.body !== null) {
+                if (content_type === "application/x-www-form-urlencoded") {
+                    const reader = _request.body.getReader();
+                    if (reader !== null) {
+                        await reader.read().then((body) => {
+                            if (body.value !== null) {
+                                const body_string = new TextDecoder().decode(body.value);
+                                this.items = key_value_list_to_array(body_string, "&", "=");
+                            }
+                        });
+                    }
+                } else if(content_type === "application/json") {
+                    const reader = _request.body.getReader();
+                    if (reader !== null) {
+                        await reader.read().then((body) => {
+                            if (body.value !== null) {
+                                const body_string = new TextDecoder().decode(body.value);
+                                this.items = JSON.parse(body_string);
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        return this;
+	}
+}
+export class CookiesScope extends Scope { constructor(items: ScopeItems) { super(items); } }
 
 
 export class Cookie {
@@ -234,7 +283,7 @@ export class FrontworkRequest {
 
         const cookies_string = this.headers.get("cookie");
         this.COOKIES = new CookiesScope(
-            cookies_string === null ? [] : key_value_list_to_array(cookies_string, "; ", "=")
+            cookies_string === null ? {} : key_value_list_to_array(cookies_string, "; ", "=")
         );
     }
 
@@ -242,12 +291,13 @@ export class FrontworkRequest {
         let text = this.method + " " + this.path;
         if(this.query_string !== "") text += "?" + this.query_string;
         text += " [" + category + "]";
-        if (this.POST.items.length > 0) {
+
+        const keys = Object.keys(this.POST.items);
+        if (keys.length !== 0) {
             text += "\n    Scope POST: ";
-            for (let i = 0; i < this.POST.items.length; i++) {
-                const item = this.POST.items[i];
-                text += "\n        " + item.key + " = \"" + item.value + "\"";
-            }
+            keys.forEach((key) => {
+                text += "\n        " + key + " = \"" + this.POST.items[key] + "\"";
+            })
         }
         return text;
     }

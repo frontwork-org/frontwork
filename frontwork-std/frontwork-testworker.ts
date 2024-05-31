@@ -69,7 +69,7 @@ export class FrontworkTestworker extends Frontwork {
     test_routes(domains: string[]) {
         for (let d = 0; d < domains.length; d++) {
             const domain_url = "http://"+domains[d]+":"+this.port;
-            const domain_request = new FrontworkRequest("GET", domain_url, new Headers(), new PostScope([]));
+            const domain_request = new FrontworkRequest("GET", domain_url, new Headers(), new PostScope({}));
             const domain_context = new FrontworkContext(this.platform, this.stage, this.i18n, domain_request, true);
 
             const routes = this.domain_to_route_selector(domain_context);
@@ -81,7 +81,7 @@ export class FrontworkTestworker extends Frontwork {
                     // Test only if the path is static
 
                     const route_url = domain_url+route.path;
-                    const route_request = new FrontworkRequest("GET", route_url, new Headers(), new PostScope([]));
+                    const route_request = new FrontworkRequest("GET", route_url, new Headers(), new PostScope({}));
                     const route_context = new FrontworkContext(this.platform, this.stage, this.i18n, route_request, true);
 
     

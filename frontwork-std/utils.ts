@@ -41,15 +41,15 @@ export function parse_url(url:string): {protocol:string, host:string, path:strin
 }
 
 
-export function key_value_list_to_array(list: string, list_delimiter: string, key_value_delimiter: string): { key: string, value: string }[] {
-    const result: { key: string, value: string }[] = [];
+export function key_value_list_to_array(list: string, list_delimiter: string, key_value_delimiter: string): { [key: string]: string } {
+    const result: { [key: string]: string } = {};
 
     const list_split = list.split(list_delimiter);
     for (let i = 0; i < list_split.length; i++) {
         const item = list_split[i];
         const item_split: string[] = item.split(key_value_delimiter);
         if (item_split.length === 2 && item_split[0] !== "") {
-            result.push({ key: item_split[0], value: item_split[1] });
+            result[item_split[0]] = item_split[1];
         }
     }
     return result;

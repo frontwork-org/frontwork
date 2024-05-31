@@ -75,7 +75,7 @@ export class FrontworkClient extends Frontwork {
     private page_change(savestate: PageChangeSavestate, do_building: boolean): PageChangeSavestate|null {
         this.request_url = savestate.url;
         
-        const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope([]));
+        const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope({}));
         const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, do_building);
         const route: Route|null = this.route_resolver(context);
 

@@ -37,16 +37,13 @@ function parse_url(url) {
     };
 }
 function key_value_list_to_array(list, list_delimiter, key_value_delimiter) {
-    const result = [];
+    const result = {};
     const list_split = list.split(list_delimiter);
     for(let i = 0; i < list_split.length; i++){
         const item = list_split[i];
         const item_split = item.split(key_value_delimiter);
         if (item_split.length === 2 && item_split[0] !== "") {
-            result.push({
-                key: item_split[0],
-                value: item_split[1]
-            });
+            result[item_split[0]] = item_split[1];
         }
     }
     return result;
@@ -67,6 +64,17 @@ const FW = {
     is_client_side: true,
     verbose_logging: false,
     reporter: function(log_type, category, text, error) {
+        if (FW.verbose_logging && FW.is_client_side) {
+            fetch(location.protocol + "//" + location.host + "//dr", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    report_text: text
+                })
+            });
+        }
         if (log_type === LogType.Error) {
             if (error === null) console.error(text);
             else console.error(text, error);
@@ -143,13 +151,9 @@ class Scope {
         this.items = items;
     }
     get(key) {
-        for(let i = 0; i < this.items.length; i++){
-            const item = this.items[i];
-            if (item.key === key) {
-                return item.value;
-            }
-        }
-        return null;
+        const value = this.items[key];
+        if (value === undefined) return null;
+        return value;
     }
 }
 class GetScope extends Scope {
@@ -160,6 +164,36 @@ class GetScope extends Scope {
 class PostScope extends Scope {
     constructor(items){
         super(items);
+    }
+    async from_request(_request) {
+        let content_type = _request.headers.get("content-type");
+        if (content_type !== null) {
+            content_type = content_type.split(";")[0];
+            if (_request.body !== null) {
+                if (content_type === "application/x-www-form-urlencoded") {
+                    const reader = _request.body.getReader();
+                    if (reader !== null) {
+                        await reader.read().then((body)=>{
+                            if (body.value !== null) {
+                                const body_string = new TextDecoder().decode(body.value);
+                                this.items = key_value_list_to_array(body_string, "&", "=");
+                            }
+                        });
+                    }
+                } else if (content_type === "application/json") {
+                    const reader = _request.body.getReader();
+                    if (reader !== null) {
+                        await reader.read().then((body)=>{
+                            if (body.value !== null) {
+                                const body_string = new TextDecoder().decode(body.value);
+                                this.items = JSON.parse(body_string);
+                            }
+                        });
+                    }
+                }
+            }
+        }
+        return this;
     }
 }
 class CookiesScope extends Scope {
@@ -194,18 +228,18 @@ class FrontworkRequest {
         this.GET = new GetScope(key_value_list_to_array(parsed_url.query_string, "&", "="));
         this.POST = post;
         const cookies_string = this.headers.get("cookie");
-        this.COOKIES = new CookiesScope(cookies_string === null ? [] : key_value_list_to_array(cookies_string, "; ", "="));
+        this.COOKIES = new CookiesScope(cookies_string === null ? {} : key_value_list_to_array(cookies_string, "; ", "="));
     }
     __request_text(category) {
         let text = this.method + " " + this.path;
         if (this.query_string !== "") text += "?" + this.query_string;
         text += " [" + category + "]";
-        if (this.POST.items.length > 0) {
+        const keys = Object.keys(this.POST.items);
+        if (keys.length !== 0) {
             text += "\n    Scope POST: ";
-            for(let i = 0; i < this.POST.items.length; i++){
-                const item = this.POST.items[i];
-                text += "\n        " + item.key + " = \"" + item.value + "\"";
-            }
+            keys.forEach((key)=>{
+                text += "\n        " + key + " = \"" + this.POST.items[key] + "\"";
+            });
         }
         return text;
     }
@@ -557,7 +591,7 @@ class FrontworkClient extends Frontwork {
     }
     page_change(savestate, do_building) {
         this.request_url = savestate.url;
-        const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope([]));
+        const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope({}));
         const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, do_building);
         const route = this.route_resolver(context);
         try {

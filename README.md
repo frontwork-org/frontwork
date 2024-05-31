@@ -35,8 +35,6 @@ We use the rust conventions for rust and typescript code.
 See: https://github.com/rust-lang/rfcs/blob/master/text/0430-finalizing-naming-conventions.md
 
 ### help wanted
-- Support for multipart/form-data
-    - low priority since you can still upload files/blob data through the proxied API
 
 #### Missing iOS and Mac support
 To develeop any app for an apple product, MacOS is required to develop and digitaly sign the app. But because I do not own any products of apple, it is not possible for me to develeop for it.   

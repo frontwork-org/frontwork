@@ -1,10 +1,39 @@
+<style>
+    h1 {
+        counter-reset: h2
+    }
+
+    h2 {
+        counter-reset: h3
+    }
+
+    h3 {
+        counter-reset: h4
+    }
+
+    h2:before {
+        counter-increment: h2;
+        content: counter(h2) ". "
+    }
+
+    h3:before {
+        counter-increment: h3;
+        content: counter(h2) "." counter(h3) ". "
+    }
+
+    h4:before {
+        counter-increment: h4;
+        content: counter(h2) "." counter(h3) "." counter(h4) ". "
+    }
+</style>
+
 # Frontwork Docs
 
-## 1. Introduction
+## Introduction
 Frontwork is a TypeScript Framework to develop Frontend applications for the web, desktop and android
 
 
-## 2. Getting Started
+## Getting Started
 For getting started you need to install the frontwork-cli tool "frontwork": 
 
     cargo install frontwork  
@@ -13,7 +42,7 @@ And then use `frontwork install` to install required dev-dependencies
 To start a new project you can use `frontwork init` to use the current directory or `frontwork new` to create a new one.
 
 
-## 3. Routing
+## Routing
 ### Domain
 With FrontworkInit.domain_to_route_selector we are able to selects which routes should work under a domain by returning Route[].
 
@@ -57,7 +86,7 @@ Executed after the DOM is ready. Put here the code for events.
 
 
 
-## 4. Middleware
+## Middleware
 
 ### Error Handler
 Will be executed on error, expects to return a "FrontworkResponse".
@@ -71,7 +100,24 @@ By returning a "Component" you stop the execution of a Route.
 Or you return null to continue the execution of the Route.
 
 
-## 5. Request & Scope
+## Context
+To be able to get easy access to data an FrontworkContext object will always be included in the constructor and methods of a Component.
+
+### Request
+#### URL
+A URL consists from the following parts and are available inside FrontworkRequest:
+
+- protocol
+- host
+- path
+- query_string
+- fragment
+
+Additianaly the attribute FrontworkRequest.path_dirs contains the splitted path by "/", that way we get easy access to directories.  
+Please note that path_dirs[0] is always empty thus the first directory to query would be path_dirs[1]. Do not worry about its length as it gets always checked beforehand.
+
+
+#### Scopes
 For every request the framework will simplify the access to nececerry variables. The class "FrontworkRequest" contains all information about the users request. Additionaly you have access to the following Scopes:
 
 - GET Scope
@@ -80,6 +126,8 @@ For every request the framework will simplify the access to nececerry variables.
 
 From a Scope you can get the value with the get() method.
 
+### Header Limitations
+For security reasons, browsers do not expose certain parts of the HTTP request, such as headers or the exact request body, to client-side JavaScript.
 
 ## 6. Response
 The class "FrontworkResponse" contains information about the data you want to sent to the user.

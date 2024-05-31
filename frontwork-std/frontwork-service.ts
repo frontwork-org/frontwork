@@ -156,32 +156,7 @@ export class FrontworkWebservice extends Frontwork {
     }
     
     private async handler(_request: Request): Promise<Response> {
-        // FormData is too complicated, so we decode it here and put it into PostScope
-        let post_data: { key: string, value: string }[] = [];
-
-
-        let content_type = _request.headers.get("content-type");
-        if (content_type !== null) {
-            content_type = content_type.split(";")[0];
-            
-            if (_request.body !== null) {
-                if (content_type === "application/x-www-form-urlencoded") {
-                    const reader = _request.body.getReader();
-                    if (reader !== null) {
-                        await reader.read().then((body) => {
-                            if (body.value !== null) {
-                                const body_string = new TextDecoder().decode(body.value);
-                                post_data = key_value_list_to_array(body_string, "&", "=");
-                            }
-                        });
-                    }
-                } else if(content_type === "multipart/form-data") {
-                    // _TODO: supporting multipart/form-data
-                }
-            }
-        }
-        
-        const POST = new PostScope(post_data)
+        const POST = await new PostScope({}).from_request(_request);
         const request = new FrontworkRequest(_request.method, _request.url, _request.headers, POST);
 
         try {
@@ -223,6 +198,7 @@ export class FrontworkWebservice extends Frontwork {
     private async handler_dev(_request: Request, service_started_timestamp: string): Promise<Response> {
         const url = _request.url;
         const url_sub = url.substring(url.length -4, url.length);
+        
         if (url_sub === "//ws") {
             let response, socket: WebSocket;
             try {
@@ -236,6 +212,13 @@ export class FrontworkWebservice extends Frontwork {
                 socket.send(service_started_timestamp);
             };
             return response;
+        } else if(url_sub === "//dr") {
+            const POST = await new PostScope({}).from_request(_request);
+            const report_text = POST.get("report_text");
+            if (report_text === null) return new Response("POST.report_text is null");
+
+            console.log("[LOG_FROM_CLIENT]", report_text);
+            return new Response("Browser FW.reporter => Dev Server reported");
         } else {
             return this.handler(_request);
         }
