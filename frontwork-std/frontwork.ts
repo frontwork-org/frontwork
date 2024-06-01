@@ -67,6 +67,15 @@ export class HTMLElementWrapper<T extends HTMLElement> {
     }
 }
 
+/**
+ * Importent: action must be "" or beginn with a slash
+ */
+export class FrontworkForm extends HTMLElementWrapper<HTMLFormElement> {
+    constructor(context: FrontworkContext, id: string, action: string, method: string) {
+        super(context.ensure_element("form", id, { action: action, method: method }).element);
+        this.element.setAttribute("fw-form", "1");
+    }
+}
 
 
 export enum EnvironmentPlatform {
@@ -93,7 +102,7 @@ export class I18n {
     }
 
     set_locale(locale: string) {
-        if(FW.verbose_logging) FW.reporter(LogType.Info, "I18n", "   Setting locale to \"" + locale + "\"", null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "I18n", "    Setting locale to \"" + locale + "\"", null);
         const locale_found = this.locales.find(l => l.locale === locale);
 
         if(locale_found === undefined) {

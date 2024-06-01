@@ -1,21 +1,20 @@
-import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkInit, EnvironmentStage, LogType, FW, BeforeRouteEvent, Route, DomReadyEvent, BuildEvent, FrontworkContext } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkInit, EnvironmentStage, LogType, FW, Route, FrontworkContext } from "./frontwork.ts";
 import { html_element_set_attributes } from "./utils.ts";
 
 
 export class FrontworkClient extends Frontwork {
-    private request_url: string;
     private build_on_page_load: boolean;
 
     constructor(init: FrontworkInit) {
         super(init);
-        this.request_url = location.toString();
 
         if (typeof init.build_on_page_load === "boolean") this.build_on_page_load = init.build_on_page_load;
         else this.build_on_page_load = false;
 
         // DOM Ready
         document.addEventListener("DOMContentLoaded", () => {
-            this.page_change({url: location.toString(), is_redirect: false, status_code: 200}, this.build_on_page_load);
+            const request = new FrontworkRequest("GET", location.toString(), new Headers(), new PostScope({}));
+            this.page_change(request, this.build_on_page_load);
         });
 
         // add event listener for page change on link click
@@ -29,12 +28,27 @@ export class FrontworkClient extends Frontwork {
             }
         }, false);
 
+        // FrontworkForm halt sending data to the server and let the client handle it instead
+        document.addEventListener('submit', (event) => {
+            const target = event.target as HTMLFormElement;
+            if (target.tagName === 'FORM' && target.getAttribute("fw-form")) {
+                console.log('Form submitted:', event.target);
+                
+                // Prevent the form from submitting
+                let submit_button = event.submitter as HTMLButtonElement|null;
+                submit_button = submit_button && submit_button.name? submit_button : null;
+                if(this.page_change_form(target, submit_button)) event.preventDefault();
+                
+            }
+        });
+
         // PopState Event: history back/forward; this event is needed to update the content
         addEventListener('popstate', (event) => {
             // validate event.state; it could be a different value if the state has been set by another script
             const savestate: PageChangeSavestate = event.state;
             if (savestate && savestate.url) {
-                this.page_change(savestate, true);
+                const request = new FrontworkRequest("GET", savestate.url, new Headers(), new PostScope({}));
+                this.page_change(request, true);
             }
         });
 
@@ -72,10 +86,7 @@ export class FrontworkClient extends Frontwork {
     }
 
     
-    private page_change(savestate: PageChangeSavestate, do_building: boolean): PageChangeSavestate|null {
-        this.request_url = savestate.url;
-        
-        const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope({}));
+    private page_change(request: FrontworkRequest, do_building: boolean): PageChangeSavestate|null {
         const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, do_building);
         const route: Route|null = this.route_resolver(context);
 
@@ -90,7 +101,7 @@ export class FrontworkClient extends Frontwork {
 
 
         if (do_building) {
-            const reb_result = this.route_execute_build(context, this.route_resolver(context));
+            const reb_result = this.route_execute_build(context, route);
             const response = reb_result.reponse;
             
             response.cookies.forEach(cookie => {
@@ -108,7 +119,7 @@ export class FrontworkClient extends Frontwork {
                 } else {
                     if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
                     this.page_change_to(redirect_url);
-                    return { url: this.request_url, is_redirect: true, status_code: response.status_code };
+                    return { method: request.method, url: context.request.url, is_redirect: true, status_code: response.status_code };
                 }
             }
     
@@ -125,7 +136,7 @@ export class FrontworkClient extends Frontwork {
                 document.body.innerHTML = resolved_content.context.document_body.innerHTML;
             
                 reb_result.dom_ready(context, this);
-                return { url: this.request_url, is_redirect: false, status_code: response.status_code };
+                return { method: request.method, url: request.url, is_redirect: false, status_code: response.status_code };
             }
         } else {
             if (route) {
@@ -141,7 +152,7 @@ export class FrontworkClient extends Frontwork {
     
     // function replacement for window.location; accessible for the Component method dom_ready
     public page_change_to(url_or_path: string) {
-        if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_to url_or_path: " + url_or_path, null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "    page_change_to: " + url_or_path, null);
         let url;
         const test = url_or_path.indexOf("//");
         if (test === 0 || test === 5 || test === 6) { // if "//" OR "http://" OR "https://"
@@ -150,11 +161,71 @@ export class FrontworkClient extends Frontwork {
             url = location.protocol+"//"+location.host+url_or_path
         }
 
-        const result = this.page_change({url: url, is_redirect: false, status_code: 200}, true);
+        const request = new FrontworkRequest("GET", url, new Headers(), new PostScope({}));
+        const result = this.page_change(request, true);
         if(result !== null) {
             if(result.is_redirect) return true;
 
-            history.pushState(result, document.title, this.request_url);
+            history.pushState(result, document.title, url);
+            return true;
+        }
+        return false;
+    }
+    
+    // function to handle Form submits being handled in client
+    public page_change_form(form: HTMLFormElement, submit_button: HTMLButtonElement|null) {
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_form", null);
+        let method = form.getAttribute("method");
+        if(method === null) method = "POST";// In Web Browsers, if a form's method attribute is empty, it defaults to "POST".
+        
+        let url: string;
+        const action = form.getAttribute("action");
+        if (action === "") {
+            url = location.protocol+"//"+location.host+window.location.pathname.toString();
+        } else {
+            url = location.protocol+"//"+location.host+action;
+        }
+
+        // Delete lonely slash
+        if (this.middleware.redirect_lonely_slash && url.substring(url.length-1) === "/") {
+            url = url.substring(0, url.length-1);
+        }
+
+        // Get FormData from form
+        const form_data = new FormData(form);
+        
+        const POST = new PostScope({});
+        if (method === "GET") {
+            let first = true;
+            form_data.forEach((value, key) => {
+                if (first) {
+                    first = false;
+                    url += "?";
+                } else {
+                    url += "&";
+                }
+                url += key+"="+encodeURIComponent(value.toString());
+            });
+
+            // Include submit button name and value
+            if (submit_button !== null) {
+                url += (first? "?" : "&") + submit_button.name+"="+submit_button.value;
+            }
+        } else {
+            form_data.forEach((value, key) => POST.items[key] = value.toString());
+            // Include submit button name and value
+            if (submit_button !== null) {
+                POST.items[submit_button.name] = submit_button.value;
+            }
+        }
+
+        const request = new FrontworkRequest(method, url, new Headers(), POST);
+        const result = this.page_change(request, true);
+        if(result !== null) {
+            if(result.is_redirect) return true;
+
+            
+            history.pushState(result, document.title, url);
             return true;
         }
         return false;
@@ -163,10 +234,12 @@ export class FrontworkClient extends Frontwork {
 
 
 class PageChangeSavestate {
+    method: string;
     url: string;
     is_redirect: boolean;
     status_code: number;
-    constructor(url: string, is_redirect: boolean, status_code: number) {
+    constructor(method: string, url: string, is_redirect: boolean, status_code: number) {
+        this.method = method;
         this.url = url;
         this.is_redirect = is_redirect;
         this.status_code = status_code;

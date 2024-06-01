@@ -1,4 +1,4 @@
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper } from "../frontwork.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
 
@@ -37,16 +37,24 @@ class TestComponent implements Component {
 		const title = context.ensure_text_element("h1", "title1").append_to(document_builder.main)
 		const description = context.ensure_text_element("p", "text1").append_to(document_builder.main)
 		
-		const section_form = context.create_element("section").append_to(document_builder.main);
-		context.ensure_text_element("h2", "title2").append_to(section_form);
+		const section = context.create_element("section").append_to(document_builder.main);
+		context.ensure_text_element("h2", "title2").append_to(section);
 
-		//TODO: Test forms
-		const form = context.ensure_element("form", "test_form", { action: "", method: "post" }).append_to(section_form);
-		console.log(form.element.innerHTML);
-		
+		// Test forms
+		const action = context.request.GET.get("action");
+		if (action !== null) {
+			context.ensure_text_element("h3", "formtest_title_"+(FW.is_client_side? "ok" : "fail")).append_to(section);
+			for (let i = 0; i < 3; i++) {
+				const div = context.create_element("div").append_to(section);
+				div.element.innerHTML = "text"+i+": "+context.request.GET.get("text"+i);
+			}
+
+		}
+
+		const form = new FrontworkForm(context, "test_form", "", "GET").append_to(section);
 
 		for (let i = 0; i < 3; i++) {
-			context.ensure_element("input", "input"+i, { type: "text", name: "text"+i, value: "asdsad" }).append_to(form);
+			context.ensure_element("input", "input"+i, { type: "text", name: "text"+i, value: "asdsad"+i }).append_to(form);
 		}
 		
 		context.ensure_text_element("button", "submit_button", { type: "submit", name: "action", value: "sent" }).append_to(form);

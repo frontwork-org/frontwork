@@ -8,5 +8,8 @@
     ,"a-test3": "Testseite3"
     ,"a-german": "Deutsch"
     ,"a-crash": "Absturz"
+
+    ,"formtest_title_fail": "Dieser Formtest wurde an den Deno Server gesendet!"
+    ,"formtest_title_ok": "Dieser Formtest wurde nicht an den Deno Server gesendet :)"
     ,"submit_button": "Senden"
 }
