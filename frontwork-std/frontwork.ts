@@ -1,4 +1,4 @@
-import { parse_url, key_value_list_to_array } from "./utils.ts";
+import { parse_url, key_value_list_to_object } from "./utils.ts";
 import { FrontworkClient } from './frontwork-client.ts'
 
 // TODO: https://tsdoc.org/
@@ -172,7 +172,7 @@ export class PostScope extends Scope {
                         await reader.read().then((body) => {
                             if (body.value !== null) {
                                 const body_string = new TextDecoder().decode(body.value);
-                                this.items = key_value_list_to_array(body_string, "&", "=");
+                                this.items = key_value_list_to_object(body_string, "&", "=");
                             }
                         });
                     }
@@ -276,14 +276,14 @@ export class FrontworkRequest {
         this.fragment = parsed_url.fragment;
 
         this.GET = new GetScope(
-            key_value_list_to_array(parsed_url.query_string, "&", "=")
+            key_value_list_to_object(parsed_url.query_string, "&", "=")
         );
 
         this.POST = post;
 
         const cookies_string = this.headers.get("cookie");
         this.COOKIES = new CookiesScope(
-            cookies_string === null ? {} : key_value_list_to_array(cookies_string, "; ", "=")
+            cookies_string === null ? {} : key_value_list_to_object(cookies_string, "; ", "=")
         );
     }
 

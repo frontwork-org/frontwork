@@ -1,6 +1,6 @@
 import { } from "./dom.ts";
 import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage, LogType, FW, FrontworkResponseRedirect, FrontworkContext } from "./frontwork.ts";
-import { key_value_list_to_array } from "./utils.ts";
+import { key_value_list_to_object } from "./utils.ts";
 
 
 class Asset {

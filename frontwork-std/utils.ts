@@ -41,7 +41,7 @@ export function parse_url(url:string): {protocol:string, host:string, path:strin
 }
 
 
-export function key_value_list_to_array(list: string, list_delimiter: string, key_value_delimiter: string): { [key: string]: string } {
+export function key_value_list_to_object(list: string, list_delimiter: string, key_value_delimiter: string): { [key: string]: string } {
     const result: { [key: string]: string } = {};
 
     const list_split = list.split(list_delimiter);

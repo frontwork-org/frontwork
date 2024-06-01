@@ -36,7 +36,7 @@ function parse_url(url) {
         fragment: fragment
     };
 }
-function key_value_list_to_array(list, list_delimiter, key_value_delimiter) {
+function key_value_list_to_object(list, list_delimiter, key_value_delimiter) {
     const result = {};
     const list_split = list.split(list_delimiter);
     for(let i = 0; i < list_split.length; i++){
@@ -176,7 +176,7 @@ class PostScope extends Scope {
                         await reader.read().then((body)=>{
                             if (body.value !== null) {
                                 const body_string = new TextDecoder().decode(body.value);
-                                this.items = key_value_list_to_array(body_string, "&", "=");
+                                this.items = key_value_list_to_object(body_string, "&", "=");
                             }
                         });
                     }
@@ -225,10 +225,10 @@ class FrontworkRequest {
         this.path_dirs = decodeURIComponent(parsed_url.path.replace(/\+/g, '%20')).split("/");
         this.query_string = parsed_url.query_string;
         this.fragment = parsed_url.fragment;
-        this.GET = new GetScope(key_value_list_to_array(parsed_url.query_string, "&", "="));
+        this.GET = new GetScope(key_value_list_to_object(parsed_url.query_string, "&", "="));
         this.POST = post;
         const cookies_string = this.headers.get("cookie");
-        this.COOKIES = new CookiesScope(cookies_string === null ? {} : key_value_list_to_array(cookies_string, "; ", "="));
+        this.COOKIES = new CookiesScope(cookies_string === null ? {} : key_value_list_to_object(cookies_string, "; ", "="));
     }
     __request_text(category) {
         let text = this.method + " " + this.path;
