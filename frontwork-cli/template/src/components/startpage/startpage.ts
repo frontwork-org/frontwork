@@ -43,7 +43,7 @@ export class StartpageComponent implements Component {
         );
     }
 
-    dom_ready(context: FrontworkContext, frontwork: FrontworkClient) {
+    dom_ready(context: FrontworkContext, client: FrontworkClient) {
         
   }
 }

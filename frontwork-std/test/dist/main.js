@@ -36,17 +36,14 @@ function parse_url(url) {
         fragment: fragment
     };
 }
-function key_value_list_to_array(list, list_delimiter, key_value_delimiter) {
-    const result = [];
+function key_value_list_to_object(list, list_delimiter, key_value_delimiter) {
+    const result = {};
     const list_split = list.split(list_delimiter);
     for(let i = 0; i < list_split.length; i++){
         const item = list_split[i];
         const item_split = item.split(key_value_delimiter);
         if (item_split.length === 2 && item_split[0] !== "") {
-            result.push({
-                key: item_split[0],
-                value: item_split[1]
-            });
+            result[item_split[0]] = item_split[1];
         }
     }
     return result;
@@ -57,17 +54,71 @@ function html_element_set_attributes(html_element, attributes) {
         html_element.setAttribute(attribute.name, attribute.value);
     }
 }
+var LogType;
+(function(LogType) {
+    LogType[LogType["Info"] = 0] = "Info";
+    LogType[LogType["Warn"] = 1] = "Warn";
+    LogType[LogType["Error"] = 2] = "Error";
+})(LogType || (LogType = {}));
+const FW = {
+    is_client_side: true,
+    reporter_client_to_server: true,
+    verbose_logging: false,
+    reporter: function(log_type, category, text, context, error) {
+        if (FW.reporter_client_to_server && FW.is_client_side) {
+            fetch(location.protocol + "//" + location.host + "//dr", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    report_text: text
+                })
+            });
+        }
+        if (log_type === LogType.Error) {
+            if (error === null) console.error(text);
+            else console.error(text, error);
+        } else if (log_type === LogType.Warn) {
+            console.warn(text);
+        } else if (log_type === LogType.Info) {
+            console.log(text);
+        }
+    }
+};
+class HTMLElementWrapper {
+    element;
+    constructor(element){
+        this.element = element;
+    }
+    append_to(parent) {
+        parent.element.appendChild(this.element);
+        return this;
+    }
+    add_event(type, listener, options) {
+        this.element.addEventListener(type, listener, options);
+    }
+}
+class FrontworkForm extends HTMLElementWrapper {
+    constructor(context, id, action, method){
+        super(context.ensure_element("form", id, {
+            action: action,
+            method: method
+        }).element);
+        this.element.setAttribute("fw-form", "1");
+    }
+}
 var EnvironmentPlatform;
 (function(EnvironmentPlatform) {
-    EnvironmentPlatform[EnvironmentPlatform["WEB"] = 0] = "WEB";
-    EnvironmentPlatform[EnvironmentPlatform["DESKTOP"] = 1] = "DESKTOP";
-    EnvironmentPlatform[EnvironmentPlatform["ANDROID"] = 2] = "ANDROID";
+    EnvironmentPlatform[EnvironmentPlatform["Web"] = 0] = "Web";
+    EnvironmentPlatform[EnvironmentPlatform["Desktop"] = 1] = "Desktop";
+    EnvironmentPlatform[EnvironmentPlatform["Android"] = 2] = "Android";
 })(EnvironmentPlatform || (EnvironmentPlatform = {}));
 var EnvironmentStage;
 (function(EnvironmentStage) {
-    EnvironmentStage[EnvironmentStage["DEVELOPMENT"] = 0] = "DEVELOPMENT";
-    EnvironmentStage[EnvironmentStage["STAGING"] = 1] = "STAGING";
-    EnvironmentStage[EnvironmentStage["PRODUCTION"] = 2] = "PRODUCTION";
+    EnvironmentStage[EnvironmentStage["Development"] = 0] = "Development";
+    EnvironmentStage[EnvironmentStage["Staging"] = 1] = "Staging";
+    EnvironmentStage[EnvironmentStage["Production"] = 2] = "Production";
 })(EnvironmentStage || (EnvironmentStage = {}));
 class I18n {
     locales;
@@ -78,10 +129,14 @@ class I18n {
         this.selected_locale = locales[0];
     }
     set_locale(locale) {
-        console.log("I18n: Setting locale to " + locale);
+        if (FW.verbose_logging) FW.reporter(LogType.Info, "I18n", "    Setting locale to \"" + locale + "\"", null, null);
         const locale_found = this.locales.find((l)=>l.locale === locale);
-        if (locale_found === undefined) throw new Error("I18nLocale " + locale + " does not exist");
+        if (locale_found === undefined) {
+            FW.reporter(LogType.Error, "I18n", "Locale '" + locale + "' does not exist", null, null);
+            return false;
+        }
         this.selected_locale = locale_found;
+        return true;
     }
     get_translation(key) {
         return this.selected_locale.get_translation(key);
@@ -94,10 +149,13 @@ class I18nLocale {
         this.locale = locale;
         this.translations = translations;
     }
-    get_translation(key) {
-        const translation = this.translations.find((t)=>t.key === key);
-        if (translation === undefined) throw new Error("I18nLocale.get_translation(\"" + key + "\"): can not get translation, because the specific key does not exist.");
-        return translation.translation;
+    get_translation(id) {
+        const translation = this.translations[id];
+        if (translation === undefined) {
+            FW.reporter(LogType.Error, "I18n", "    Missing translation for the locale '" + this.locale + "': ,\"" + id + "\": \"translated_text\"", null, null);
+            return "";
+        }
+        return translation;
     }
 }
 class Scope {
@@ -106,18 +164,49 @@ class Scope {
         this.items = items;
     }
     get(key) {
-        for(let i = 0; i < this.items.length; i++){
-            const item = this.items[i];
-            if (item.key === key) {
-                return item.value;
-            }
-        }
-        return null;
+        const value = this.items[key];
+        if (value === undefined) return null;
+        return value;
+    }
+}
+class GetScope extends Scope {
+    constructor(items){
+        super(items);
     }
 }
 class PostScope extends Scope {
     constructor(items){
         super(items);
+    }
+    async from_request(_request) {
+        let content_type = _request.headers.get("content-type");
+        if (content_type !== null) {
+            content_type = content_type.split(";")[0];
+            if (_request.body !== null) {
+                if (content_type === "application/x-www-form-urlencoded") {
+                    const reader = _request.body.getReader();
+                    if (reader !== null) {
+                        await reader.read().then((body)=>{
+                            if (body.value !== null) {
+                                const body_string = new TextDecoder().decode(body.value);
+                                this.items = key_value_list_to_object(body_string, "&", "=");
+                            }
+                        });
+                    }
+                } else if (content_type === "application/json") {
+                    const reader = _request.body.getReader();
+                    if (reader !== null) {
+                        await reader.read().then((body)=>{
+                            if (body.value !== null) {
+                                const body_string = new TextDecoder().decode(body.value);
+                                this.items = JSON.parse(body_string);
+                            }
+                        });
+                    }
+                }
+            }
+        }
+        return this;
     }
 }
 class CookiesScope extends Scope {
@@ -149,76 +238,29 @@ class FrontworkRequest {
         this.path_dirs = decodeURIComponent(parsed_url.path.replace(/\+/g, '%20')).split("/");
         this.query_string = parsed_url.query_string;
         this.fragment = parsed_url.fragment;
-        this.GET = new CookiesScope(key_value_list_to_array(parsed_url.query_string, "&", "="));
+        this.GET = new GetScope(key_value_list_to_object(parsed_url.query_string, "&", "="));
         this.POST = post;
         const cookies_string = this.headers.get("cookie");
-        this.COOKIES = new CookiesScope(cookies_string === null ? [] : key_value_list_to_array(cookies_string, "; ", "="));
+        this.COOKIES = new CookiesScope(cookies_string === null ? {} : key_value_list_to_object(cookies_string, "; ", "="));
     }
-}
-class DocumentBuilder {
-    doctype;
-    document_html;
-    document_head;
-    document_body;
-    constructor(doctype){
-        this.doctype = doctype || "<!DOCTYPE html>";
-        this.document_html = document.createElement("html");
-        this.document_head = this.document_html.appendChild(document.createElement("head"));
-        this.document_body = this.document_html.appendChild(document.createElement("body"));
+    __request_text(category) {
+        let text = this.method + " " + this.path;
+        if (this.query_string !== "") text += "?" + this.query_string;
+        text += " [" + category + "]";
+        const keys = Object.keys(this.POST.items);
+        if (keys.length !== 0) {
+            text += "\n    Scope POST: ";
+            keys.forEach((key)=>{
+                text += "\n        " + key + " = \"" + this.POST.items[key] + "\"";
+            });
+        }
+        return text;
     }
-    set_html_lang(code) {
-        this.document_html.setAttribute("lang", code);
-        return this;
+    log(category, context) {
+        if (FW.verbose_logging) FW.reporter(LogType.Info, category, this.__request_text(category), context, null);
     }
-    add_head_meta_data(title, description, robots) {
-        const meta_chatset = this.document_head.appendChild(document.createElement("meta"));
-        meta_chatset.setAttribute("charset", "UTF-8");
-        const meta_viewport = this.document_head.appendChild(document.createElement("meta"));
-        meta_viewport.setAttribute("name", "viewport");
-        meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
-        const meta_title = this.document_head.appendChild(document.createElement("title"));
-        meta_title.innerHTML = title;
-        const meta_description = this.document_head.appendChild(document.createElement("meta"));
-        meta_description.setAttribute("name", "description");
-        meta_description.setAttribute("content", description);
-        const meta_robots = this.document_head.appendChild(document.createElement("meta"));
-        meta_robots.setAttribute("name", "robots");
-        meta_robots.setAttribute("content", robots);
-        return this;
-    }
-    add_head_meta_opengraph_website(title, description, url, image_url) {
-        const meta_og_type = this.document_head.appendChild(document.createElement("meta"));
-        meta_og_type.setAttribute("property", "og:type");
-        meta_og_type.setAttribute("content", "website");
-        const meta_og_url = this.document_head.appendChild(document.createElement("meta"));
-        meta_og_url.setAttribute("property", "og:url");
-        meta_og_url.setAttribute("content", url);
-        const meta_og_title = this.document_head.appendChild(document.createElement("meta"));
-        meta_og_title.setAttribute("property", "og:title");
-        meta_og_title.setAttribute("content", title);
-        const meta_og_description = this.document_head.appendChild(document.createElement("meta"));
-        meta_og_description.setAttribute("property", "og:description");
-        meta_og_description.setAttribute("content", description);
-        const meta_og_image = this.document_head.appendChild(document.createElement("meta"));
-        meta_og_image.setAttribute("property", "og:image");
-        meta_og_image.setAttribute("content", image_url);
-        return this;
-    }
-    html_response() {
-        const style_css = this.document_head.appendChild(document.createElement("link"));
-        style_css.setAttribute("rel", "stylesheet");
-        style_css.setAttribute("href", "/assets/style.css");
-        style_css.setAttribute("type", "text/css");
-        const main_js = this.document_body.appendChild(document.createElement("script"));
-        main_js.setAttribute("src", "/assets/main.js");
-        main_js.setAttribute("type", "text/javascript");
-        return this.document_html;
-    }
-    toString() {
-        const html_response = this.html_response();
-        let content = this.doctype + '\n';
-        content += html_response.outerHTML;
-        return content;
+    error(category, context, error) {
+        FW.reporter(LogType.Error, category, this.__request_text(category), context, error);
     }
 }
 class FrontworkResponse {
@@ -230,6 +272,10 @@ class FrontworkResponse {
     constructor(status_code, content){
         this.status_code = status_code;
         this.content = content;
+    }
+    set_mime_type(mime_type) {
+        this.mime_type = mime_type;
+        return this;
     }
     add_header(name, value) {
         this.headers.push([
@@ -257,8 +303,7 @@ class FrontworkResponse {
         return this;
     }
     into_response() {
-        const content_text = typeof this.content === "object" ? this.content.toString() : this.content;
-        const response = new Response(content_text, {
+        const response = new Response(this.content.toString(), {
             status: this.status_code
         });
         response.headers.set('content-type', this.mime_type);
@@ -266,15 +311,93 @@ class FrontworkResponse {
             const header = this.headers[i];
             response.headers.set(header[0], header[1]);
         }
-        for(let i1 = 0; i1 < this.cookies.length; i1++){
-            const cookie = this.cookies[i1];
+        for(let i = 0; i < this.cookies.length; i++){
+            const cookie = this.cookies[i];
             response.headers.append('set-cookie', cookie.to_string());
         }
         return response;
     }
 }
+class DocumentBuilder {
+    context;
+    doctype;
+    constructor(context){
+        this.context = context;
+        this.doctype = "<!DOCTYPE html>";
+        this.set_html_lang(context.i18n.selected_locale.locale);
+    }
+    head_append_tag(tag, attributes) {
+        const element = document.createElement(tag);
+        if (attributes) {
+            for(const key in attributes){
+                element.setAttribute(key, attributes[key]);
+            }
+        }
+        this.context.document_head.append(element);
+        return this;
+    }
+    add_head_meta_data(title, description, robots) {
+        const meta_chatset = this.context.document_head.appendChild(document.createElement("meta"));
+        meta_chatset.setAttribute("charset", "UTF-8");
+        const meta_viewport = this.context.document_head.appendChild(document.createElement("meta"));
+        meta_viewport.setAttribute("name", "viewport");
+        meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
+        const meta_title = this.context.document_head.appendChild(document.createElement("title"));
+        meta_title.innerHTML = title;
+        const meta_description = this.context.document_head.appendChild(document.createElement("meta"));
+        meta_description.setAttribute("name", "description");
+        meta_description.setAttribute("content", description);
+        const meta_robots = this.context.document_head.appendChild(document.createElement("meta"));
+        meta_robots.setAttribute("name", "robots");
+        meta_robots.setAttribute("content", robots);
+        return this;
+    }
+    add_head_meta_opengraph_website(title, description, url, image_url) {
+        const meta_og_type = this.context.document_head.appendChild(document.createElement("meta"));
+        meta_og_type.setAttribute("property", "og:type");
+        meta_og_type.setAttribute("content", "website");
+        const meta_og_url = this.context.document_head.appendChild(document.createElement("meta"));
+        meta_og_url.setAttribute("property", "og:url");
+        meta_og_url.setAttribute("content", url);
+        const meta_og_title = this.context.document_head.appendChild(document.createElement("meta"));
+        meta_og_title.setAttribute("property", "og:title");
+        meta_og_title.setAttribute("content", title);
+        const meta_og_description = this.context.document_head.appendChild(document.createElement("meta"));
+        meta_og_description.setAttribute("property", "og:description");
+        meta_og_description.setAttribute("content", description);
+        const meta_og_image = this.context.document_head.appendChild(document.createElement("meta"));
+        meta_og_image.setAttribute("property", "og:image");
+        meta_og_image.setAttribute("content", image_url);
+        return this;
+    }
+    set_html_lang(code) {
+        this.context.document_html.setAttribute("lang", code);
+        return this;
+    }
+    body_append(wr) {
+        this.context.document_body.append(wr.element);
+        return wr;
+    }
+    html() {
+        const style_css = this.context.document_head.appendChild(document.createElement("link"));
+        style_css.setAttribute("id", "fw-style");
+        style_css.setAttribute("rel", "stylesheet");
+        style_css.setAttribute("href", "/assets/style.css");
+        style_css.setAttribute("type", "text/css");
+        const main_js = this.context.document_body.appendChild(document.createElement("script"));
+        style_css.setAttribute("id", "fw-script");
+        main_js.setAttribute("src", "/assets/main.js");
+        main_js.setAttribute("type", "text/javascript");
+        return this.context.document_html;
+    }
+    toString() {
+        const html_response = this.html();
+        return this.doctype + '\n' + html_response.outerHTML;
+    }
+}
 class FrontworkResponseRedirect extends FrontworkResponse {
     constructor(redirect_path){
+        if (FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> " + redirect_path, null, null);
         super(301, "redirecting...");
         this.add_header("Location", redirect_path);
     }
@@ -291,147 +414,152 @@ class Route {
         previous_route_id += 1;
     }
 }
-class DomainRoutes {
-    domain;
-    routes = [];
-    constructor(domain, routes){
-        this.domain = domain;
-        this.routes = routes;
+class FrontworkContext {
+    platform;
+    stage;
+    i18n;
+    request;
+    do_building;
+    document_html;
+    document_head;
+    document_body;
+    constructor(platform, stage, i18n, request, do_building){
+        this.platform = platform;
+        this.stage = stage;
+        this.i18n = i18n;
+        this.request = request;
+        this.do_building = do_building;
+        this.document_html = document.createElement("html");
+        this.document_head = this.document_html.appendChild(document.createElement("head"));
+        this.document_body = this.document_html.appendChild(document.createElement("body"));
+    }
+    create_element(tag, attributes) {
+        const element = document.createElement(tag);
+        if (attributes) {
+            for(const key in attributes){
+                element.setAttribute(key, attributes[key]);
+            }
+        }
+        return new HTMLElementWrapper(element);
+    }
+    ensure_element(tag, id, attributes) {
+        const elem = this.do_building ? this.document_html.querySelector("#" + id) : document.getElementById(id);
+        if (elem !== null) return new HTMLElementWrapper(elem);
+        const elem2 = this.create_element(tag, attributes);
+        elem2.element.id = id;
+        return elem2;
+    }
+    ensure_text_element(tag, id, attributes) {
+        const elem = this.do_building ? this.document_html.querySelector("#" + id) : document.getElementById(id);
+        if (elem !== null) return new HTMLElementWrapper(elem);
+        const elem2 = this.create_element(tag, attributes);
+        elem2.element.id = id;
+        elem2.element.innerText = this.i18n.get_translation(id);
+        return elem2;
     }
 }
 class Frontwork {
     platform;
     stage;
     port;
-    domain_routes;
+    domain_to_route_selector;
     middleware;
     i18n;
     constructor(init){
         this.platform = init.platform;
         this.stage = init.stage;
         this.port = init.port;
-        this.domain_routes = init.domain_routes;
+        this.domain_to_route_selector = init.domain_to_route_selector;
         this.middleware = init.middleware;
         this.i18n = init.i18n;
+        if (this.stage === EnvironmentStage.Development) FW.verbose_logging = true;
     }
-    routes_resolver(context) {
-        if (this.middleware.redirect_lonely_slash && context.request.path_dirs.length > 2 && context.request.path_dirs[context.request.path_dirs.length - 1] === "") {
-            let new_path = "";
-            for(let i = 0; i < context.request.path_dirs.length - 1; i++){
-                if (context.request.path_dirs[i] !== "") {
-                    new_path += "/" + context.request.path_dirs[i];
-                }
-            }
-            this.log(context.request, "[REDIRECT] -> " + new_path);
-            const redirect_component = {
-                response: new FrontworkResponseRedirect(new_path),
-                dom_ready: ()=>{}
-            };
-            return redirect_component;
-        }
-        if (this.middleware.before_routes !== null) {
-            this.log(context.request, "[BEFORE_ROUTES]");
-            const response = this.middleware.before_routes.build(context, this);
-            if (response !== null) return {
-                response: response,
-                dom_ready: this.middleware.before_routes.dom_ready
-            };
-        }
-        for(let i1 = 0; i1 < this.domain_routes.length; i1++){
-            const domain_routes = this.domain_routes[i1];
-            if (domain_routes.domain.test(context.request.host)) {
-                for(let i2 = 0; i2 < domain_routes.routes.length; i2++){
-                    const route = domain_routes.routes[i2];
-                    const route_path_dirs = route.path.split("/");
+    route_resolver(context) {
+        const routes = this.domain_to_route_selector(context);
+        for(let b = 0; b < routes.length; b++){
+            const route = routes[b];
+            const route_path_dirs = route.path.split("/");
+            if (context.request.path_dirs.length === route_path_dirs.length) {
+                for(let c = 0; c < route_path_dirs.length; c++){
                     if (context.request.path_dirs.length === route_path_dirs.length) {
                         let found = true;
-                        for(let i3 = 0; i3 < route_path_dirs.length; i3++){
-                            const route_path_dir = route_path_dirs[i3];
-                            if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i3]) {
+                        for(let i = 0; i < route_path_dirs.length; i++){
+                            const route_path_dir = route_path_dirs[i];
+                            if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i]) {
                                 found = false;
                                 break;
                             }
                         }
                         if (found) {
-                            this.log(context.request, "[ROUTE #" + route.id + " (" + route.path + ")]");
-                            const response1 = route.component.build(context, this);
-                            if (response1 !== null) return {
-                                response: response1,
-                                dom_ready: route.component.dom_ready
-                            };
+                            if (FW.verbose_logging) context.request.log("ROUTE #" + route.id + " (" + route.path + ")", context);
+                            return route;
                         }
                     }
                 }
             }
         }
-        if (this.middleware.after_routes !== null) {
-            this.log(context.request, "[AFTER_ROUTES]");
-            const response2 = this.middleware.after_routes.build(context, this);
-            if (response2 !== null) return {
-                response: response2,
-                dom_ready: this.middleware.after_routes.dom_ready
-            };
-        }
         return null;
     }
-    log(request, extra) {
-        this.middleware.log(request, extra);
+    route_execute_build(context, route) {
+        if (route) {
+            try {
+                const component = new route.component(context);
+                return {
+                    reponse: component.build(context),
+                    component: component
+                };
+            } catch (error) {
+                context.request.error("ROUTE #" + route.id + " (" + route.path + ")", context, error);
+                return {
+                    reponse: this.middleware.error_handler_component.build(context),
+                    component: this.middleware.error_handler_component
+                };
+            }
+        }
+        if (FW.verbose_logging) context.request.log("NOT_FOUND", context);
+        try {
+            const component = new this.middleware.not_found_handler(context);
+            return {
+                reponse: component.build(context),
+                component: component
+            };
+        } catch (error) {
+            context.request.error("NOT_FOUND", context, error);
+            return {
+                reponse: this.middleware.error_handler_component.build(context),
+                component: this.middleware.error_handler_component
+            };
+        }
     }
 }
 class FrontworkMiddleware {
     error_handler;
+    error_handler_component;
     not_found_handler;
-    before_routes;
-    after_routes;
+    before_route;
     redirect_lonely_slash;
     constructor(init){
-        if (init && init.error_handler) {
-            const init_error_handler = init.error_handler;
-            this.error_handler = (request, error)=>{
-                this.log(request, "[ERROR]");
-                return init_error_handler(request, error);
-            };
-        } else {
-            this.error_handler = (request)=>{
-                this.log(request, "[ERROR]");
-                return new FrontworkResponse(500, "ERROR");
-            };
-        }
-        if (init && init.not_found_handler) {
-            this.not_found_handler = init.not_found_handler;
-        } else {
-            this.not_found_handler = {
-                build: ()=>{
-                    return new FrontworkResponse(404, "ERROR 404 - Page not found");
-                },
-                dom_ready: ()=>{}
-            };
-        }
-        this.before_routes = init && init.before_routes ? init.before_routes : null;
-        this.after_routes = init && init.after_routes ? init.after_routes : null;
+        this.error_handler = init.error_handler;
+        this.error_handler_component = {
+            build (context) {
+                return init.error_handler(context);
+            },
+            dom_ready () {}
+        };
+        this.not_found_handler = init.not_found_handler;
+        this.before_route = init.before_route;
         this.redirect_lonely_slash = init && init.redirect_lonely_slash ? init.redirect_lonely_slash : true;
-    }
-    log(request, extra) {
-        let path_with_query_string = request.path;
-        if (request.query_string !== "") path_with_query_string += "?" + request.query_string;
-        console.log(request.method + " " + path_with_query_string + " " + extra);
-        if (request.POST.items.length > 0) console.log(" Scope POST: ", request.POST.items);
     }
 }
 class FrontworkClient extends Frontwork {
-    request_url;
     build_on_page_load;
     constructor(init){
         super(init);
-        this.request_url = location.toString();
         if (typeof init.build_on_page_load === "boolean") this.build_on_page_load = init.build_on_page_load;
         else this.build_on_page_load = false;
         document.addEventListener("DOMContentLoaded", ()=>{
-            this.page_change({
-                url: location.toString(),
-                is_redirect: false,
-                status_code: 200
-            }, this.build_on_page_load);
+            const request = new FrontworkRequest("GET", location.toString(), new Headers(), new PostScope({}));
+            this.page_change(request, this.build_on_page_load);
         });
         document.addEventListener('click', (event)=>{
             const target = event.target;
@@ -441,14 +569,23 @@ class FrontworkClient extends Frontwork {
                 }
             }
         }, false);
+        document.addEventListener('submit', (event)=>{
+            const target = event.target;
+            if (target.tagName === 'FORM' && target.getAttribute("fw-form")) {
+                let submit_button = event.submitter;
+                submit_button = submit_button && submit_button.name ? submit_button : null;
+                if (this.page_change_form(target, submit_button)) event.preventDefault();
+            }
+        });
         addEventListener('popstate', (event)=>{
             const savestate = event.state;
             if (savestate && savestate.url) {
-                this.page_change(savestate, true);
+                const request = new FrontworkRequest("GET", savestate.url, new Headers(), new PostScope({}));
+                this.page_change(request, true);
             }
         });
-        if (this.stage === EnvironmentStage.DEVELOPMENT) {
-            console.log("hot-reloading is enabled; Make sure this is the development environment");
+        if (this.stage === EnvironmentStage.Development) {
+            console.info("hot-reloading is enabled; Make sure this is the development environment");
             let state = 0;
             const connect = ()=>{
                 const ws = new WebSocket("ws://" + location.host + "//ws");
@@ -471,80 +608,75 @@ class FrontworkClient extends Frontwork {
             connect();
         }
     }
-    page_change(savestate, do_building) {
-        this.request_url = savestate.url;
-        const request = new FrontworkRequest("GET", this.request_url, new Headers(), new PostScope([]));
-        const context = {
-            request: request,
-            i18n: this.i18n,
-            platform: this.platform,
-            stage: this.stage
-        };
-        let result;
+    page_change(request, do_building) {
+        const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, do_building);
+        const route = this.route_resolver(context);
         try {
-            const resolved_component = this.routes_resolver(context);
-            if (resolved_component) {
-                result = {
-                    response: resolved_component.response,
-                    dom_ready: resolved_component.dom_ready
-                };
-            } else {
-                result = {
-                    response: this.middleware.not_found_handler.build(context, this),
-                    dom_ready: this.middleware.not_found_handler.dom_ready
-                };
-            }
+            this.middleware.before_route.build(context);
+            this.middleware.before_route.dom_ready(context, this);
         } catch (error) {
-            console.error(error);
-            const error_handler_result = this.middleware.error_handler(request, error);
-            result = {
-                response: error_handler_result,
-                dom_ready: null
-            };
+            context.request.error("before_route", context, error);
         }
-        if (result.response !== null) {
-            if (result.response.status_code === 301) {
-                const redirect_url = result.response.get_header("Location");
+        if (do_building) {
+            const reb_result = this.route_execute_build(context, route);
+            reb_result.reponse.cookies.forEach((cookie)=>{
+                if (cookie.http_only === false) {
+                    document.cookie = cookie.toString();
+                }
+            });
+            if (reb_result.reponse.status_code === 301 || reb_result.reponse.status_code === 302) {
+                const redirect_url = reb_result.reponse.get_header("Location");
                 if (redirect_url === null) {
-                    console.error("Tried to redirect: Status Code is 301, but Location header is null");
+                    FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", context, null);
                     return null;
                 } else {
-                    console.log("Redirect to:", redirect_url);
+                    if (FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, context, null);
                     this.page_change_to(redirect_url);
                     return {
-                        url: this.request_url,
+                        method: request.method,
+                        url: context.request.url,
                         is_redirect: true,
-                        status_code: result.response.status_code
+                        status_code: reb_result.reponse.status_code
                     };
                 }
             }
-            const resolved_content = result.response.content;
-            if (typeof resolved_content.document_html !== "undefined") {
-                if (do_building) {
-                    result.response.cookies.forEach((cookie)=>{
-                        if (cookie.http_only === false) {
-                            document.cookie = cookie.toString();
+            const resolved_content = reb_result.reponse.content;
+            if (typeof resolved_content.context.document_html !== "undefined") {
+                resolved_content.html();
+                html_element_set_attributes(document.children[0], resolved_content.context.document_html.attributes);
+                html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
+                document.head.innerHTML = resolved_content.context.document_head.innerHTML;
+                const html = document.body.parentElement;
+                if (document.body !== null) document.body.remove();
+                if (html !== null) {
+                    for(let i = 0; i < context.document_body.children.length; i++){
+                        const child = context.document_body.children[i];
+                        if (child.tagName === "SCRIPT") {
+                            child.remove();
                         }
-                    });
-                    resolved_content.html_response();
-                    html_element_set_attributes(document.children[0], resolved_content.document_html.attributes);
-                    html_element_set_attributes(document.head, resolved_content.document_head.attributes);
-                    html_element_set_attributes(document.body, resolved_content.document_body.attributes);
-                    document.head.innerHTML = resolved_content.document_head.innerHTML;
-                    document.body.innerHTML = resolved_content.document_body.innerHTML;
+                    }
+                    html.append(context.document_body);
                 }
-                if (result.dom_ready !== null) result.dom_ready(context, this);
+                reb_result.component.dom_ready(context, this);
                 return {
-                    url: this.request_url,
+                    method: request.method,
+                    url: request.url,
                     is_redirect: false,
-                    status_code: result.response.status_code
+                    status_code: reb_result.reponse.status_code
                 };
+            }
+        } else {
+            if (route) {
+                const route_component = new route.component(context);
+                route_component.dom_ready(context, this);
+            } else {
+                new this.middleware.not_found_handler(context).dom_ready(context, this);
             }
         }
         return null;
     }
     page_change_to(url_or_path) {
-        console.log("page_change_to url_or_path:", url_or_path);
+        if (FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "    page_change_to: " + url_or_path, null, null);
         let url;
         const test = url_or_path.indexOf("//");
         if (test === 0 || test === 5 || test === 6) {
@@ -552,112 +684,173 @@ class FrontworkClient extends Frontwork {
         } else {
             url = location.protocol + "//" + location.host + url_or_path;
         }
-        const result = this.page_change({
-            url: url,
-            is_redirect: false,
-            status_code: 200
-        }, true);
+        const request = new FrontworkRequest("GET", url, new Headers(), new PostScope({}));
+        const result = this.page_change(request, true);
         if (result !== null) {
             if (result.is_redirect) return true;
-            console.log("history.pushState result", result);
-            history.pushState(result, document.title, this.request_url);
+            history.pushState(result, document.title, url);
+            return true;
+        }
+        return false;
+    }
+    page_change_form(form, submit_button) {
+        if (FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_form", null, null);
+        let method = form.getAttribute("method");
+        if (method === null) method = "POST";
+        let url;
+        const action = form.getAttribute("action");
+        if (action === "") {
+            url = location.protocol + "//" + location.host + window.location.pathname.toString();
+        } else {
+            url = location.protocol + "//" + location.host + action;
+        }
+        if (this.middleware.redirect_lonely_slash && url.substring(url.length - 1) === "/") {
+            url = url.substring(0, url.length - 1);
+        }
+        const form_data = new FormData(form);
+        const POST = new PostScope({});
+        if (method === "GET") {
+            let first = true;
+            form_data.forEach((value, key)=>{
+                if (first) {
+                    first = false;
+                    url += "?";
+                } else {
+                    url += "&";
+                }
+                url += key + "=" + encodeURIComponent(value.toString());
+            });
+            if (submit_button !== null) {
+                url += (first ? "?" : "&") + submit_button.name + "=" + submit_button.value;
+            }
+        } else {
+            form_data.forEach((value, key)=>POST.items[key] = value.toString());
+            if (submit_button !== null) {
+                POST.items[submit_button.name] = submit_button.value;
+            }
+        }
+        const request = new FrontworkRequest(method, url, new Headers(), POST);
+        const result = this.page_change(request, true);
+        if (result !== null) {
+            if (result.is_redirect) return true;
+            history.pushState(result, document.title, url);
             return true;
         }
         return false;
     }
 }
-const __default = JSON.parse(`[
-    { "key": "title1", "translation": "Frontwork Test Page" }
-    ,{ "key": "text1", "translation": "This is a test page for the Frontwork framework." }
-    ,{ "key": "title2", "translation": "Test Form" }
-]`);
-const __default1 = JSON.parse(`[
-    { "key": "title1", "translation": "Frontwork Test Seite" }
-    ,{ "key": "text1", "translation": "Dies ist eine deutsche Test Seite für das Frontwork framework." }
-    ,{ "key": "title2", "translation": "Test Formular" }
-]`);
+const __default = JSON.parse("{\n     \"title1\": \"Frontwork Test Page\"\n    ,\"text1\": \"This is a test page for the Frontwork framework.\"\n    ,\"title2\": \"Test Form\"\n    ,\"test-page2\": \"Test Page 2\"\n    ,\"another_title1\": \"Hello from 127.0.0.1\"\n    ,\"another_text1\": \"Yes you can have different domains :)\"\n\n    ,\"a-home\": \"Home\"\n    ,\"a-test2\": \"Test2\"\n    ,\"a-test3\": \"Test3\"\n    ,\"a-german\": \"German\"\n    ,\"a-crash\": \"Crash\"\n\n    ,\"event_button_tester\": \"Event Button Tester\"\n\n    ,\"formtest_title_fail\": \"This form test was sent to the Deno server!\"\n    ,\"formtest_title_ok\": \"This form test was not sent to the Deno server :)\"\n    ,\"submit_button\": \"Submit\"\n\n}");
+const __default1 = JSON.parse("{\n    \"title1\": \"Frontwork Test Seite\"\n   ,\"text1\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\"\n   ,\"title2\": \"Test Formular\"\n\n   ,\"a-home\": \"Startseite\"\n    ,\"a-test2\": \"Testseite2\"\n    ,\"a-test3\": \"Testseite3\"\n    ,\"a-german\": \"Deutsch\"\n    ,\"a-crash\": \"Absturz\"\n\n    ,\"event_button_tester\": \"Ereignistastentester\"\n\n    ,\"formtest_title_fail\": \"Dieser Formtest wurde an den Deno Server gesendet!\"\n    ,\"formtest_title_ok\": \"Dieser Formtest wurde nicht an den Deno Server gesendet :)\"\n    ,\"submit_button\": \"Senden\"\n}");
 const i18n = new I18n([
     new I18nLocale("en", __default),
-    new I18nLocale("de", __default1), 
+    new I18nLocale("de", __default1)
 ]);
-function render_header() {
-    const header = document.createElement("header");
-    const link1 = header.appendChild(document.createElement("a"));
-    link1.innerText = "Home";
-    link1.setAttribute("href", "/");
-    link1.setAttribute("style", "margin-right: 10px;");
-    const link2 = header.appendChild(document.createElement("a"));
-    link2.innerText = "Test 2";
-    link2.setAttribute("href", "/test2");
-    link2.setAttribute("style", "margin-right: 10px;");
-    const link3 = header.appendChild(document.createElement("a"));
-    link3.innerText = "Test 3";
-    link3.setAttribute("href", "/test3");
-    link3.setAttribute("style", "margin-right: 10px;");
-    const link_german = header.appendChild(document.createElement("a"));
-    link_german.innerText = "German";
-    link_german.setAttribute("href", "/german");
-    link_german.setAttribute("style", "margin-right: 10px;");
-    const link_crash = header.appendChild(document.createElement("a"));
-    link_crash.innerText = "Crash";
-    link_crash.setAttribute("href", "/crash");
-    link_crash.setAttribute("style", "margin-right: 10px;");
-    return header;
+class MyMainDocumentBuilder extends DocumentBuilder {
+    main;
+    constructor(context){
+        super(context);
+        const header = this.body_append(context.create_element("header"));
+        context.ensure_text_element("a", "a-home", {
+            href: "/"
+        }).append_to(header);
+        context.ensure_text_element("a", "a-test2", {
+            href: "/test2"
+        }).append_to(header);
+        context.ensure_text_element("a", "a-test3", {
+            href: "/test3"
+        }).append_to(header);
+        context.ensure_text_element("a", "a-german", {
+            href: "/german"
+        }).append_to(header);
+        context.ensure_text_element("a", "a-crash", {
+            href: "/crash"
+        }).append_to(header);
+        this.main = this.body_append(context.create_element("main"));
+    }
+}
+class AnotherComponent {
+    build(context) {
+        const document_builder = new DocumentBuilder(context);
+        const main = document_builder.body_append(context.create_element("main"));
+        context.ensure_text_element("h1", "another_title1").append_to(main);
+        context.ensure_text_element("p", "another_text1").append_to(main);
+        return new FrontworkResponse(200, document_builder);
+    }
+    dom_ready() {}
 }
 class TestComponent {
-    build(context) {
-        const document_builder = new DocumentBuilder();
-        document_builder.document_body.appendChild(render_header());
-        const main = document_builder.document_body.appendChild(document.createElement("main"));
-        const title1 = main.appendChild(document.createElement("h1"));
-        title1.innerText = context.i18n.get_translation("title1");
-        const description = main.appendChild(document.createElement("p"));
-        description.innerText = context.i18n.get_translation("text1");
-        const section_form = main.appendChild(document.createElement("section"));
-        const section_form_title = section_form.appendChild(document.createElement("h2"));
-        section_form_title.innerText = context.i18n.get_translation("title2");
-        const section_form_form = section_form.appendChild(document.createElement("form"));
-        section_form_form.setAttribute("id", "test_form");
-        section_form_form.setAttribute("action", "");
-        section_form_form.setAttribute("method", "post");
-        for(let i = 0; i < 3; i++){
-            const section_form_form_input_text = section_form_form.appendChild(document.createElement("input"));
-            section_form_form_input_text.setAttribute("type", "text");
-            section_form_form_input_text.setAttribute("name", "text" + i);
-            section_form_form_input_text.setAttribute("value", "aabbcc");
-        }
-        const section_form_submit_button = section_form_form.appendChild(document.createElement("button"));
-        section_form_submit_button.setAttribute("type", "submit");
-        section_form_submit_button.setAttribute("name", "action");
-        section_form_submit_button.setAttribute("value", "sent");
-        section_form_submit_button.innerHTML = "Submit";
-        return new FrontworkResponse(200, document_builder.set_html_lang(context.i18n.selected_locale.locale).add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow"));
+    button_event;
+    constructor(context){
+        this.button_event = context.ensure_text_element("button", "event_button_tester", {
+            type: "button"
+        });
     }
-    dom_ready() {}
+    build(context) {
+        const document_builder = new MyMainDocumentBuilder(context);
+        const title = context.ensure_text_element("h1", "title1").append_to(document_builder.main);
+        const description = context.ensure_text_element("p", "text1").append_to(document_builder.main);
+        this.button_event.append_to(document_builder.main);
+        const section = context.create_element("section").append_to(document_builder.main);
+        context.ensure_text_element("h2", "title2").append_to(section);
+        const action = context.request.GET.get("action");
+        if (action !== null) {
+            context.ensure_text_element("h3", "formtest_title_" + (FW.is_client_side ? "ok" : "fail")).append_to(section);
+            for(let i = 0; i < 3; i++){
+                const div = context.create_element("div").append_to(section);
+                div.element.innerHTML = "text" + i + ": " + context.request.GET.get("text" + i);
+            }
+        }
+        const form = new FrontworkForm(context, "test_form", "", "GET").append_to(section);
+        for(let i = 0; i < 3; i++){
+            context.ensure_element("input", "input" + i, {
+                type: "text",
+                name: "text" + i,
+                value: "asdsad" + i
+            }).append_to(form);
+        }
+        context.ensure_text_element("button", "submit_button", {
+            type: "submit",
+            name: "action",
+            value: "sent"
+        }).append_to(form);
+        return new FrontworkResponse(200, document_builder.add_head_meta_data(title.element.innerText, description.element.innerText, "noindex,nofollow"));
+    }
+    dom_ready(context, client) {
+        try {
+            let times = 0;
+            this.button_event.add_event("click", ()=>{
+                times++;
+                this.button_event.element.innerHTML = "Changed " + times + " times";
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
 }
 class TestGerman extends TestComponent {
-    build(context) {
+    constructor(context){
         context.i18n.set_locale("de");
+        super(context);
+    }
+    build(context) {
         return super.build(context);
     }
-    dom_ready() {}
+    dom_ready(context, client) {
+        super.dom_ready(context, client);
+    }
 }
 class Test2Component {
-    build() {
-        const document_builder = new DocumentBuilder();
-        document_builder.document_body.appendChild(render_header());
-        const main = document_builder.document_body.appendChild(document.createElement("main"));
-        const title1 = main.appendChild(document.createElement("h1"));
-        title1.innerText = "Test Page 2";
-        const description = main.appendChild(document.createElement("p"));
-        description.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
-        return new FrontworkResponse(200, document_builder.set_html_lang("en").add_head_meta_data(title1.innerText, description.innerText, "noindex,nofollow"));
+    build(context) {
+        const document_builder = new MyMainDocumentBuilder(context);
+        const title1 = context.ensure_text_element("h1", "test-page2").append_to(document_builder.main);
+        const description = context.ensure_element("p", "description").append_to(document_builder.main);
+        description.element.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
+        FW.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", context, null);
+        return new FrontworkResponse(200, document_builder.add_head_meta_data(title1.element.innerText, description.element.innerText, "noindex,nofollow"));
     }
-    dom_ready(context, frontwork) {
-        console.log("FrontworkContext", context);
-        console.log("frontwork", frontwork);
+    dom_ready(context, client) {
         setTimeout(()=>{
-            frontwork.page_change_to("/");
+            client.page_change_to("/");
         }, 1000);
     }
 }
@@ -668,18 +861,39 @@ class Test3Component {
     dom_ready() {}
 }
 class ElementTestComponent {
-    build() {
-        const document_builder = new DocumentBuilder();
-        return new FrontworkResponse(200, document_builder.set_html_lang("en").add_head_meta_data("element_test", "element_test", "noindex,nofollow"));
+    build(context) {
+        const document_builder = new MyMainDocumentBuilder(context);
+        return new FrontworkResponse(200, document_builder.add_head_meta_data("element_test", "element_test", "noindex,nofollow"));
     }
     dom_ready() {}
 }
-class HelloWorldComponent {
+class HelloWorldPrioTestComponent {
     build(context) {
-        const content = "hello " + context.request.path_dirs[2];
+        const content = "Hello this is indeed first come, first served basis";
         return new FrontworkResponse(200, content);
     }
-    dom_ready() {}
+    dom_ready(context) {}
+}
+class HelloWorldComponent {
+    build(context) {
+        const content = "Hello " + context.request.path_dirs[2];
+        return new FrontworkResponse(200, content);
+    }
+    dom_ready(context) {}
+}
+class CollisionHandlerComponent {
+    build(context) {
+        if (context.request.path_dirs[2] === "first-come-first-served") {
+            return new HelloWorldPrioTestComponent().build(context);
+        }
+        return new HelloWorldComponent().build(context);
+    }
+    dom_ready(context) {
+        if (context.request.path_dirs[2] === "first-come-first-served") {
+            new HelloWorldPrioTestComponent().dom_ready(context);
+        }
+        new HelloWorldComponent().dom_ready(context);
+    }
 }
 class CrashComponent {
     build() {
@@ -688,32 +902,53 @@ class CrashComponent {
     }
     dom_ready() {}
 }
-const domain_routes = [
-    new DomainRoutes(/.*/, [
-        new Route("/", new TestComponent()),
-        new Route("/test2", new Test2Component()),
-        new Route("/test3", new Test3Component()),
-        new Route("/german", new TestGerman()),
-        new Route("/crash", new CrashComponent()),
-        new Route("/element_test", new ElementTestComponent()),
-        new Route("/hello/22222222", new HelloWorldComponent()),
-        new Route("/hello/*", new HelloWorldComponent()), 
-    ])
+class NotFoundComponent {
+    build(context) {
+        const document_builder = new MyMainDocumentBuilder(context);
+        const h1 = context.document_body.appendChild(document.createElement("h1"));
+        h1.innerText = "ERROR 404 - Not found";
+        return new FrontworkResponse(404, document_builder.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow"));
+    }
+    dom_ready() {}
+}
+const default_routes = [
+    new Route("/", TestComponent),
+    new Route("/test2", Test2Component),
+    new Route("/test3", Test3Component),
+    new Route("/german", TestGerman),
+    new Route("/crash", CrashComponent),
+    new Route("/element_test", ElementTestComponent),
+    new Route("/hello/first-come-first-served", HelloWorldPrioTestComponent),
+    new Route("/hello/*", HelloWorldComponent),
+    new Route("/hi/*", CollisionHandlerComponent)
+];
+const another_routes = [
+    new Route("/", AnotherComponent)
 ];
 const middleware = new FrontworkMiddleware({
-    before_routes: {
+    before_route: {
         build: (context)=>{
             context.i18n.set_locale("en");
-            return null;
         },
         dom_ready: ()=>{}
-    }
+    },
+    error_handler: (context)=>{
+        const document_builder = new MyMainDocumentBuilder(context);
+        const h1 = context.document_body.appendChild(document.createElement("h1"));
+        h1.innerText = "ERROR 500 - Internal server error";
+        return new FrontworkResponse(500, document_builder.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow"));
+    },
+    not_found_handler: NotFoundComponent
 });
 const APP_CONFIG = {
-    platform: EnvironmentPlatform.WEB,
-    stage: EnvironmentStage.DEVELOPMENT,
+    platform: EnvironmentPlatform.Web,
+    stage: EnvironmentStage.Development,
     port: 8080,
-    domain_routes: domain_routes,
+    domain_to_route_selector: (context)=>{
+        const domain = context.request.host.split(":")[0];
+        if (domain === "127.0.0.1") return another_routes;
+        return default_routes;
+    },
     middleware: middleware,
     i18n: i18n,
     build_on_page_load: false

@@ -22,18 +22,18 @@ fn print_help(no_error: bool, error_message: &str) {
     if no_error {
         println!("The usage of arguments has been entered wrong because {}. \nPlease follow the following usage:", error_message);
     } else {
-        println!("FrontWork by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors");
+        println!("Frontwork by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors");
         println!("-- The TypeScript Framework using Deno & Webassembly --");
         println!("\n Usage:");
     }
     println!("  -h or --help                    | this help message");
-    println!("  install                         | install required dependencies to develop with FrontWork");
+    println!("  install                         | install required dependencies to develop with Frontwork");
     println!("  init                            | create a new project in the current directory");
     println!("  new                             | create a new folder in the current directory and then execute init");
     println!("  component new                   | create a new component");
     println!("  component remove                | remove a component");
     println!("  run                             | run the script of the entered name in package.json");
-    println!("  test                            | execute main.testworker.ts");
+    println!("  test                            | run main.testworker.ts");
     println!("  build                           | build the application to the dist folder. Optional use: --production or --staging");
     println!("  watch                           | start development server and build the application on changes");
     println!("");
@@ -283,7 +283,7 @@ fn main() {
                         ts_file_content.push_str("                .add_head_meta_data(title, description, \"index,follow\")\n");
                         ts_file_content.push_str("        );\n");
                         ts_file_content.push_str("    }\n\n");
-                        ts_file_content.push_str("    dom_ready(context: FrontworkContext, frontwork: FrontworkClient) {\n        \n  }\n");
+                        ts_file_content.push_str("    dom_ready(context: FrontworkContext, client: FrontworkClient) {\n        \n  }\n");
                         ts_file_content.push_str("}\n");
                             
 
@@ -586,3 +586,5 @@ fn run_service(project_path: &String) -> process::Child {
         .spawn()
         .expect("Failed to execute deno. Make sure deno is installed on this machine.")
 }
+
+//TODO: Add bundle function to replace deno bundle. Since it is depricated. Use deno_emit = "0.40.3" instead

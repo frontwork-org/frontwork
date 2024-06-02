@@ -10,7 +10,7 @@ export const domain_routes: DomainRoutes[] = [
 ];
 
 export const middleware = new FrontworkMiddleware({
-	before_routes: {
+	before_route: {
 		build: (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
 			return null;

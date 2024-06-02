@@ -1,5 +1,21 @@
-[
-    { "key": "title1", "translation": "Frontwork Test Page" }
-    ,{ "key": "text1", "translation": "This is a test page for the Frontwork framework." }
-    ,{ "key": "title2", "translation": "Test Form" }
-]
+{
+     "title1": "Frontwork Test Page"
+    ,"text1": "This is a test page for the Frontwork framework."
+    ,"title2": "Test Form"
+    ,"test-page2": "Test Page 2"
+    ,"another_title1": "Hello from 127.0.0.1"
+    ,"another_text1": "Yes you can have different domains :)"
+
+    ,"a-home": "Home"
+    ,"a-test2": "Test2"
+    ,"a-test3": "Test3"
+    ,"a-german": "German"
+    ,"a-crash": "Crash"
+
+    ,"event_button_tester": "Event Button Tester"
+
+    ,"formtest_title_fail": "This form test was sent to the Deno server!"
+    ,"formtest_title_ok": "This form test was not sent to the Deno server :)"
+    ,"submit_button": "Submit"
+
+}
