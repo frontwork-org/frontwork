@@ -645,7 +645,6 @@ class FrontworkClient extends Frontwork {
                 resolved_content.html();
                 html_element_set_attributes(document.children[0], resolved_content.context.document_html.attributes);
                 html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
-                html_element_set_attributes(document.body, resolved_content.context.document_body.attributes);
                 document.head.innerHTML = resolved_content.context.document_head.innerHTML;
                 const html = document.body.parentElement;
                 if (document.body !== null) document.body.remove();
