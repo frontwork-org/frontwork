@@ -35,7 +35,6 @@ class TestComponent implements Component {
 	
 	constructor(context: FrontworkContext) {
 		this.button_event = context.ensure_text_element("button", "event_button_tester", { type: "button" });
-		console.log("this.button_event constructor", this.button_event);
 		
 	}
 
@@ -46,7 +45,6 @@ class TestComponent implements Component {
 		const description = context.ensure_text_element("p", "text1").append_to(document_builder.main)
 		
 		this.button_event.append_to(document_builder.main);
-		console.log("this.button_event build", this.button_event);
 		
 		const section = context.create_element("section").append_to(document_builder.main);
 		context.ensure_text_element("h2", "title2").append_to(section);
@@ -77,12 +75,10 @@ class TestComponent implements Component {
 	}
 	
     dom_ready(context: FrontworkContext, client: FrontworkClient): void {
-		console.log("this.button_event dom_ready", this.button_event);
 		try {
 			let times = 0;
 			this.button_event.add_event("click", () => {
 				times++;
-				console.log("this.button_event inEVENT", this.button_event);
 				this.button_event.element.innerHTML = "Changed "+times+" times";
 			})
 		} catch (error) {
@@ -216,10 +212,6 @@ const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
-
-			context.document_head.innerHTML = "";
-			context.document_body.innerHTML = "";
-			context.document_body_REAL.innerHTML = "";
 		},
 		dom_ready: () => { }
 	},

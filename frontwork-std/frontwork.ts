@@ -16,6 +16,11 @@ export const FW =  {
     is_client_side: true,
     
     /**
+     * If true the default reporter will sent some client logs to the dev server
+     */
+    reporter_client_to_server: true,
+    
+    /**
      * IF true FW.reporter will not be be called on LogType.Info.
      * Warn and Error messages will always be reported.
      */
@@ -28,7 +33,7 @@ export const FW =  {
      * @param text: string
     */
     reporter: function(log_type: LogType, category: string, text: string, context: FrontworkContext|null, error: Error|null) {
-        if (FW.verbose_logging && FW.is_client_side) {
+        if (FW.reporter_client_to_server && FW.is_client_side) {
             fetch(location.protocol+"//"+location.host+"//dr", {
                 method: "POST",
                 headers: {
@@ -493,7 +498,7 @@ export class DocumentBuilder implements DocumentBuilderInterface {
         style_css.setAttribute("type", "text/css");
 
         // force adding main.js to the end of the body
-        const main_js = this.context.document_body_REAL.appendChild( document.createElement("script") );
+        const main_js = this.context.document_body.appendChild( document.createElement("script") );
         style_css.setAttribute("id", "fw-script");
         main_js.setAttribute("src", "/assets/main.js");
         main_js.setAttribute("type", "text/javascript");
@@ -502,7 +507,6 @@ export class DocumentBuilder implements DocumentBuilderInterface {
     }
 
     toString() {
-        this.context.document_body_REAL.append(this.context.document_body);
         const html_response = this.html();
 
         return this.doctype + '\n' 
@@ -569,8 +573,7 @@ export class FrontworkContext {
 
     readonly document_html: HTMLHtmlElement;
     readonly document_head: HTMLHeadElement;
-    readonly document_body_REAL: HTMLBodyElement;
-    readonly document_body: HTMLElement;
+    readonly document_body: HTMLBodyElement;
 
     constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, i18n: I18n,request: FrontworkRequest, do_building: boolean) {
         this.platform = platform;
@@ -581,9 +584,7 @@ export class FrontworkContext {
 
         this.document_html = document.createElement("html");
         this.document_head = this.document_html.appendChild( document.createElement("head") );
-        this.document_body_REAL = this.document_html.appendChild( document.createElement("body") );
-        this.document_body = document.createElement("div");
-        this.document_body.id = "fw-app";
+        this.document_body = this.document_html.appendChild( document.createElement("body") );
     }
 
 
@@ -635,11 +636,6 @@ export class FrontworkContext {
         elem2.element.id = id;
         elem2.element.innerText = this.i18n.get_translation(id);
 
-        // if (id === "event_button_tester") {
-        //     console.log("context", this);
-        //     console.log("elem2.element.innerText", elem2.element.innerText);
-        // }
-        
         return elem2;
     }
 
@@ -713,9 +709,6 @@ export class Frontwork {
         if (route) {
             try {
                 const component = new route.component(context);
-                console.log("THE_component", component);
-                console.log("THE_component", component.build);
-                console.log("THE_component", component.dom_ready);
                 return { reponse: component.build(context), component: component };
             } catch (error) {
                 context.request.error("ROUTE #" + route.id + " ("+route.path+")", context, error);

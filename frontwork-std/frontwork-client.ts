@@ -32,8 +32,6 @@ export class FrontworkClient extends Frontwork {
         document.addEventListener('submit', (event) => {
             const target = event.target as HTMLFormElement;
             if (target.tagName === 'FORM' && target.getAttribute("fw-form")) {
-                console.log('Form submitted:', event.target);
-                
                 // Prevent the form from submitting
                 let submit_button = event.submitter as HTMLButtonElement|null;
                 submit_button = submit_button && submit_button.name? submit_button : null;
@@ -88,18 +86,8 @@ export class FrontworkClient extends Frontwork {
     
     private page_change(request: FrontworkRequest, do_building: boolean): PageChangeSavestate|null {
         const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, do_building);
-        console.log("do_building", do_building);
         const route: Route|null = this.route_resolver(context);
         
-        // clear head and body
-        console.log("--- CLEAR head and body ---");
-        context.document_head.innerHTML = "";
-        context.document_body.innerHTML = "";
-        context.document_body_REAL.innerHTML = "";
-        console.log("--- CLEAR head and body COMPLETED ---");
-
-
-
         // Middleware: before Route
         try {
             this.middleware.before_route.build(context);
@@ -110,10 +98,7 @@ export class FrontworkClient extends Frontwork {
 
 
         if (do_building) {
-            document.body.innerHTML = "";
-
             const reb_result = this.route_execute_build(context, route);
-            console.log("reb_result.dom_ready", reb_result.component);
             
             reb_result.reponse.cookies.forEach(cookie => {
                 if (cookie.http_only === false) {
@@ -141,16 +126,23 @@ export class FrontworkClient extends Frontwork {
 
                 html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.context.document_html.attributes);
                 html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
-                html_element_set_attributes(document.body, resolved_content.context.document_body_REAL.attributes);
+                html_element_set_attributes(document.body, resolved_content.context.document_body.attributes);
             
                 document.head.innerHTML = resolved_content.context.document_head.innerHTML;
 
-                // Remove all tags except script from the body
-                const fw_body = document.getElementById("fw-app");
-                if(fw_body !== null) fw_body.remove();
+                const html = document.body.parentElement;
+                if(document.body !== null) document.body.remove();
 
-                // Add all tags except script from the body
-                document.body.prepend(context.document_body);
+                // Add all elements except script to the body
+                if(html !== null) {
+                    for (let i = 0; i < context.document_body.children.length; i++) {
+                        const child = context.document_body.children[i];
+                        if (child.tagName === "SCRIPT") {
+                            child.remove();
+                        }
+                    }
+                    html.append(context.document_body);
+                }
                 
                 reb_result.component.dom_ready(context, this);
                 return { method: request.method, url: request.url, is_redirect: false, status_code: reb_result.reponse.status_code };
@@ -158,8 +150,6 @@ export class FrontworkClient extends Frontwork {
         } else {
             if (route) {
                 const route_component = new route.component(context);
-                console.log("route_component.dom_ready", route_component.dom_ready);
-                
                 route_component.dom_ready(context, this);
             } else {
                 new this.middleware.not_found_handler(context).dom_ready(context, this);
