@@ -184,7 +184,12 @@ export class FrontworkWebservice extends Frontwork {
             const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, true);
             const route = this.route_resolver(context);
             
-            // Before Route
+            // Middleware: before Route
+            try {
+                this.middleware.before_route.build(context);
+            } catch (error) {
+                context.request.error("before_route", context, error);
+            }
 
             // Route or Not found
             return this.route_execute_build(context, route).reponse.into_response();
