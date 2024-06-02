@@ -13,7 +13,7 @@ export class FrontworkTestworker extends Frontwork {
         super(init);
         console.info("Test worker started\n");
         FW.verbose_logging = true;
-        FW.reporter = (log_type: LogType, category: string, text: string, error: Error|null) => {
+        FW.reporter = (log_type: LogType, category: string, text: string, context: FrontworkContext|null, error: Error|null) => {
             if (log_type === LogType.Error) {
                 this.fail_count++;
                 if(error === null) console.error(text);

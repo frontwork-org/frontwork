@@ -55,7 +55,7 @@ class Asset {
             
             default: 
                 this.content_type = "unknown";
-                FW.reporter(LogType.Warn, "ASSET", "Unknown mime type for file extention '"+file_extention+"'. Please use only compatible and efficient file types for the web.", null) 
+                FW.reporter(LogType.Warn, "ASSET", "Unknown mime type for file extention '"+file_extention+"'. Please use only compatible and efficient file types for the web.", null, null) 
                 break;
         }
 
@@ -123,7 +123,7 @@ export class FrontworkWebservice extends Frontwork {
                 response.headers.append("content-type", "text/css; charset=utf-8")
                 return response;
             } catch (error) {
-                FW.reporter(LogType.Error, "ASSET", "ERROR can not load style.css from '" + this.style_css_absolute_path + "'\n", error);
+                FW.reporter(LogType.Error, "ASSET", "ERROR can not load style.css from '" + this.style_css_absolute_path + "'\n", null, error);
                 return null;
             }
         } else if(request.path === "/assets/main.js") {
@@ -133,7 +133,7 @@ export class FrontworkWebservice extends Frontwork {
                 response.headers.append("content-type", "text/javascript; charset=utf-8")
                 return response;
             } catch (error) {
-                FW.reporter(LogType.Error, "ASSET", "ERROR can not load main.js from '" + this.main_js_absolute_path + "'\n", error);
+                FW.reporter(LogType.Error, "ASSET", "ERROR can not load main.js from '" + this.main_js_absolute_path + "'\n", null, error);
                 return null;
             }
         }
@@ -146,7 +146,7 @@ export class FrontworkWebservice extends Frontwork {
                     response.headers.append("content-type", asset.content_type)
                     return response;
                 } catch (error) {
-                    FW.reporter(LogType.Error, "ASSET", "ERROR can not load asset from '" + asset.absolute_path + "'\n", error);
+                    FW.reporter(LogType.Error, "ASSET", "ERROR can not load asset from '" + asset.absolute_path + "'\n", null, error);
                     return null;
                 }
             }
@@ -163,7 +163,7 @@ export class FrontworkWebservice extends Frontwork {
             // Assets resolver
             const resolved_asset = this.assets_resolver(request);
             if(resolved_asset !== null) {
-                if(FW.verbose_logging) request.log("ASSET");
+                if(FW.verbose_logging) request.log("ASSET", null);
                 return resolved_asset;
             }
 
@@ -177,7 +177,7 @@ export class FrontworkWebservice extends Frontwork {
                     }
                 }
                 
-                if(FW.verbose_logging) request.log("LONELY_SLASH_REDIRECT");
+                if(FW.verbose_logging) request.log("LONELY_SLASH_REDIRECT", null);
                 return new FrontworkResponseRedirect(new_path).into_response();
             }
 

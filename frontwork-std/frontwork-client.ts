@@ -96,7 +96,7 @@ export class FrontworkClient extends Frontwork {
             this.middleware.before_route.build(context);
             this.middleware.before_route.dom_ready(context, this);
         } catch (error) {
-            context.request.error("before_route", error);
+            context.request.error("before_route", context, error);
         }
 
 
@@ -114,10 +114,10 @@ export class FrontworkClient extends Frontwork {
                 // redirect
                 const redirect_url = response.get_header("Location");
                 if (redirect_url === null) {
-                    FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
+                    FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", context, null);
                     return null;
                 } else {
-                    if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
+                    if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, context, null);
                     this.page_change_to(redirect_url);
                     return { method: request.method, url: context.request.url, is_redirect: true, status_code: response.status_code };
                 }
@@ -152,7 +152,7 @@ export class FrontworkClient extends Frontwork {
     
     // function replacement for window.location; accessible for the Component method dom_ready
     public page_change_to(url_or_path: string) {
-        if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "    page_change_to: " + url_or_path, null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "    page_change_to: " + url_or_path, null, null);
         let url;
         const test = url_or_path.indexOf("//");
         if (test === 0 || test === 5 || test === 6) { // if "//" OR "http://" OR "https://"
@@ -174,7 +174,7 @@ export class FrontworkClient extends Frontwork {
     
     // function to handle Form submits being handled in client
     public page_change_form(form: HTMLFormElement, submit_button: HTMLButtonElement|null) {
-        if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_form", null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_form", null, null);
         let method = form.getAttribute("method");
         if(method === null) method = "POST";// In Web Browsers, if a form's method attribute is empty, it defaults to "POST".
         

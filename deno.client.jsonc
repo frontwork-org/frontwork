@@ -5,10 +5,8 @@
       "strict": true
     },
     "lint": {
-      "files": {
-        "include": ["frontwork-std/"],
-        "exclude": []
-      },
+      "include": ["frontwork-std/"],
+      "exclude": [],
       "rules": {
         "tags": ["recommended"],
         "include": [],
@@ -16,10 +14,8 @@
       }
     },
     "fmt": {
-      "files": {
-        "include": ["frontwork-std/"],
-        "exclude": []
-      },
+      "include": ["frontwork-std/"],
+      "exclude": [],
       "options": {
         "useTabs": true,
         "lineWidth": 80,

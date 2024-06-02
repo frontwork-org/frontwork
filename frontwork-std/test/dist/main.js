@@ -63,7 +63,7 @@ var LogType;
 const FW = {
     is_client_side: true,
     verbose_logging: false,
-    reporter: function(log_type, category, text, error) {
+    reporter: function(log_type, category, text, context, error) {
         if (FW.verbose_logging && FW.is_client_side) {
             fetch(location.protocol + "//" + location.host + "//dr", {
                 method: "POST",
@@ -125,10 +125,10 @@ class I18n {
         this.selected_locale = locales[0];
     }
     set_locale(locale) {
-        if (FW.verbose_logging) FW.reporter(LogType.Info, "I18n", "    Setting locale to \"" + locale + "\"", null);
+        if (FW.verbose_logging) FW.reporter(LogType.Info, "I18n", "    Setting locale to \"" + locale + "\"", null, null);
         const locale_found = this.locales.find((l)=>l.locale === locale);
         if (locale_found === undefined) {
-            FW.reporter(LogType.Error, "I18n", "Locale '" + locale + "' does not exist", null);
+            FW.reporter(LogType.Error, "I18n", "Locale '" + locale + "' does not exist", null, null);
             return false;
         }
         this.selected_locale = locale_found;
@@ -148,7 +148,7 @@ class I18nLocale {
     get_translation(id) {
         const translation = this.translations[id];
         if (translation === undefined) {
-            FW.reporter(LogType.Error, "I18n", "    Missing translation for the locale '" + this.locale + "': ,\"" + id + "\": \"translated_text\"", null);
+            FW.reporter(LogType.Error, "I18n", "    Missing translation for the locale '" + this.locale + "': ,\"" + id + "\": \"translated_text\"", null, null);
             return "";
         }
         return translation;
@@ -252,11 +252,11 @@ class FrontworkRequest {
         }
         return text;
     }
-    log(category) {
-        if (FW.verbose_logging) FW.reporter(LogType.Info, category, this.__request_text(category), null);
+    log(category, context) {
+        if (FW.verbose_logging) FW.reporter(LogType.Info, category, this.__request_text(category), context, null);
     }
-    error(category, error) {
-        FW.reporter(LogType.Error, category, this.__request_text(category), error);
+    error(category, context, error) {
+        FW.reporter(LogType.Error, category, this.__request_text(category), context, error);
     }
 }
 class FrontworkResponse {
@@ -391,7 +391,7 @@ class DocumentBuilder {
 }
 class FrontworkResponseRedirect extends FrontworkResponse {
     constructor(redirect_path){
-        if (FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> " + redirect_path, null);
+        if (FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> " + redirect_path, null, null);
         super(301, "redirecting...");
         this.add_header("Location", redirect_path);
     }
@@ -485,7 +485,7 @@ class Frontwork {
                             }
                         }
                         if (found) {
-                            if (FW.verbose_logging) context.request.log("ROUTE #" + route.id + " (" + route.path + ")");
+                            if (FW.verbose_logging) context.request.log("ROUTE #" + route.id + " (" + route.path + ")", context);
                             return route;
                         }
                     }
@@ -503,14 +503,14 @@ class Frontwork {
                     dom_ready: component.dom_ready
                 };
             } catch (error) {
-                context.request.error("ROUTE #" + route.id + " (" + route.path + ")", error);
+                context.request.error("ROUTE #" + route.id + " (" + route.path + ")", context, error);
                 return {
                     reponse: this.middleware.error_handler_component.build(context),
                     dom_ready: this.middleware.error_handler_component.dom_ready
                 };
             }
         }
-        if (FW.verbose_logging) context.request.log("NOT_FOUND");
+        if (FW.verbose_logging) context.request.log("NOT_FOUND", context);
         try {
             const component = new this.middleware.not_found_handler(context);
             return {
@@ -518,7 +518,7 @@ class Frontwork {
                 dom_ready: component.dom_ready
             };
         } catch (error) {
-            context.request.error("NOT_FOUND", error);
+            context.request.error("NOT_FOUND", context, error);
             return {
                 reponse: this.middleware.error_handler_component.build(context),
                 dom_ready: this.middleware.error_handler_component.dom_ready
@@ -610,7 +610,7 @@ class FrontworkClient extends Frontwork {
             this.middleware.before_route.build(context);
             this.middleware.before_route.dom_ready(context, this);
         } catch (error) {
-            context.request.error("before_route", error);
+            context.request.error("before_route", context, error);
         }
         if (do_building) {
             const reb_result = this.route_execute_build(context, route);
@@ -623,10 +623,10 @@ class FrontworkClient extends Frontwork {
             if (response.status_code === 301 || response.status_code === 302) {
                 const redirect_url = response.get_header("Location");
                 if (redirect_url === null) {
-                    FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", null);
+                    FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", context, null);
                     return null;
                 } else {
-                    if (FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, null);
+                    if (FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, context, null);
                     this.page_change_to(redirect_url);
                     return {
                         method: request.method,
@@ -663,7 +663,7 @@ class FrontworkClient extends Frontwork {
         return null;
     }
     page_change_to(url_or_path) {
-        if (FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "    page_change_to: " + url_or_path, null);
+        if (FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "    page_change_to: " + url_or_path, null, null);
         let url;
         const test = url_or_path.indexOf("//");
         if (test === 0 || test === 5 || test === 6) {
@@ -681,7 +681,7 @@ class FrontworkClient extends Frontwork {
         return false;
     }
     page_change_form(form, submit_button) {
-        if (FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_form", null);
+        if (FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_form", null, null);
         let method = form.getAttribute("method");
         if (method === null) method = "POST";
         let url;
@@ -810,7 +810,7 @@ class Test2Component {
         const title1 = context.ensure_text_element("h1", "test-page2").append_to(document_builder.main);
         const description = context.ensure_element("p", "description").append_to(document_builder.main);
         description.element.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
-        FW.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);
+        FW.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", context, null);
         return new FrontworkResponse(200, document_builder.add_head_meta_data(title1.element.innerText, description.element.innerText, "noindex,nofollow"));
     }
     dom_ready(context, client) {

@@ -83,7 +83,7 @@ class Test2Component implements Component {
 		const description = context.ensure_element("p", "description").append_to(document_builder.main);
 		description.element.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
 		
-		FW.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", null);
+		FW.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", context, null);
 		return new FrontworkResponse(200, 
 			document_builder
 				.add_head_meta_data(title1.element.innerText, description.element.innerText, "noindex,nofollow")

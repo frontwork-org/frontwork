@@ -26,9 +26,8 @@ export const FW =  {
      * @param log_type: LogType 
      * @param category: string 
      * @param text: string
-     * //TODO: Add Context
     */
-    reporter: function(log_type: LogType, category: string, text: string, error: Error|null) {
+    reporter: function(log_type: LogType, category: string, text: string, context: FrontworkContext|null, error: Error|null) {
         if (FW.verbose_logging && FW.is_client_side) {
             fetch(location.protocol+"//"+location.host+"//dr", {
                 method: "POST",
@@ -102,11 +101,11 @@ export class I18n {
     }
 
     set_locale(locale: string) {
-        if(FW.verbose_logging) FW.reporter(LogType.Info, "I18n", "    Setting locale to \"" + locale + "\"", null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "I18n", "    Setting locale to \"" + locale + "\"", null, null);
         const locale_found = this.locales.find(l => l.locale === locale);
 
         if(locale_found === undefined) {
-            FW.reporter(LogType.Error, "I18n", "Locale '"+locale+"' does not exist", null);
+            FW.reporter(LogType.Error, "I18n", "Locale '"+locale+"' does not exist", null, null);
             return false;
         }
         
@@ -133,7 +132,7 @@ export class I18nLocale {
         const translation = this.translations[id];
 
         if(translation === undefined) {
-            FW.reporter(LogType.Error, "I18n", "    Missing translation for the locale '"+this.locale+"': ,\""+id+"\": \"translated_text\"", null);
+            FW.reporter(LogType.Error, "I18n", "    Missing translation for the locale '"+this.locale+"': ,\""+id+"\": \"translated_text\"", null, null);
             return "";
         }
 
@@ -311,12 +310,12 @@ export class FrontworkRequest {
         return text;
     }
 
-    log(category: string) {
-        if(FW.verbose_logging) FW.reporter(LogType.Info, category, this.__request_text(category), null);
+    log(category: string, context: FrontworkContext|null) {
+        if(FW.verbose_logging) FW.reporter(LogType.Info, category, this.__request_text(category), context, null);
     }
     
-    error(category: string, error: Error) {
-        FW.reporter(LogType.Error, category, this.__request_text(category), error);
+    error(category: string, context: FrontworkContext, error: Error) {
+        FW.reporter(LogType.Error, category, this.__request_text(category), context, error);
     }
 }
 
@@ -506,7 +505,7 @@ export class DocumentBuilder implements DocumentBuilderInterface {
 
 export class FrontworkResponseRedirect extends FrontworkResponse {
     constructor(redirect_path: string) {
-        if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> "+redirect_path, null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> "+redirect_path, null, null);
         
         super(301, "redirecting...");
         this.add_header("Location", redirect_path);
@@ -682,7 +681,7 @@ export class Frontwork {
                         }
 
                         if (found) {
-                            if(FW.verbose_logging) context.request.log("ROUTE #" + route.id + " ("+route.path+")");
+                            if(FW.verbose_logging) context.request.log("ROUTE #" + route.id + " ("+route.path+")", context);
                             return route;
                         }
                     }
@@ -700,18 +699,18 @@ export class Frontwork {
                 const component = new route.component(context);
                 return { reponse: component.build(context), dom_ready: component.dom_ready };
             } catch (error) {
-                context.request.error("ROUTE #" + route.id + " ("+route.path+")", error);
+                context.request.error("ROUTE #" + route.id + " ("+route.path+")", context, error);
                 return { reponse: this.middleware.error_handler_component.build(context), dom_ready: this.middleware.error_handler_component.dom_ready };
             }
         }
 
         // Middleware: Not found
-        if(FW.verbose_logging) context.request.log("NOT_FOUND");
+        if(FW.verbose_logging) context.request.log("NOT_FOUND", context);
         try {
             const component = new this.middleware.not_found_handler(context);
             return { reponse: component.build(context), dom_ready: component.dom_ready };
         } catch (error) {
-            context.request.error("NOT_FOUND", error);
+            context.request.error("NOT_FOUND", context, error);
             return { reponse: this.middleware.error_handler_component.build(context), dom_ready: this.middleware.error_handler_component.dom_ready };
         }
 	}
