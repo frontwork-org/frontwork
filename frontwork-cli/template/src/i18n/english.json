@@ -1,5 +1,5 @@
-[
-    { "key": "title1", "translation": "Startpage" }
-    ,{ "key": "text1", "translation": "Thank you for using the Frontwork framework." }
-    ,{ "key": "title2", "translation": "Test Form" }
-]
+{
+    "title1": "Startpage",
+    "text1": "Thank you for using the Frontwork framework.",
+    "title2": "Test Form"
+}

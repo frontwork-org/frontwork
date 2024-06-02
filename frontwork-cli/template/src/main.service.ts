@@ -1,4 +1,4 @@
-import { FrontworkWebservice } from "https://deno.land/x/frontwork@0.0.11/frontwork-service.ts";
+import { FrontworkWebservice } from "https://deno.land/x/frontwork@0.0.12/frontwork-service.ts";
 import { APP_CONFIG } from "./environments/environment.ts";
 
 const __FILE_PATH = new URL(import.meta.url).pathname;
