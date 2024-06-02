@@ -64,6 +64,10 @@ export class HTMLElementWrapper<T extends HTMLElement> {
         parent.element.appendChild(this.element);
         return this;
     }
+
+    add_event(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
+        this.element.addEventListener(type, listener, options);
+    }
 }
 
 /**
@@ -483,12 +487,14 @@ export class DocumentBuilder implements DocumentBuilderInterface {
     html() {
         // force adding style.css to the end of the head
         const style_css = this.context.document_head.appendChild( document.createElement("link") );
+        style_css.setAttribute("id", "fw-style");
         style_css.setAttribute("rel", "stylesheet");
         style_css.setAttribute("href", "/assets/style.css");
         style_css.setAttribute("type", "text/css");
 
         // force adding main.js to the end of the body
-        const main_js = this.context.document_body.appendChild( document.createElement("script") );
+        const main_js = this.context.document_body_REAL.appendChild( document.createElement("script") );
+        style_css.setAttribute("id", "fw-script");
         main_js.setAttribute("src", "/assets/main.js");
         main_js.setAttribute("type", "text/javascript");
 
@@ -496,6 +502,7 @@ export class DocumentBuilder implements DocumentBuilderInterface {
     }
 
     toString() {
+        this.context.document_body_REAL.append(this.context.document_body);
         const html_response = this.html();
 
         return this.doctype + '\n' 
@@ -562,7 +569,8 @@ export class FrontworkContext {
 
     readonly document_html: HTMLHtmlElement;
     readonly document_head: HTMLHeadElement;
-    readonly document_body: HTMLBodyElement;
+    readonly document_body_REAL: HTMLBodyElement;
+    readonly document_body: HTMLElement;
 
     constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, i18n: I18n,request: FrontworkRequest, do_building: boolean) {
         this.platform = platform;
@@ -573,7 +581,9 @@ export class FrontworkContext {
 
         this.document_html = document.createElement("html");
         this.document_head = this.document_html.appendChild( document.createElement("head") );
-        this.document_body = this.document_html.appendChild( document.createElement("body") );
+        this.document_body_REAL = this.document_html.appendChild( document.createElement("body") );
+        this.document_body = document.createElement("div");
+        this.document_body.id = "fw-app";
     }
 
 
@@ -624,6 +634,12 @@ export class FrontworkContext {
         const elem2 = this.create_element(tag, attributes);
         elem2.element.id = id;
         elem2.element.innerText = this.i18n.get_translation(id);
+
+        // if (id === "event_button_tester") {
+        //     console.log("context", this);
+        //     console.log("elem2.element.innerText", elem2.element.innerText);
+        // }
+        
         return elem2;
     }
 
@@ -692,15 +708,18 @@ export class Frontwork {
         return null;
 	}
 
-	protected route_execute_build(context: FrontworkContext, route: Route|null): {reponse: FrontworkResponse, dom_ready: DomReadyEvent} {
+	protected route_execute_build(context: FrontworkContext, route: Route|null): {reponse: FrontworkResponse, component: Component} {
         // Route
         if (route) {
             try {
                 const component = new route.component(context);
-                return { reponse: component.build(context), dom_ready: component.dom_ready };
+                console.log("THE_component", component);
+                console.log("THE_component", component.build);
+                console.log("THE_component", component.dom_ready);
+                return { reponse: component.build(context), component: component };
             } catch (error) {
                 context.request.error("ROUTE #" + route.id + " ("+route.path+")", context, error);
-                return { reponse: this.middleware.error_handler_component.build(context), dom_ready: this.middleware.error_handler_component.dom_ready };
+                return { reponse: this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
             }
         }
 
@@ -708,10 +727,10 @@ export class Frontwork {
         if(FW.verbose_logging) context.request.log("NOT_FOUND", context);
         try {
             const component = new this.middleware.not_found_handler(context);
-            return { reponse: component.build(context), dom_ready: component.dom_ready };
+            return { reponse: component.build(context), component: component };
         } catch (error) {
             context.request.error("NOT_FOUND", context, error);
-            return { reponse: this.middleware.error_handler_component.build(context), dom_ready: this.middleware.error_handler_component.dom_ready };
+            return { reponse: this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
         }
 	}
 

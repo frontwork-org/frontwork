@@ -9,6 +9,8 @@
     ,"a-german": "Deutsch"
     ,"a-crash": "Absturz"
 
+    ,"event_button_tester": "Ereignistastentester"
+
     ,"formtest_title_fail": "Dieser Formtest wurde an den Deno Server gesendet!"
     ,"formtest_title_ok": "Dieser Formtest wurde nicht an den Deno Server gesendet :)"
     ,"submit_button": "Senden"

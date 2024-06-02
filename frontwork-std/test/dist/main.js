@@ -94,6 +94,9 @@ class HTMLElementWrapper {
         parent.element.appendChild(this.element);
         return this;
     }
+    add_event(type, listener, options) {
+        this.element.addEventListener(type, listener, options);
+    }
 }
 class FrontworkForm extends HTMLElementWrapper {
     constructor(context, id, action, method){
@@ -376,15 +379,18 @@ class DocumentBuilder {
     }
     html() {
         const style_css = this.context.document_head.appendChild(document.createElement("link"));
+        style_css.setAttribute("id", "fw-style");
         style_css.setAttribute("rel", "stylesheet");
         style_css.setAttribute("href", "/assets/style.css");
         style_css.setAttribute("type", "text/css");
-        const main_js = this.context.document_body.appendChild(document.createElement("script"));
+        const main_js = this.context.document_body_REAL.appendChild(document.createElement("script"));
+        style_css.setAttribute("id", "fw-script");
         main_js.setAttribute("src", "/assets/main.js");
         main_js.setAttribute("type", "text/javascript");
         return this.context.document_html;
     }
     toString() {
+        this.context.document_body_REAL.append(this.context.document_body);
         const html_response = this.html();
         return this.doctype + '\n' + html_response.outerHTML;
     }
@@ -416,6 +422,7 @@ class FrontworkContext {
     do_building;
     document_html;
     document_head;
+    document_body_REAL;
     document_body;
     constructor(platform, stage, i18n, request, do_building){
         this.platform = platform;
@@ -425,7 +432,9 @@ class FrontworkContext {
         this.do_building = do_building;
         this.document_html = document.createElement("html");
         this.document_head = this.document_html.appendChild(document.createElement("head"));
-        this.document_body = this.document_html.appendChild(document.createElement("body"));
+        this.document_body_REAL = this.document_html.appendChild(document.createElement("body"));
+        this.document_body = document.createElement("div");
+        this.document_body.id = "fw-app";
     }
     create_element(tag, attributes) {
         const element = document.createElement(tag);
@@ -498,15 +507,18 @@ class Frontwork {
         if (route) {
             try {
                 const component = new route.component(context);
+                console.log("THE_component", component);
+                console.log("THE_component", component.build);
+                console.log("THE_component", component.dom_ready);
                 return {
                     reponse: component.build(context),
-                    dom_ready: component.dom_ready
+                    component: component
                 };
             } catch (error) {
                 context.request.error("ROUTE #" + route.id + " (" + route.path + ")", context, error);
                 return {
                     reponse: this.middleware.error_handler_component.build(context),
-                    dom_ready: this.middleware.error_handler_component.dom_ready
+                    component: this.middleware.error_handler_component
                 };
             }
         }
@@ -515,13 +527,13 @@ class Frontwork {
             const component = new this.middleware.not_found_handler(context);
             return {
                 reponse: component.build(context),
-                dom_ready: component.dom_ready
+                component: component
             };
         } catch (error) {
             context.request.error("NOT_FOUND", context, error);
             return {
                 reponse: this.middleware.error_handler_component.build(context),
-                dom_ready: this.middleware.error_handler_component.dom_ready
+                component: this.middleware.error_handler_component
             };
         }
     }
@@ -605,7 +617,13 @@ class FrontworkClient extends Frontwork {
     }
     page_change(request, do_building) {
         const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, do_building);
+        console.log("do_building", do_building);
         const route = this.route_resolver(context);
+        console.log("--- CLEAR head and body ---");
+        context.document_head.innerHTML = "";
+        context.document_body.innerHTML = "";
+        context.document_body_REAL.innerHTML = "";
+        console.log("--- CLEAR head and body COMPLETED ---");
         try {
             this.middleware.before_route.build(context);
             this.middleware.before_route.dom_ready(context, this);
@@ -613,15 +631,16 @@ class FrontworkClient extends Frontwork {
             context.request.error("before_route", context, error);
         }
         if (do_building) {
+            document.body.innerHTML = "";
             const reb_result = this.route_execute_build(context, route);
-            const response = reb_result.reponse;
-            response.cookies.forEach((cookie)=>{
+            console.log("reb_result.dom_ready", reb_result.component);
+            reb_result.reponse.cookies.forEach((cookie)=>{
                 if (cookie.http_only === false) {
                     document.cookie = cookie.toString();
                 }
             });
-            if (response.status_code === 301 || response.status_code === 302) {
-                const redirect_url = response.get_header("Location");
+            if (reb_result.reponse.status_code === 301 || reb_result.reponse.status_code === 302) {
+                const redirect_url = reb_result.reponse.get_header("Location");
                 if (redirect_url === null) {
                     FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", context, null);
                     return null;
@@ -632,29 +651,32 @@ class FrontworkClient extends Frontwork {
                         method: request.method,
                         url: context.request.url,
                         is_redirect: true,
-                        status_code: response.status_code
+                        status_code: reb_result.reponse.status_code
                     };
                 }
             }
-            const resolved_content = response.content;
+            const resolved_content = reb_result.reponse.content;
             if (typeof resolved_content.context.document_html !== "undefined") {
                 resolved_content.html();
                 html_element_set_attributes(document.children[0], resolved_content.context.document_html.attributes);
                 html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
-                html_element_set_attributes(document.body, resolved_content.context.document_body.attributes);
+                html_element_set_attributes(document.body, resolved_content.context.document_body_REAL.attributes);
                 document.head.innerHTML = resolved_content.context.document_head.innerHTML;
-                document.body.innerHTML = resolved_content.context.document_body.innerHTML;
-                reb_result.dom_ready(context, this);
+                const fw_body = document.getElementById("fw-app");
+                if (fw_body !== null) fw_body.remove();
+                document.body.prepend(context.document_body);
+                reb_result.component.dom_ready(context, this);
                 return {
                     method: request.method,
                     url: request.url,
                     is_redirect: false,
-                    status_code: response.status_code
+                    status_code: reb_result.reponse.status_code
                 };
             }
         } else {
             if (route) {
                 const route_component = new route.component(context);
+                console.log("route_component.dom_ready", route_component.dom_ready);
                 route_component.dom_ready(context, this);
             } else {
                 new this.middleware.not_found_handler(context).dom_ready(context, this);
@@ -726,8 +748,8 @@ class FrontworkClient extends Frontwork {
         return false;
     }
 }
-const __default = JSON.parse("{\n     \"title1\": \"Frontwork Test Page\"\n    ,\"text1\": \"This is a test page for the Frontwork framework.\"\n    ,\"title2\": \"Test Form\"\n    ,\"test-page2\": \"Test Page 2\"\n    ,\"another_title1\": \"Hello from 127.0.0.1\"\n    ,\"another_text1\": \"Yes you can have different domains :)\"\n\n    ,\"a-home\": \"Home\"\n    ,\"a-test2\": \"Test2\"\n    ,\"a-test3\": \"Test3\"\n    ,\"a-german\": \"German\"\n    ,\"a-crash\": \"Crash\"\n\n    ,\"formtest_title_fail\": \"This form test was sent to the Deno server!\"\n    ,\"formtest_title_ok\": \"This form test was not sent to the Deno server :)\"\n    ,\"submit_button\": \"Submit\"\n\n}");
-const __default1 = JSON.parse("{\n    \"title1\": \"Frontwork Test Seite\"\n   ,\"text1\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\"\n   ,\"title2\": \"Test Formular\"\n\n   ,\"a-home\": \"Startseite\"\n    ,\"a-test2\": \"Testseite2\"\n    ,\"a-test3\": \"Testseite3\"\n    ,\"a-german\": \"Deutsch\"\n    ,\"a-crash\": \"Absturz\"\n\n    ,\"formtest_title_fail\": \"Dieser Formtest wurde an den Deno Server gesendet!\"\n    ,\"formtest_title_ok\": \"Dieser Formtest wurde nicht an den Deno Server gesendet :)\"\n    ,\"submit_button\": \"Senden\"\n}");
+const __default = JSON.parse("{\n     \"title1\": \"Frontwork Test Page\"\n    ,\"text1\": \"This is a test page for the Frontwork framework.\"\n    ,\"title2\": \"Test Form\"\n    ,\"test-page2\": \"Test Page 2\"\n    ,\"another_title1\": \"Hello from 127.0.0.1\"\n    ,\"another_text1\": \"Yes you can have different domains :)\"\n\n    ,\"a-home\": \"Home\"\n    ,\"a-test2\": \"Test2\"\n    ,\"a-test3\": \"Test3\"\n    ,\"a-german\": \"German\"\n    ,\"a-crash\": \"Crash\"\n\n    ,\"event_button_tester\": \"Event Button Tester\"\n\n    ,\"formtest_title_fail\": \"This form test was sent to the Deno server!\"\n    ,\"formtest_title_ok\": \"This form test was not sent to the Deno server :)\"\n    ,\"submit_button\": \"Submit\"\n\n}");
+const __default1 = JSON.parse("{\n    \"title1\": \"Frontwork Test Seite\"\n   ,\"text1\": \"Dies ist eine deutsche Test Seite für das Frontwork framework.\"\n   ,\"title2\": \"Test Formular\"\n\n   ,\"a-home\": \"Startseite\"\n    ,\"a-test2\": \"Testseite2\"\n    ,\"a-test3\": \"Testseite3\"\n    ,\"a-german\": \"Deutsch\"\n    ,\"a-crash\": \"Absturz\"\n\n    ,\"event_button_tester\": \"Ereignistastentester\"\n\n    ,\"formtest_title_fail\": \"Dieser Formtest wurde an den Deno Server gesendet!\"\n    ,\"formtest_title_ok\": \"Dieser Formtest wurde nicht an den Deno Server gesendet :)\"\n    ,\"submit_button\": \"Senden\"\n}");
 const i18n = new I18n([
     new I18nLocale("en", __default),
     new I18nLocale("de", __default1)
@@ -766,10 +788,19 @@ class AnotherComponent {
     dom_ready() {}
 }
 class TestComponent {
+    button_event;
+    constructor(context){
+        this.button_event = context.ensure_text_element("button", "event_button_tester", {
+            type: "button"
+        });
+        console.log("this.button_event constructor", this.button_event);
+    }
     build(context) {
         const document_builder = new MyMainDocumentBuilder(context);
         const title = context.ensure_text_element("h1", "title1").append_to(document_builder.main);
         const description = context.ensure_text_element("p", "text1").append_to(document_builder.main);
+        this.button_event.append_to(document_builder.main);
+        console.log("this.button_event build", this.button_event);
         const section = context.create_element("section").append_to(document_builder.main);
         context.ensure_text_element("h2", "title2").append_to(section);
         const action = context.request.GET.get("action");
@@ -795,14 +826,31 @@ class TestComponent {
         }).append_to(form);
         return new FrontworkResponse(200, document_builder.add_head_meta_data(title.element.innerText, description.element.innerText, "noindex,nofollow"));
     }
-    dom_ready() {}
+    dom_ready(context, client) {
+        console.log("this.button_event dom_ready", this.button_event);
+        try {
+            let times = 0;
+            this.button_event.add_event("click", ()=>{
+                times++;
+                console.log("this.button_event inEVENT", this.button_event);
+                this.button_event.element.innerHTML = "Changed " + times + " times";
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
 }
 class TestGerman extends TestComponent {
-    build(context) {
+    constructor(context){
         context.i18n.set_locale("de");
+        super(context);
+    }
+    build(context) {
         return super.build(context);
     }
-    dom_ready() {}
+    dom_ready(context, client) {
+        super.dom_ready(context, client);
+    }
 }
 class Test2Component {
     build(context) {
@@ -894,6 +942,9 @@ const middleware = new FrontworkMiddleware({
     before_route: {
         build: (context)=>{
             context.i18n.set_locale("en");
+            context.document_head.innerHTML = "";
+            context.document_body.innerHTML = "";
+            context.document_body_REAL.innerHTML = "";
         },
         dom_ready: ()=>{}
     },

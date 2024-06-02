@@ -6,5 +6,5 @@ echo ${SCRIPT_DIR}
 
 killall -KILL deno
 
-deno run --watch --config ${SCRIPT_DIR}/../deno.jsonc --allow-net --allow-read ${SCRIPT_DIR}/../frontwork-std/test/test.service.ts & 
-    deno bundle --watch -c ${SCRIPT_DIR}/../deno.client.jsonc ${SCRIPT_DIR}/../frontwork-std/test/test.client.ts ${SCRIPT_DIR}/../frontwork-std/test/dist/main.js  && fg
+deno run --watch --config ${SCRIPT_DIR}/../deno.jsonc --allow-net --allow-read ${SCRIPT_DIR}/../frontwork-std/test/test.service.ts & fg &
+    deno bundle --watch --config ${SCRIPT_DIR}/../deno.client.jsonc ${SCRIPT_DIR}/../frontwork-std/test/test.client.ts ${SCRIPT_DIR}/../frontwork-std/test/dist/main.js  && fg

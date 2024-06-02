@@ -31,11 +31,22 @@ class AnotherComponent implements Component {
 }
 
 class TestComponent implements Component {
+	button_event: HTMLElementWrapper<HTMLButtonElement>;
+	
+	constructor(context: FrontworkContext) {
+		this.button_event = context.ensure_text_element("button", "event_button_tester", { type: "button" });
+		console.log("this.button_event constructor", this.button_event);
+		
+	}
+
     build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
 
 		const title = context.ensure_text_element("h1", "title1").append_to(document_builder.main)
 		const description = context.ensure_text_element("p", "text1").append_to(document_builder.main)
+		
+		this.button_event.append_to(document_builder.main);
+		console.log("this.button_event build", this.button_event);
 		
 		const section = context.create_element("section").append_to(document_builder.main);
 		context.ensure_text_element("h2", "title2").append_to(section);
@@ -64,15 +75,31 @@ class TestComponent implements Component {
 				.add_head_meta_data(title.element.innerText, description.element.innerText, "noindex,nofollow")
 		);
 	}
-    dom_ready(): void {}
+	
+    dom_ready(context: FrontworkContext, client: FrontworkClient): void {
+		console.log("this.button_event dom_ready", this.button_event);
+		try {
+			let times = 0;
+			this.button_event.add_event("click", () => {
+				times++;
+				console.log("this.button_event inEVENT", this.button_event);
+				this.button_event.element.innerHTML = "Changed "+times+" times";
+			})
+		} catch (error) {
+			console.error(error);
+		}
+	}
 }
 
 class TestGerman extends TestComponent {
-    build(context: FrontworkContext) {
+    constructor(context: FrontworkContext) {
 		context.i18n.set_locale("de");
+		super(context);
+	}
+    build(context: FrontworkContext) {
 		return super.build(context);
 	}
-    dom_ready(): void {}
+    dom_ready(context: FrontworkContext, client: FrontworkClient): void { super.dom_ready(context, client); }
 }
 
 class Test2Component implements Component {
@@ -189,6 +216,10 @@ const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
+
+			context.document_head.innerHTML = "";
+			context.document_body.innerHTML = "";
+			context.document_body_REAL.innerHTML = "";
 		},
 		dom_ready: () => { }
 	},

@@ -12,6 +12,8 @@
     ,"a-german": "German"
     ,"a-crash": "Crash"
 
+    ,"event_button_tester": "Event Button Tester"
+
     ,"formtest_title_fail": "This form test was sent to the Deno server!"
     ,"formtest_title_ok": "This form test was not sent to the Deno server :)"
     ,"submit_button": "Submit"

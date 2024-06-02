@@ -88,7 +88,16 @@ export class FrontworkClient extends Frontwork {
     
     private page_change(request: FrontworkRequest, do_building: boolean): PageChangeSavestate|null {
         const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, do_building);
+        console.log("do_building", do_building);
         const route: Route|null = this.route_resolver(context);
+        
+        // clear head and body
+        console.log("--- CLEAR head and body ---");
+        context.document_head.innerHTML = "";
+        context.document_body.innerHTML = "";
+        context.document_body_REAL.innerHTML = "";
+        console.log("--- CLEAR head and body COMPLETED ---");
+
 
 
         // Middleware: before Route
@@ -101,46 +110,56 @@ export class FrontworkClient extends Frontwork {
 
 
         if (do_building) {
+            document.body.innerHTML = "";
+
             const reb_result = this.route_execute_build(context, route);
-            const response = reb_result.reponse;
+            console.log("reb_result.dom_ready", reb_result.component);
             
-            response.cookies.forEach(cookie => {
+            reb_result.reponse.cookies.forEach(cookie => {
                 if (cookie.http_only === false) {
                     document.cookie = cookie.toString();
                 }
             });
 
-            if (response.status_code === 301 || response.status_code === 302) {
+            if (reb_result.reponse.status_code === 301 || reb_result.reponse.status_code === 302) {
                 // redirect
-                const redirect_url = response.get_header("Location");
+                const redirect_url = reb_result.reponse.get_header("Location");
                 if (redirect_url === null) {
                     FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", context, null);
                     return null;
                 } else {
                     if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, context, null);
                     this.page_change_to(redirect_url);
-                    return { method: request.method, url: context.request.url, is_redirect: true, status_code: response.status_code };
+                    return { method: request.method, url: context.request.url, is_redirect: true, status_code: reb_result.reponse.status_code };
                 }
             }
     
 
-            const resolved_content = <DocumentBuilder> response.content;
+            const resolved_content = <DocumentBuilder> reb_result.reponse.content;
             if (typeof resolved_content.context.document_html !== "undefined") {
                 resolved_content.html();
 
                 html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.context.document_html.attributes);
                 html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
-                html_element_set_attributes(document.body, resolved_content.context.document_body.attributes);
+                html_element_set_attributes(document.body, resolved_content.context.document_body_REAL.attributes);
             
                 document.head.innerHTML = resolved_content.context.document_head.innerHTML;
-                document.body.innerHTML = resolved_content.context.document_body.innerHTML;
-            
-                reb_result.dom_ready(context, this);
-                return { method: request.method, url: request.url, is_redirect: false, status_code: response.status_code };
+
+                // Remove all tags except script from the body
+                const fw_body = document.getElementById("fw-app");
+                if(fw_body !== null) fw_body.remove();
+
+                // Add all tags except script from the body
+                document.body.prepend(context.document_body);
+                
+                reb_result.component.dom_ready(context, this);
+                return { method: request.method, url: request.url, is_redirect: false, status_code: reb_result.reponse.status_code };
             }
         } else {
             if (route) {
                 const route_component = new route.component(context);
+                console.log("route_component.dom_ready", route_component.dom_ready);
+                
                 route_component.dom_ready(context, this);
             } else {
                 new this.middleware.not_found_handler(context).dom_ready(context, this);
