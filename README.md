@@ -36,6 +36,10 @@ See: https://github.com/rust-lang/rfcs/blob/master/text/0430-finalizing-naming-c
 
 ### help wanted
 
+#### Missing support for the desktop platform
+
+#### Missing support for android
+
 #### Missing iOS and Mac support
 To develeop any app for an apple product, MacOS is required to develop and digitaly sign the app. But because I do not own any products of apple, it is not possible for me to develeop for it.   
 Still, apple has a market share, thus Frontwork will support apple products in the future.  
