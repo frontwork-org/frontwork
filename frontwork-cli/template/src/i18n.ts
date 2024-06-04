@@ -5,4 +5,4 @@ import { default as german } from "./i18n/german.json" with { type: "json" };
 export const i18n = new I18n([
     new I18nLocale("en", english as I18nLocaleTranslation),
     new I18nLocale("de", german as I18nLocaleTranslation),
-]);
+]); 

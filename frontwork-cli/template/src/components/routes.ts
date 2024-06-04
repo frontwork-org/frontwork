@@ -1,5 +1,17 @@
-import { Route, FrontworkMiddleware, FrontworkContext, Component, DocumentBuilder, FrontworkResponse, DomainToRouteSelector } from "../dependencies.ts";
+import { Route, FrontworkMiddleware, FrontworkContext, Component, DocumentBuilder, FrontworkResponse, DomainToRouteSelector, HTMLElementWrapper } from "../dependencies.ts";
 import { StartpageComponent } from "./startpage/startpage.ts";
+
+
+export class MainDocumentBuilder extends DocumentBuilder {
+	main: HTMLElementWrapper<HTMLElement>;
+
+	constructor(context: FrontworkContext) {
+		super(context);
+		const header = this.body_append( context.create_element("header") );
+		context.ensure_text_element("a", "a-home", { href: "/" }).append_to(header);
+		this.main = this.body_append(context.create_element("main"));
+	}
+}
 
 
 class NotFoundComponent implements Component {

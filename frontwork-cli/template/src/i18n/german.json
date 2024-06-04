@@ -1,5 +1,7 @@
 {
+    "a-home": "Startseite",
     "title1": "Startseite",
-    "text1": "Danke, dass du das Frontwork framework verwendest.",
-    "title2": "Test Formular"
+    "description1": "Danke, dass du das Frontwork framework verwendest.",
+    "title2": "Test Formular",
+    "submit_button": "Senden"
 }
