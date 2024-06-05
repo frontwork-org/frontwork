@@ -4,7 +4,7 @@
   "description": "My New Frontwork App",
   "main": "main.service.ts",
   "engines": {
-    "deno": "^1.23.0"  
+    "deno": "^1.44.0"  
   },
   "scripts": {
     "test": "fw test",
