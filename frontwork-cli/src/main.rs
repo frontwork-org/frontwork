@@ -272,18 +272,18 @@ fn main() {
                         let mut ts_file_content = String::new();
                         ts_file_content.push_str("import { Component, FrontworkContext, DocumentBuilder, FrontworkResponse, FrontworkClient } from \"../../dependencies.ts\";\n\n\n");
                         ts_file_content.push_str(&format!("export class {} implements Component {{\n", componentname_classname));
+                        ts_file_content.push_str("    constructor(context: FrontworkContext) {\n        \n    }\n\n");
                         ts_file_content.push_str("    build(context: FrontworkContext) {\n");
-                        ts_file_content.push_str("        const document_builder = new DocumentBuilder();\n");
-                        ts_file_content.push_str(&format!("        let title = '{}';\n", componentname_uppercamelcase));
-                        ts_file_content.push_str(&format!("        let description = '{}';\n", componentname_uppercamelcase));
+                        ts_file_content.push_str("        const document_builder = new DocumentBuilder(context);\n");
+                        ts_file_content.push_str(&format!("        const title = '{}';\n", componentname_uppercamelcase));
+                        ts_file_content.push_str(&format!("        const description = '{}';\n", componentname_uppercamelcase));
                         ts_file_content.push_str("        \n");
                         ts_file_content.push_str("        return new FrontworkResponse(200, \n");
                         ts_file_content.push_str("            document_builder\n");
-                        ts_file_content.push_str("                .set_html_lang(context.i18n.selected_locale.locale)\n");
                         ts_file_content.push_str("                .add_head_meta_data(title, description, \"index,follow\")\n");
                         ts_file_content.push_str("        );\n");
                         ts_file_content.push_str("    }\n\n");
-                        ts_file_content.push_str("    dom_ready(context: FrontworkContext, client: FrontworkClient) {\n        \n  }\n");
+                        ts_file_content.push_str("    dom_ready(context: FrontworkContext, client: FrontworkClient) {\n        \n    }\n");
                         ts_file_content.push_str("}\n");
                             
 

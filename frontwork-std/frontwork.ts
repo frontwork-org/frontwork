@@ -499,7 +499,7 @@ export class DocumentBuilder implements DocumentBuilderInterface {
 
         // force adding main.js to the end of the body
         const main_js = this.context.document_body.appendChild( document.createElement("script") );
-        style_css.setAttribute("id", "fw-script");
+        main_js.setAttribute("id", "fw-script");
         main_js.setAttribute("src", "/assets/main.js");
         main_js.setAttribute("type", "text/javascript");
 

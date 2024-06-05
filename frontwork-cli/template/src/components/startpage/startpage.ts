@@ -3,6 +3,8 @@ import { MainDocumentBuilder } from '../routes.ts';
 
 
 export class StartpageComponent implements Component {
+	constructor(context: FrontworkContext) {}
+
     build(context: FrontworkContext) {
         const document_builder = new MainDocumentBuilder(context);
 		console.log(context);
