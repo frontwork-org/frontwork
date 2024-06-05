@@ -13,6 +13,7 @@ mod utils;
 mod download;
 mod package_json;
 mod environment_platform;
+mod bundler;
 
 static PROJECT_TEMPLATE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/template/");
 
@@ -36,6 +37,7 @@ fn print_help(no_error: bool, error_message: &str) {
     println!("  test                            | run main.testworker.ts");
     println!("  build                           | build the application to the dist folder. Optional use: --production or --staging");
     println!("  watch                           | start development server and build the application on changes");
+    // println!("  bundle                          | //TODO bundle help command, +README");
     println!("");
 }
 
@@ -49,6 +51,7 @@ pub enum SubCommand {
     Test,
     Build,
     Watch,
+    Bundle,
 }
 
 pub enum Flag {
@@ -411,6 +414,10 @@ fn main() {
         SubCommand::Watch => {
             command_watch();
         }
+        
+        SubCommand::Bundle => {
+            bundler::bundle();
+        },
     }
 
 }
@@ -586,5 +593,3 @@ fn run_service(project_path: &String) -> process::Child {
         .spawn()
         .expect("Failed to execute deno. Make sure deno is installed on this machine.")
 }
-
-//TODO: Add bundle function to replace deno bundle. Since it is depricated. Use deno_emit = "0.40.3" instead
