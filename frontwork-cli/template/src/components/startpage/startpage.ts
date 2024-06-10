@@ -7,8 +7,6 @@ export class StartpageComponent implements Component {
 
     build(context: FrontworkContext) {
         const document_builder = new MainDocumentBuilder(context);
-		console.log(context);
-		
         
 		const title1 = context.ensure_text_element("h1", "title1").append_to(document_builder.main);
 		const text1 = context.ensure_text_element("p", "description1").append_to(document_builder.main);
