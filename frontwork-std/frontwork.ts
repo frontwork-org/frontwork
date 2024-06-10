@@ -747,7 +747,11 @@ export class FrontworkMiddleware {
 	constructor(init: FrontworkMiddlewareInit) {
         this.error_handler = init.error_handler
         this.error_handler_component = {
-            build(context: FrontworkContext) { return init.error_handler(context); },
+            build(context: FrontworkContext) {
+                context.document_head.innerHTML = "";
+                context.document_body.innerHTML = "";
+                return init.error_handler(context); 
+            },
             dom_ready() {}
         }
         this.not_found_handler = init.not_found_handler;

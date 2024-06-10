@@ -95,6 +95,7 @@ impl Arguments {
 
                 match args[2].as_str() {
                     "new" => Flag::New,
+                    "add" => Flag::New,
                     "remove" => Flag::Remove,
                     _ => return Err("the entered subcommand is not valid")
                 }
@@ -258,7 +259,7 @@ fn main() {
             let componentname_classname = format!("{}Component", componentname_uppercamelcase);
             let componentpath = format!("{}/{}", components_path, componentname);
             let global_style_file_path = format!("{}/src/style.scss", project_path);
-            let global_style_content = format!("\n@import './components/{}.scss';", componentname);
+            let global_style_content = format!("\n@import './components/{}/{}.scss';", componentname, componentname);
             let routes_file_path = format!("{}/src/components/routes.ts", project_path);
             let component_import_statement = format!("import {{ {} }} from \"./{}/{}.ts\";", componentname_classname, componentname, componentname);
 
