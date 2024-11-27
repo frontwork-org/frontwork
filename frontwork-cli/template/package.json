@@ -7,8 +7,9 @@
     "deno": "^1.44.0"  
   },
   "scripts": {
-    "test": "fw test",
-    "build": "fw build",
-    "watch": "fw watch"
+    "test": "frontwork test",
+    "build": "frontwork build",
+    "watch": "frontwork watch",
+    "bundle": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run bundle.ts"
   }
 }
