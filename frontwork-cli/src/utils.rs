@@ -1,7 +1,21 @@
+#![allow(dead_code)]
 use std::{io::{stdout, Write}, os::unix::fs::PermissionsExt, path::Path, process::Child, time::SystemTime};
 use std::fs;
 use rsass::{compile_scss_path, output};
 
+
+pub fn find_optional_arg(args: &[String], find: &str) -> Option<String> {
+    let args_len = args.len();
+    if args_len > 3 {
+        for i in 2..args_len {
+            if args[i] == find {
+                return if i+1 < args_len { Some(args[i+1].clone()) } else { None };
+            }
+        }
+    }
+
+    None
+}
 
 
 pub fn read_from_line(message: &str) -> String {

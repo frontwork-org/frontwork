@@ -5,7 +5,7 @@ import { domain_to_route_selector, middleware } from "../components/routes.ts";
 export const APP_CONFIG: FrontworkInit = {
 	platform: EnvironmentPlatform.Web, 
 	stage: EnvironmentStage.Staging,
-	port: 80,
+	port: 8080,
 	domain_to_route_selector: domain_to_route_selector,
 	middleware: middleware,
 	i18n: i18n,

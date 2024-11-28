@@ -54,7 +54,10 @@ impl Iterator for DownloadPartialRangeIter {
 
 fn fillspaces(start: u64, end: u64) -> String {
     let start_string = start.to_string();
-    " ".repeat(end.to_string().len() - start_string.len()).to_string() + &start_string
+    [
+        " ".repeat(end.to_string().len() - start_string.len()).to_string(),
+        start_string,
+    ].concat()
 }
 
 pub fn download_file(url: &str) -> Result<String> {
@@ -81,7 +84,7 @@ pub fn download_file(url: &str) -> Result<String> {
     let filename = url.split("/").last().unwrap();
     let tmp_dir = TMP_DIR.to_string() + "/http-download-fw";
     std::fs::create_dir_all(tmp_dir.clone()).unwrap();
-    let tmp_filepath = tmp_dir + "/" + &filename.to_string(); // Geht nicht
+    let tmp_filepath = [tmp_dir, "/".to_string(), filename.to_string()].concat();
     let mut output_file = File::create(&tmp_filepath)?;
 
     // GET requests: 
