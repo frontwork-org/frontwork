@@ -31,6 +31,7 @@ export const FW =  {
      * @param category: string 
      * @param text: string
     */
+    // deno-lint-ignore no-unused-vars
     reporter: function(log_type: LogType, category: string, text: string, context: FrontworkContext|null, error: Error|null) {
         if (FW.reporter_client_to_server && FW.is_client_side) {
             fetch(location.protocol+"//"+location.host+"//dr", {
