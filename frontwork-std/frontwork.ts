@@ -710,7 +710,8 @@ export class Frontwork {
             try {
                 const component = new route.component(context);
                 return { reponse: component.build(context), component: component };
-            } catch (error) {
+            // deno-lint-ignore no-explicit-any
+            } catch (error: any) {
                 context.request.error("ROUTE #" + route.id + " ("+route.path+")", context, error);
                 return { reponse: this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
             }
@@ -721,7 +722,8 @@ export class Frontwork {
         try {
             const component = new this.middleware.not_found_handler(context);
             return { reponse: component.build(context), component: component };
-        } catch (error) {
+        // deno-lint-ignore no-explicit-any
+        } catch (error: any) {
             context.request.error("NOT_FOUND", context, error);
             return { reponse: this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
         }
