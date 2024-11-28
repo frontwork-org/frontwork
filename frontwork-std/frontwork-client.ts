@@ -92,7 +92,8 @@ export class FrontworkClient extends Frontwork {
         try {
             this.middleware.before_route.build(context);
             this.middleware.before_route.dom_ready(context, this);
-        } catch (error) {
+        // deno-lint-ignore no-explicit-any
+        } catch (error: any) {
             context.request.error("before_route", context, error);
         }
 

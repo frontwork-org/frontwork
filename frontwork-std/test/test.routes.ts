@@ -92,10 +92,10 @@ class TestGerman extends TestComponent {
 		context.i18n.set_locale("de");
 		super(context);
 	}
-    build(context: FrontworkContext) {
+    override build(context: FrontworkContext) {
 		return super.build(context);
 	}
-    dom_ready(context: FrontworkContext, client: FrontworkClient): void { super.dom_ready(context, client); }
+    override dom_ready(context: FrontworkContext, client: FrontworkClient): void { super.dom_ready(context, client); }
 }
 
 class Test2Component implements Component {
