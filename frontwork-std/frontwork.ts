@@ -1,7 +1,6 @@
 import { parse_url, key_value_list_to_object } from "./utils.ts";
 import { FrontworkClient } from './frontwork-client.ts'
 
-// TODO: https://tsdoc.org/
 
 export enum LogType {
     Info,

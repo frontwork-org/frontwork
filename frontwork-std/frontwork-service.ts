@@ -1,6 +1,5 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkRequest, PostScope, FrontworkResponse, FrontworkInit, EnvironmentStage, LogType, FW, FrontworkResponseRedirect, FrontworkContext } from "./frontwork.ts";
-import { key_value_list_to_object } from "./utils.ts";
+import { Frontwork, FrontworkRequest, PostScope, FrontworkInit, EnvironmentStage, LogType, FW, FrontworkResponseRedirect, FrontworkContext } from "./frontwork.ts";
 
 
 class Asset {
@@ -78,12 +77,25 @@ export class FrontworkWebservice extends Frontwork {
         console.info("Deno started webservice on http://localhost:" + this.port);
         const abortController = new AbortController();
 
-        if (this.stage === EnvironmentStage.Development) {
-            const service_started_timestamp = new Date().getTime().toString();
+        try {
+            if (this.stage === EnvironmentStage.Development) {
+                const service_started_timestamp = new Date().getTime().toString();
+    
+                Deno.serve({ port: this.port, signal: abortController.signal }, (_request: Request) => { return this.handler_dev(_request, service_started_timestamp); });
+            } else {
+                Deno.serve({ port: this.port, signal: abortController.signal }, this.handler);
+            }
+        } catch (error) {
+            console.error(error);
+            console.error("");
+            console.error("");
+            console.error("An error accoured while trying to start the Deno Webservice.");
 
-            Deno.serve({ port: this.port, signal: abortController.signal }, (_request: Request) => { return this.handler_dev(_request, service_started_timestamp); });
-        } else {
-            Deno.serve({ port: this.port, signal: abortController.signal }, this.handler);
+            // CAP_NET_BIND_SERVICE error message
+            if (this.port < 1024) {
+                console.error("Please note: Ports lower than 1024 can be only opened by root.");
+            }
+            console.error("");
         }
 
         globalThis.addEventListener("unload", () => abortController.abort());
@@ -122,7 +134,8 @@ export class FrontworkWebservice extends Frontwork {
                 const response = new Response(file);
                 response.headers.append("content-type", "text/css; charset=utf-8")
                 return response;
-            } catch (error) {
+            // deno-lint-ignore no-explicit-any
+            } catch (error: any) {
                 FW.reporter(LogType.Error, "ASSET", "ERROR can not load style.css from '" + this.style_css_absolute_path + "'\n", null, error);
                 return null;
             }
@@ -132,7 +145,8 @@ export class FrontworkWebservice extends Frontwork {
                 const response = new Response(file);
                 response.headers.append("content-type", "text/javascript; charset=utf-8")
                 return response;
-            } catch (error) {
+            // deno-lint-ignore no-explicit-any
+            } catch (error: any) {
                 FW.reporter(LogType.Error, "ASSET", "ERROR can not load main.js from '" + this.main_js_absolute_path + "'\n", null, error);
                 return null;
             }
@@ -145,7 +159,8 @@ export class FrontworkWebservice extends Frontwork {
                     const response = new Response(file);
                     response.headers.append("content-type", asset.content_type)
                     return response;
-                } catch (error) {
+                // deno-lint-ignore no-explicit-any
+                } catch (error: any) {
                     FW.reporter(LogType.Error, "ASSET", "ERROR can not load asset from '" + asset.absolute_path + "'\n", null, error);
                     return null;
                 }
@@ -187,7 +202,8 @@ export class FrontworkWebservice extends Frontwork {
             // Middleware: before Route
             try {
                 this.middleware.before_route.build(context);
-            } catch (error) {
+            // deno-lint-ignore no-explicit-any
+            } catch (error: any) {
                 context.request.error("before_route", context, error);
             }
 

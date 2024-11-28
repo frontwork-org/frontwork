@@ -6,9 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::{self, Child};
 use std::{env, fs};
 use std::{thread, time};
-use utils::{
-    create_dir_all_verbose, read_from_line, run_command, transverse_directory,
-};
+use utils::{create_dir_all_verbose, read_from_line, run_command, transverse_directory};
 mod download;
 mod environment_platform;
 mod package_json;
@@ -38,7 +36,6 @@ fn print_help(no_error: bool, error_message: &str) {
     println!("  test                            | run main.testworker.ts");
     println!("  build                           | build the application to the dist folder. Optional use: --production or --staging");
     println!("  watch                           | start development server and build the application on changes");
-    println!("  bundle                          | bundle the FrontEnd to one JavaScript file");
     println!("");
 }
 
@@ -52,7 +49,6 @@ pub enum SubCommand {
     Test,
     Build,
     Watch,
-    Bundle,
 }
 
 pub enum Flag {
@@ -86,7 +82,6 @@ impl Arguments {
                 "test" => SubCommand::Test,
                 "build" => SubCommand::Build,
                 "watch" => SubCommand::Watch,
-                "bundle" => SubCommand::Bundle,
                 _ => return Err("the entered subcommand is not valid"),
             };
 
@@ -457,11 +452,6 @@ fn main() {
         SubCommand::Watch => {
             command_watch();
         }
-
-        SubCommand::Bundle => {
-            let project_path = get_project_path();
-            bundle_client(&project_path);
-        }
     }
 }
 
@@ -626,8 +616,30 @@ fn build_css(project_path: &String, dist_web_path: &String) {
     );
 }
 
-fn bundle_client(project_path: &String) -> process::Child {
+fn build_service(project_path: &String, dist_web_path: &String) -> process::Child {
+    let service_binary_path = format!("{}/main.service", dist_web_path);
+    if Path::new(&service_binary_path).exists() {
+        fs::remove_file(&service_binary_path).expect("Failed to remove existing binary file");
+    }
+
+    std::process::Command::new("deno")
+        .arg("compile")
+        .arg("-c")
+        .arg(format!("{}/deno.jsonc", project_path))
+        .arg("-o")
+        .arg(service_binary_path)
+        .arg("--target")
+        .arg("x86_64-unknown-linux-gnu")
+        .arg("--allow-all")
+        // .arg("--allow-net")
+        .arg(format!("{}/src/main.service.ts", project_path))
+        .spawn()
+        .expect("Failed to execute deno. Make sure deno is installed on this machine.")
+}
+
+fn build_client(project_path: &String, dist_web_path: &String) -> process::Child {
     let bundle_ts_path = format!("{}/bundle.ts", project_path);
+    let dist_web_file_path = format!("{}/main.client.js", dist_web_path);
 
     if !Path::new(&bundle_ts_path).exists() {
         fs::write(&bundle_ts_path, BUNDLE_TS_FILE_STR).expect("Unable to write bundle.ts file");
@@ -641,33 +653,9 @@ fn bundle_client(project_path: &String) -> process::Child {
         .arg("--allow-net")
         .arg("--allow-run")
         .arg(bundle_ts_path)
+        .arg(dist_web_file_path)
         .spawn()
         .expect("Failed to execute deno. Make sure deno is installed on this machine.")
-}
-
-fn build_service(project_path: &String, dist_web_path: &String) -> process::Child {
-    // TODO: build_service replace bundle with compile
-    std::process::Command::new("deno")
-        .arg("bundle")
-        .arg("-c")
-        .arg(format!("{}/deno.jsonc", project_path))
-        .arg(format!("{}/src/main.service.ts", project_path))
-        .arg(format!("{}/main.service.js", dist_web_path))
-        .spawn()
-        .expect("Failed to execute deno. Make sure deno is installed on this machine.")
-}
-
-fn build_client(project_path: &String, _dist_web_path: &String) -> process::Child {
-    // TODO: build_client
-    // std::process::Command::new("deno")
-    //     .arg("bundle")
-    //     .arg("-c")
-    //     .arg(format!("{}/deno.client.jsonc", project_path))
-    //     .arg(format!("{}/src/main.client.ts", project_path))
-    //     .arg(format!("{}/main.client.js", dist_web_path))
-    //     .spawn()
-    //     .expect("Failed to execute deno. Make sure deno is installed on this machine.")
-    bundle_client(project_path)
 }
 
 fn run_service(project_path: &String) -> process::Child {
