@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars
 import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";

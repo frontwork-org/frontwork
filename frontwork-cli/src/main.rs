@@ -632,8 +632,8 @@ fn build_service(project_path: &String, dist_web_path: &String) -> process::Chil
         .arg(service_binary_path)
         .arg("--target")
         .arg("x86_64-unknown-linux-gnu")
-        .arg("--allow-all")
-        // .arg("--allow-net")
+        .arg("--allow-read")
+        .arg("--allow-net")
         .arg(format!("{}/src/main.service.ts", project_path));
 
     println!("Program: {}", &command.get_program().to_string_lossy());
