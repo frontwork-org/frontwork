@@ -1,4 +1,4 @@
-import { Component, FrontworkContext, DocumentBuilder, FrontworkResponse, FrontworkClient, FrontworkForm } from "../../dependencies.ts";
+import { Component, FrontworkContext, DocumentBuilder, FrontworkResponse, FrontworkClient, FrontworkForm, FW } from "../../dependencies.ts";
 import { MainDocumentBuilder } from '../routes.ts';
 
 
@@ -13,14 +13,24 @@ export class StartpageComponent implements Component {
 		
 		const section = context.create_element("section").append_to(document_builder.main);
 		context.ensure_text_element("h2", "title2").append_to(section);
+
+		// Form
+		const action = context.request.GET.get("action");
+		if (action !== null) {
+			for (let i = 0; i < 3; i++) {
+				const div = context.create_element("div").append_to(section);
+				div.element.innerHTML = "text"+i+": "+context.request.GET.get("text"+i);
+			}
+
+		}
 		
 		const form = new FrontworkForm(context, "test_form", "", "post").append_to(section);
 
 		for (let i = 0; i < 3; i++) {
-			context.ensure_element("input", "text"+i, { type: "text", value: "aabbcc" }).append_to(form);
+			context.ensure_element("input", "text"+i, { type: "text", name: "text"+i, value: "aabbcc" }).append_to(form);
 		}
 		
-		context.ensure_text_element("button", "submit_button", { type: "text", value: "aabbcc" }).append_to(form);
+		context.ensure_text_element("button", "submit_button", { type: "submit", name: "action", value: "sent" }).append_to(form);
         
 
         return new FrontworkResponse(200, 
