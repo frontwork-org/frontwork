@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-unused-vars
 import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
@@ -232,7 +233,7 @@ const middleware = new FrontworkMiddleware({
 
 export const APP_CONFIG: FrontworkInit = {
 	platform: EnvironmentPlatform.Web, 
-	stage: EnvironmentStage.Development,
+	stage: EnvironmentStage.Production,
 	port: 8080,
 	domain_to_route_selector: (context: FrontworkContext) => {
 		const domain = context.request.host.split(":")[0];

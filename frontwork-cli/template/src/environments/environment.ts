@@ -1,6 +1,6 @@
 import { EnvironmentPlatform, EnvironmentStage, FrontworkInit } from "../dependencies.ts";
 import { i18n } from "../i18n.ts";
-import { domain_to_route_selector, middleware, } from "../components/routes.ts";
+import { domain_to_route_selector, middleware } from "../components/routes.ts";
 
 export const APP_CONFIG: FrontworkInit = {
 	platform: EnvironmentPlatform.Web, 
