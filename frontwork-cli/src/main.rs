@@ -20,7 +20,7 @@ fn print_help(no_error: bool, error_message: &str) {
     if no_error {
         println!("The usage of arguments has been entered wrong because {}. \nPlease follow the following usage:", error_message);
     } else {
-        println!("Frontwork by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors");
+        println!("Frontwork CLI Tool v{} by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors", env!("CARGO_PKG_VERSION"));
         println!("-- The TypeScript Framework using Deno & Webassembly --");
         println!("\n Usage:");
     }
@@ -528,8 +528,10 @@ fn command_build(environment: Environment) {
 
     // rename files back their original names
     if environment != Environment::Development {
-        fs::rename(envfile_dev_path, envfile_selected_path).expect("expected to be able rename file");
-        fs::rename(envfile_tempdev_path, envfile_dev_path).expect("expected to be able rename file");
+        fs::rename(envfile_dev_path, envfile_selected_path)
+            .expect("expected to be able rename file");
+        fs::rename(envfile_tempdev_path, envfile_dev_path)
+            .expect("expected to be able rename file");
     }
 }
 
@@ -622,7 +624,6 @@ fn build_service(project_path: &String, dist_web_path: &String) -> process::Chil
         fs::remove_file(&service_binary_path).expect("Failed to remove existing binary file");
     }
 
-
     let mut binding = std::process::Command::new("deno");
     let command = binding
         .arg("compile")
@@ -639,8 +640,9 @@ fn build_service(project_path: &String, dist_web_path: &String) -> process::Chil
     println!("Program: {}", &command.get_program().to_string_lossy());
     println!("Args: {:?}", &command.get_args().collect::<Vec<_>>());
 
-
-    command.spawn().expect("Failed to execute deno. Make sure deno is installed on this machine.")
+    command
+        .spawn()
+        .expect("Failed to execute deno. Make sure deno is installed on this machine.")
 }
 
 fn build_client(project_path: &String, dist_web_path: &String) -> process::Child {
