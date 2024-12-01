@@ -203,7 +203,7 @@ export class FrontworkWebservice extends Frontwork {
         if (assets_folder_path.slice(-1) !== "/") assets_folder_path += "/";
         this.assets_folder_path = assets_folder_path;
 
-        const scanDirectory = (dir_path: string, relative_path: string) => {
+        const scan_directory = (dir_path: string, relative_path: string) => {
             for (const dirEntry of Deno.readDirSync(dir_path)) {
                 if (dirEntry.isFile) {
                     this.assets.push(
@@ -213,7 +213,7 @@ export class FrontworkWebservice extends Frontwork {
                         ),
                     );
                 } else if (dirEntry.isDirectory) {
-                    scanDirectory(
+                    scan_directory(
                         dir_path + dirEntry.name + "/",
                         relative_path + dirEntry.name + "/",
                     );
@@ -221,7 +221,7 @@ export class FrontworkWebservice extends Frontwork {
             }
         };
 
-        scanDirectory(this.assets_folder_path, "/");
+        scan_directory(this.assets_folder_path, "/");
         return this;
     }
 
