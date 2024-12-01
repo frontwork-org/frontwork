@@ -73,6 +73,10 @@ export class HTMLElementWrapper<T extends HTMLElement> {
     add_event(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
         this.element.addEventListener(type, listener, options);
     }
+
+    replace_text(search: string, replace: string) {
+        this.element.element.innerText = this.element.element.innerText.split(search).join(replace);
+    }
 }
 
 /**
