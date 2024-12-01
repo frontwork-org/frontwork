@@ -503,9 +503,9 @@ fn command_build(environment: Environment) {
             return;
         } else {
             fs::rename(envfile_dev_path, envfile_tempdev_path)
-                .expect("expected to be able move file");
+                .expect("expected to be able rename file");
             fs::rename(envfile_selected_path, envfile_dev_path)
-                .expect("expected to be able move file");
+                .expect("expected to be able rename file");
         }
     }
 
@@ -528,8 +528,8 @@ fn command_build(environment: Environment) {
 
     // rename files back their original names
     if environment != Environment::Development {
-        fs::rename(envfile_dev_path, envfile_selected_path).expect("expected to be able move file");
-        fs::rename(envfile_tempdev_path, envfile_dev_path).expect("expected to be able move file");
+        fs::rename(envfile_dev_path, envfile_selected_path).expect("expected to be able rename file");
+        fs::rename(envfile_tempdev_path, envfile_dev_path).expect("expected to be able rename file");
     }
 }
 
@@ -622,7 +622,9 @@ fn build_service(project_path: &String, dist_web_path: &String) -> process::Chil
         fs::remove_file(&service_binary_path).expect("Failed to remove existing binary file");
     }
 
-    std::process::Command::new("deno")
+
+    let mut binding = std::process::Command::new("deno");
+    let command = binding
         .arg("compile")
         .arg("-c")
         .arg(format!("{}/deno.jsonc", project_path))
@@ -632,9 +634,13 @@ fn build_service(project_path: &String, dist_web_path: &String) -> process::Chil
         .arg("x86_64-unknown-linux-gnu")
         .arg("--allow-all")
         // .arg("--allow-net")
-        .arg(format!("{}/src/main.service.ts", project_path))
-        .spawn()
-        .expect("Failed to execute deno. Make sure deno is installed on this machine.")
+        .arg(format!("{}/src/main.service.ts", project_path));
+
+    println!("Program: {}", &command.get_program().to_string_lossy());
+    println!("Args: {:?}", &command.get_args().collect::<Vec<_>>());
+
+
+    command.spawn().expect("Failed to execute deno. Make sure deno is installed on this machine.")
 }
 
 fn build_client(project_path: &String, dist_web_path: &String) -> process::Child {

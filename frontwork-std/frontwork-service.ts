@@ -83,7 +83,7 @@ export class FrontworkWebservice extends Frontwork {
     
                 Deno.serve({ port: this.port, signal: abortController.signal }, (_request: Request) => { return this.handler_dev(_request, service_started_timestamp); });
             } else {
-                Deno.serve({ port: this.port, signal: abortController.signal }, this.handler);
+                Deno.serve({ port: this.port, signal: abortController.signal }, (_request: Request) => { return this.handler(_request); });
             }
         } catch (error) {
             console.error(error);

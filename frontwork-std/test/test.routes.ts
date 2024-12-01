@@ -232,7 +232,7 @@ const middleware = new FrontworkMiddleware({
 
 export const APP_CONFIG: FrontworkInit = {
 	platform: EnvironmentPlatform.Web, 
-	stage: EnvironmentStage.Development,
+	stage: EnvironmentStage.Production,
 	port: 8080,
 	domain_to_route_selector: (context: FrontworkContext) => {
 		const domain = context.request.host.split(":")[0];
