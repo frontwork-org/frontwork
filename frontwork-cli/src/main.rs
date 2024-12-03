@@ -297,7 +297,7 @@ fn main() {
                             componentname_uppercamelcase
                         ));
                         ts_file_content.push_str("        \n");
-                        ts_file_content.push_str("        return new FrontworkResponse(200, \n");
+                        ts_file_content.push_str("        return await new FrontworkResponse(200, \n");
                         ts_file_content.push_str("            document_builder\n");
                         ts_file_content.push_str("                .add_head_meta_data(title, description, \"index,follow\")\n");
                         ts_file_content.push_str("        );\n");
