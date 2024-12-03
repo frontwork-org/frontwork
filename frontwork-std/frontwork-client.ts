@@ -5,6 +5,13 @@ import { html_element_set_attributes } from "./utils.ts";
 export class FrontworkClient extends Frontwork {
     private build_on_page_load: boolean;
 
+    // page_change() behaviour: 
+    // It kills the previous Promise so that it will not execute its Component build function since it is not needed because the user already clicked to the next page.
+    // But we should wait for page_change_form because we want ensure that the data is transmitted.
+    private page_change_ready = true;
+    private page_change_previous_abort_controller: AbortController|null = null;
+    public is_page_change_ready(): boolean { return this.page_change_ready }
+
     constructor(init: FrontworkInit) {
         super(init);
 
@@ -14,39 +21,48 @@ export class FrontworkClient extends Frontwork {
         // DOM Ready
         document.addEventListener("DOMContentLoaded", () => {
             const request = new FrontworkRequest("GET", location.toString(), new Headers(), new PostScope({}));
-            this.page_change(request, this.build_on_page_load);
+            this.page_change(request, this.build_on_page_load, false);
         });
 
         // add event listener for page change on link click
-        document.addEventListener('click', (event) => {
+        document.addEventListener('click', async (event) =>  {
             const target = event.target as HTMLAnchorElement;
             if (target.tagName === 'A') {
-                if (this.page_change_to(target.href)) {
-                    // only prevent default if page_change_to fails. It fails if the link is external or unknown.
+                if (this.page_change_ready) {
+                    if (await this.page_change_to(target.href, false)) {
+                        // only prevent default if page_change_to fails. It fails if the link is external or unknown.
+                        event.preventDefault();
+                    }
+                } else {
                     event.preventDefault();
                 }
             }
         }, false);
 
         // FrontworkForm halt sending data to the server and let the client handle it instead
-        document.addEventListener('submit', (event) => {
+        document.addEventListener('submit', async (event) => {
             const target = event.target as HTMLFormElement;
             if (target.tagName === 'FORM' && target.getAttribute("fw-form")) {
                 // Prevent the form from submitting
                 let submit_button = event.submitter as HTMLButtonElement|null;
                 submit_button = submit_button && submit_button.name? submit_button : null;
-                if(this.page_change_form(target, submit_button)) event.preventDefault();
+                if(await this.page_change_form(target, submit_button)) event.preventDefault();
                 
             }
         });
 
         // PopState Event: history back/forward; this event is needed to update the content
         addEventListener('popstate', (event) => {
-            // validate event.state; it could be a different value if the state has been set by another script
-            const savestate: PageChangeSavestate = event.state;
-            if (savestate && savestate.url) {
-                const request = new FrontworkRequest("GET", savestate.url, new Headers(), new PostScope({}));
-                this.page_change(request, true);
+            if (this.page_change_ready) {
+                // validate event.state; it could be a different value if the state has been set by another script
+                const savestate: PageChangeSavestate = event.state;
+                if (savestate && savestate.url) {
+                    const request = new FrontworkRequest("GET", savestate.url, new Headers(), new PostScope({}));
+                    this.page_change(request, true, true);
+                }
+            } else {
+                // Page is still processing form data. Prevent go back/forward
+                history.pushState(null, "", window.location.pathname);
             }
         });
 
@@ -84,82 +100,95 @@ export class FrontworkClient extends Frontwork {
     }
 
     
-    private page_change(request: FrontworkRequest, do_building: boolean): PageChangeSavestate|null {
-        const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, do_building);
-        const route: Route|null = this.route_resolver(context);
-        
-        // Middleware: before Route
-        try {
-            this.middleware.before_route.build(context);
-            this.middleware.before_route.dom_ready(context, this);
-        // deno-lint-ignore no-explicit-any
-        } catch (error: any) {
-            context.request.error("before_route", context, error);
-        }
-
-
-        if (do_building) {
-            const reb_result = this.route_execute_build(context, route);
-            
-            reb_result.reponse.cookies.forEach(cookie => {
-                if (cookie.http_only === false) {
-                    document.cookie = cookie.toString();
-                }
-            });
-
-            if (reb_result.reponse.status_code === 301 || reb_result.reponse.status_code === 302) {
-                // redirect
-                const redirect_url = reb_result.reponse.get_header("Location");
-                if (redirect_url === null) {
-                    FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", context, null);
-                    return null;
-                } else {
-                    if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, context, null);
-                    this.page_change_to(redirect_url);
-                    return { method: request.method, url: context.request.url, is_redirect: true, status_code: reb_result.reponse.status_code };
-                }
+    private async page_change(request: FrontworkRequest, do_building: boolean, ignore_not_ready: boolean): Promise<PageChangeSavestate | null> {
+        if (this.page_change_ready || ignore_not_ready) {
+            if (this.page_change_previous_abort_controller !== null) {
+                this.page_change_previous_abort_controller.abort();
             }
-    
+            const abort_controller = new AbortController();
+            this.page_change_previous_abort_controller = abort_controller;
 
-            const resolved_content = <DocumentBuilder> reb_result.reponse.content;
-            if (typeof resolved_content.context.document_html !== "undefined") {
-                resolved_content.html();
+            const context = new FrontworkContext(this.platform, this.stage, this.i18n, request, do_building);
+            const route: Route|null = this.route_resolver(context);
+            
+            // Middleware: before Route
+            try {
+                this.middleware.before_route.build(context);
+                this.middleware.before_route.dom_ready(context, this);
+            // deno-lint-ignore no-explicit-any
+            } catch (error: any) {
+                context.request.error("before_route", context, error);
+            }
 
-                html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.context.document_html.attributes);
-                html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
-                document.head.innerHTML = resolved_content.context.document_head.innerHTML;
 
-                const html = document.body.parentElement;
-                if(document.body !== null) document.body.remove();
-
-                // Add all elements except script to the body
-                if(html !== null) {
-                    for (let i = 0; i < context.document_body.children.length; i++) {
-                        const child = context.document_body.children[i];
-                        if (child.tagName === "SCRIPT") {
-                            child.remove();
-                        }
-                    }
-                    html.append(context.document_body);
+            if (do_building) {
+                const reb_result = await this.route_execute_build(context, route);
+                if (abort_controller.signal.aborted) {
+                    return null;
                 }
                 
-                reb_result.component.dom_ready(context, this);
-                return { method: request.method, url: request.url, is_redirect: false, status_code: reb_result.reponse.status_code };
-            }
-        } else {
-            if (route) {
-                const route_component = new route.component(context);
-                route_component.dom_ready(context, this);
-            } else {
-                new this.middleware.not_found_handler(context).dom_ready(context, this);
-            }
-        }
+                reb_result.reponse.cookies.forEach(cookie => {
+                    if (cookie.http_only === false) {
+                        document.cookie = cookie.toString();
+                    }
+                });
+
+                if (reb_result.reponse.status_code === 301 || reb_result.reponse.status_code === 302) {
+                    // redirect
+                    const redirect_url = reb_result.reponse.get_header("Location");
+                    if (redirect_url === null) {
+                        FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", context, null);
+                        return null;
+                    } else {
+                        if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, context, null);
+                        this.page_change_to(redirect_url, true);
+                        return { method: request.method, url: context.request.url, is_redirect: true, status_code: reb_result.reponse.status_code };
+                    }
+                }
         
+
+                const resolved_content = <DocumentBuilder> reb_result.reponse.content;
+                if (typeof resolved_content.context.document_html !== "undefined") {
+                    resolved_content.html();
+
+                    html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.context.document_html.attributes);
+                    html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
+                    document.head.innerHTML = resolved_content.context.document_head.innerHTML;
+
+                    const html = document.body.parentElement;
+                    if(document.body !== null) document.body.remove();
+
+                    // Add all elements except script to the body
+                    if(html !== null) {
+                        for (let i = 0; i < context.document_body.children.length; i++) {
+                            const child = context.document_body.children[i];
+                            if (child.tagName === "SCRIPT") {
+                                child.remove();
+                            }
+                        }
+                        html.append(context.document_body);
+                    }
+                    
+                    reb_result.component.dom_ready(context, this);
+                    return { method: request.method, url: request.url, is_redirect: false, status_code: reb_result.reponse.status_code };
+                }
+            } else {
+                if (route) {
+                    const route_component = new route.component(context);
+                    route_component.dom_ready(context, this);
+                } else {
+                    new this.middleware.not_found_handler(context).dom_ready(context, this);
+                }
+            }
+
+            this.page_change_ready = true;
+        }
+
         return null;
     }
     
     // function replacement for window.location; accessible for the Component method dom_ready
-    public page_change_to(url_or_path: string) {
+    public async page_change_to(url_or_path: string, ignore_not_ready: boolean) {
         if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "    page_change_to: " + url_or_path, null, null);
         let url;
         const test = url_or_path.indexOf("//");
@@ -170,7 +199,7 @@ export class FrontworkClient extends Frontwork {
         }
 
         const request = new FrontworkRequest("GET", url, new Headers(), new PostScope({}));
-        const result = this.page_change(request, true);
+        const result = await this.page_change(request, true, ignore_not_ready);
         if(result !== null) {
             if(result.is_redirect) return true;
 
@@ -181,7 +210,8 @@ export class FrontworkClient extends Frontwork {
     }
     
     // function to handle Form submits being handled in client
-    public page_change_form(form: HTMLFormElement, submit_button: HTMLButtonElement|null) {
+    public async page_change_form(form: HTMLFormElement, submit_button: HTMLButtonElement|null) {
+        this.page_change_ready = false;
         if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_form", null, null);
         let method = form.getAttribute("method");
         if(method === null) method = "POST";// In Web Browsers, if a form's method attribute is empty, it defaults to "POST".
@@ -228,7 +258,7 @@ export class FrontworkClient extends Frontwork {
         }
 
         const request = new FrontworkRequest(method, url, new Headers(), POST);
-        const result = this.page_change(request, true);
+        const result = await this.page_change(request, true, false);
         if(result !== null) {
             if(result.is_redirect) return true;
 

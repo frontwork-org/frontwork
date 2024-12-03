@@ -73,6 +73,14 @@ export class HTMLElementWrapper<T extends HTMLElement> {
     add_event(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
         this.element.addEventListener(type, listener, options);
     }
+
+    replace_text(search: string, replace: string) {
+        this.element.innerText = this.element.innerText.split(search).join(replace);
+    }
+
+    replace_html(search: string, replace: string) {
+        this.element.innerHTML = this.element.innerHTML.split(search).join(replace);
+    }
 }
 
 /**
@@ -124,6 +132,10 @@ export class I18n {
 
     get_translation(key: string): string {
         return this.selected_locale.get_translation(key);
+    }
+
+    get_translation_with_replace(key: string, search: string, replace: string): string {
+        return this.get_translation(key).split(search).join(replace);
     }
     
 }
@@ -524,7 +536,7 @@ export class FrontworkResponseRedirect extends FrontworkResponse {
 }
 
 export interface BuildEvent {
-    (context: FrontworkContext): FrontworkResponse
+    (context: FrontworkContext): Promise<FrontworkResponse>
 }
 
 export interface DomReadyEvent {
@@ -704,16 +716,16 @@ export class Frontwork {
         return null;
 	}
 
-	protected route_execute_build(context: FrontworkContext, route: Route|null): {reponse: FrontworkResponse, component: Component} {
+	protected async route_execute_build(context: FrontworkContext, route: Route|null): Promise<{ reponse: FrontworkResponse; component: Component; }> {
         // Route
         if (route) {
             try {
                 const component = new route.component(context);
-                return { reponse: component.build(context), component: component };
+                return { reponse: await component.build(context), component: component };
             // deno-lint-ignore no-explicit-any
             } catch (error: any) {
                 context.request.error("ROUTE #" + route.id + " ("+route.path+")", context, error);
-                return { reponse: this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
+                return { reponse: await this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
             }
         }
 
@@ -721,11 +733,11 @@ export class Frontwork {
         if(FW.verbose_logging) context.request.log("NOT_FOUND", context);
         try {
             const component = new this.middleware.not_found_handler(context);
-            return { reponse: component.build(context), component: component };
+            return { reponse: await component.build(context), component: component };
         // deno-lint-ignore no-explicit-any
         } catch (error: any) {
             context.request.error("NOT_FOUND", context, error);
-            return { reponse: this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
+            return { reponse: await this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
         }
 	}
 
@@ -749,7 +761,7 @@ export class FrontworkMiddleware {
 	constructor(init: FrontworkMiddlewareInit) {
         this.error_handler = init.error_handler
         this.error_handler_component = {
-            build(context: FrontworkContext) {
+            async build(context: FrontworkContext) {
                 context.document_head.innerHTML = "";
                 context.document_body.innerHTML = "";
                 return init.error_handler(context); 

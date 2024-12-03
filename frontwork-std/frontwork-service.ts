@@ -361,10 +361,8 @@ export class FrontworkWebservice extends Frontwork {
             }
 
             // Route or Not found
-            return this.route_execute_build(
-                context,
-                route,
-            ).reponse.into_response();
+            const reb_result = await this.route_execute_build(context, route);
+            return reb_result.reponse.into_response();
         } catch (error) {
             console.error("ERROR in middleware.error_handler", error);
         }
@@ -379,6 +377,7 @@ export class FrontworkWebservice extends Frontwork {
         const url = _request.url;
         const url_sub = url.substring(url.length - 4, url.length);
 
+        // TODO: clear assets list and redo setup_assets_resolver() for hot-reloading
         if (url_sub === "//ws") {
             let response, socket: WebSocket;
             try {

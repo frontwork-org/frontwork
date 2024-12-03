@@ -1,4 +1,4 @@
-# Frontwork - The TypeScript Framework using Deno & Webassembly
+# Frontwork - EXPERIMENTAL TypeScript Framework using Deno & Webassembly
 
 - Create Server-Side Rendering and Client-Side Rendering with the same Typescript code
 - Routing System with Domains included
