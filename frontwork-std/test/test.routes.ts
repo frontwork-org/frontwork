@@ -21,7 +21,7 @@ class MyMainDocumentBuilder extends DocumentBuilder {
 
 
 class AnotherComponent implements Component {
-    build(context: FrontworkContext): FrontworkResponse {
+    async build(context: FrontworkContext): Promise<FrontworkResponse> {
 		const document_builder = new DocumentBuilder(context);
 		const main = document_builder.body_append( context.create_element("main") );
 		context.ensure_text_element("h1", "another_title1").append_to(main);
@@ -39,7 +39,7 @@ class TestComponent implements Component {
 		
 	}
 
-    build(context: FrontworkContext) {
+    async build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
 
 		const title = context.ensure_text_element("h1", "title1").append_to(document_builder.main)
@@ -100,7 +100,7 @@ class TestGerman extends TestComponent {
 }
 
 class Test2Component implements Component {
-    build(context: FrontworkContext) {
+    async build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
 
 		const title1 = context.ensure_text_element("h1", "test-page2").append_to(document_builder.main);
@@ -115,13 +115,13 @@ class Test2Component implements Component {
 	}
     dom_ready(context: FrontworkContext, client: FrontworkClient): void {
 		setTimeout(() => {
-			client.page_change_to("/")
+			client.page_change_to("/", false);
 		}, 1000);
 	}
 }
 
 class Test3Component implements Component {
-    build() {
+    async build() {
 		return new FrontworkResponseRedirect("/");	
 	}
     dom_ready(): void {}
@@ -129,7 +129,7 @@ class Test3Component implements Component {
 
 
 class ElementTestComponent implements Component {
-    build(context: FrontworkContext) {
+    async build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
 		return new FrontworkResponse(200, 
 			document_builder
@@ -140,7 +140,7 @@ class ElementTestComponent implements Component {
 }
 
 class HelloWorldPrioTestComponent implements Component {
-    build(context: FrontworkContext) {
+    async build(context: FrontworkContext) {
 		const content = "Hello this is indeed first come, first served basis";
 		return new FrontworkResponse(200, content);
 	}
@@ -148,7 +148,7 @@ class HelloWorldPrioTestComponent implements Component {
 }
 
 class HelloWorldComponent implements Component {
-    build(context: FrontworkContext) {
+    async build(context: FrontworkContext) {
 		const content = "Hello "+context.request.path_dirs[2];
 		return new FrontworkResponse(200, content);
 	}
@@ -171,7 +171,7 @@ class CollisionHandlerComponent implements Component {
 }
 
 class CrashComponent implements Component {
-    build() {
+    async build() {
 		throw new Error("Crash Test");
 		// deno-lint-ignore no-unreachable
 		return new FrontworkResponse(200, "this text shall never be seen in the browser");
@@ -180,7 +180,7 @@ class CrashComponent implements Component {
 }
 
 class NotFoundComponent implements Component {
-    build(context: FrontworkContext) {
+    async build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
 		const h1 = context.document_body.appendChild(document.createElement("h1"));
 		h1.innerText = "ERROR 404 - Not found";

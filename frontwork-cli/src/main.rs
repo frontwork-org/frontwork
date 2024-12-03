@@ -284,7 +284,7 @@ fn main() {
                         ts_file_content.push_str(
                             "    constructor(context: FrontworkContext) {\n        \n    }\n\n",
                         );
-                        ts_file_content.push_str("    build(context: FrontworkContext) {\n");
+                        ts_file_content.push_str("    async build(context: FrontworkContext) {\n");
                         ts_file_content.push_str(
                             "        const document_builder = new DocumentBuilder(context);\n",
                         );

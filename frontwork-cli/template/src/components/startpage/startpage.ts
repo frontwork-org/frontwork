@@ -5,7 +5,7 @@ import { MainDocumentBuilder } from '../routes.ts';
 export class StartpageComponent implements Component {
 	constructor(context: FrontworkContext) {}
 
-    build(context: FrontworkContext) {
+    async build(context: FrontworkContext) {
         const document_builder = new MainDocumentBuilder(context);
         
 		const title1 = context.ensure_text_element("h1", "title1").append_to(document_builder.main);
