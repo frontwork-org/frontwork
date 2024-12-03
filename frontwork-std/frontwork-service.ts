@@ -361,10 +361,8 @@ export class FrontworkWebservice extends Frontwork {
             }
 
             // Route or Not found
-            return this.route_execute_build(
-                context,
-                route,
-            ).reponse.into_response();
+            const reb_result = await this.route_execute_build(context, route);
+            return reb_result.reponse.into_response();
         } catch (error) {
             console.error("ERROR in middleware.error_handler", error);
         }
