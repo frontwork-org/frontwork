@@ -11,6 +11,9 @@ if (APP_CONFIG.stage !== EnvironmentStage.Development || __dir.includes("/tmp/")
     __dir = Deno.execPath().split("/").slice(0, -1).join("/");
 }
 
+// Remove last slash if exist
+if (__dir.slice(-1) === "/") __dir.slice(0, -1);
+
 new FrontworkWebservice(APP_CONFIG)
     .setup_assets_resolver(__dir + '/assets')
     .setup_style_css(__dir + '/style.css')
