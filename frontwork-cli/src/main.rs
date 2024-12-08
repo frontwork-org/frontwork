@@ -460,7 +460,7 @@ fn get_project_path() -> String {
     let package_json_path = format!("{}/package.json", project_path);
     let components_path = format!("{}/src/components", project_path);
     if !Path::new(&package_json_path).exists() || !Path::new(&components_path).exists() {
-        println!("The current directory is not a frontwork project directory. Please change directory or run 'fw init' to initialize the project first.");
+        println!("The current directory is not a frontwork project directory. Please change directory or run 'frontwork init' to initialize the project first.");
         process::exit(1);
     }
 

@@ -442,6 +442,11 @@ export class DocumentBuilder implements DocumentBuilderInterface {
     add_head_meta_data(title: string, description: string, robots: string): DocumentBuilder {
         const meta_chatset = this.context.document_head.appendChild( document.createElement("meta") );
         meta_chatset.setAttribute("charset", "UTF-8");
+        
+        const meta_compatible = this.context.document_head.appendChild( document.createElement("meta") );
+        meta_compatible.setAttribute("http-equiv", "X-UA-Compatible");
+        meta_compatible.setAttribute("content", "IE=edge");
+        
         const meta_viewport = this.context.document_head.appendChild( document.createElement("meta") );
         meta_viewport.setAttribute("name", "viewport");
         meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
