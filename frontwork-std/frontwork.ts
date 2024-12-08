@@ -606,8 +606,8 @@ export class FrontworkContext {
 
 
     /**
-     * Creates an HTML element.
-     * @param tag The tag name of the element to create if it doesn't exist.
+     * Creates an HTML element. DOES NOT CHECK IF ALREADY EXIST.
+     * @param tag The tag name of the element to create.
      * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
      * @returns HTMLElementWrapper
      */
