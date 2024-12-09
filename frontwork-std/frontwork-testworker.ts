@@ -66,11 +66,11 @@ export class FrontworkTestworker extends Frontwork {
         return this;
     }
 
-    test_routes(domains: string[]) {
+    async test_routes(domains: string[]) {
         for (let d = 0; d < domains.length; d++) {
             const domain_url = "http://"+domains[d]+":"+this.port;
             const domain_request = new FrontworkRequest("GET", domain_url, new Headers(), new PostScope({}));
-            const domain_context = new FrontworkContext(this.platform, this.stage, this.i18n, domain_request, true);
+            const domain_context = new FrontworkContext(this.platform, this.stage, this.api_protocol_address, this.i18n, domain_request, true);
 
             const routes = this.domain_to_route_selector(domain_context);
             
@@ -82,15 +82,15 @@ export class FrontworkTestworker extends Frontwork {
 
                     const route_url = domain_url+route.path;
                     const route_request = new FrontworkRequest("GET", route_url, new Headers(), new PostScope({}));
-                    const route_context = new FrontworkContext(this.platform, this.stage, this.i18n, route_request, true);
+                    const route_context = new FrontworkContext(this.platform, this.stage, this.api_protocol_address, this.i18n, route_request, true);
 
     
-                    this.assert_function(() => {
+                    await this.assert_function(async () => {
                         // Middleware: before Routes
-                        this.middleware.before_route.build(route_context);
+                        await this.middleware.before_route.build(route_context);
 
                         // Route
-                        new route.component(route_context).build(route_context);
+                        await new route.component(route_context).build(route_context);
                     });
                 }
             }

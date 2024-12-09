@@ -554,11 +554,11 @@ export declare interface Component {
 }
 
 export interface ErrorHandler {
-    (context: FrontworkContext): FrontworkResponse;
+    (context: FrontworkContext): Promise<FrontworkResponse>
 }
 
 export declare interface BeforeRouteEvent {
-    build(context: FrontworkContext): void;
+    build(context: FrontworkContext): Promise<void>;
     dom_ready: DomReadyEvent;
 }
 
@@ -581,9 +581,34 @@ export interface DomainToRouteSelector {
     (context: FrontworkContext): Route[]
 }
 
+export interface ApiRequestExtras {
+    /** A string indicating how the request will interact with the browser's cache to set request's cache. */
+    cache?: RequestCache;
+    /** RequestCredentials is a string that specifies how the browser should handle credentials (cookies, HTTP authentication, and client-side SSL certificates) for cross-origin requests.. */
+    // credentials?: RequestCredentials;
+    /** A Headers object, an object literal, or an array of two-item arrays to set request's headers. */
+    headers?: Headers;
+    /** A cryptographic hash of the resource to be fetched by request. Sets request's integrity. */
+    // integrity?: string;
+    /** A boolean to set request's keepalive. */
+    // keepalive?: boolean;
+    /** A string to indicate whether the request will use CORS, or will be restricted to same-origin URLs. Sets request's mode. */
+    // mode?: RequestMode;
+    // priority?: RequestPriority;
+    /** A string indicating whether request follows redirects, results in an error upon encountering a redirect, or returns the redirect (in an opaque fashion). Sets request's redirect. */
+    redirect?: RequestRedirect;
+    /** A string whose value is a same-origin URL, "about:client", or the empty string, to set request's referrer. */
+    // referrer?: string;
+    /** A referrer policy to set request's referrerPolicy. */
+    // referrerPolicy?: ReferrerPolicy;
+    /** An AbortSignal to set request's signal. */
+    signal?: AbortSignal | null;
+}
+
 export class FrontworkContext {
     readonly platform: EnvironmentPlatform;
     readonly stage: EnvironmentStage;
+    readonly api_protocol_address: string;
     readonly i18n: I18n;
     readonly request: FrontworkRequest;
     readonly do_building: boolean;
@@ -592,9 +617,13 @@ export class FrontworkContext {
     readonly document_head: HTMLHeadElement;
     readonly document_body: HTMLBodyElement;
 
-    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, i18n: I18n,request: FrontworkRequest, do_building: boolean) {
+    // Set-Cookie headers for deno side rendering. Deno should retrieve Cookies from the API and pass them to the browser. Should not be used to manually set Cookies. Use the FrontworkResponse.set_cookie method instead
+    set_cookies: string[] = [];
+
+    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, api_protocol_address: string, i18n: I18n,request: FrontworkRequest, do_building: boolean) {
         this.platform = platform;
         this.stage = stage;
+        this.api_protocol_address = api_protocol_address;
         this.i18n = i18n;
         this.request = request;
         this.do_building = do_building;
@@ -656,6 +685,55 @@ export class FrontworkContext {
         return elem2;
     }
 
+
+    async api_request<T>(method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean }, extras: ApiRequestExtras = {}): Promise<T> {
+        let url = this.api_protocol_address+path;
+        
+        // Prepare request options
+        const options: RequestInit = extras; 
+        options.method = method;
+        options.headers = extras.headers? extras.headers : new Headers();
+        
+        // Add parameters
+        let params_string = "";
+        const params_array = Object.entries(params);
+        if(params_array.length > 0) {
+            params_string += params_array[0][0]+"="+ params_array[0][1];
+            for (let a = 1; a < params_array.length; a++) {
+                params_string += "&"+params_array[a][0]+"="+ params_array[a][1];
+            }
+        }
+
+        if (method === "GET") {
+            url += "?"+params_string;
+        } else {
+            options.body = params_string;
+            options.headers.set("Content-Type", "application/x-www-form-urlencoded");
+        }
+        
+        
+        // TODO: Deno should pass Cookies from the browser to the API
+        const response = await fetch(url, options);
+        
+        // retrieve set-cookie headers from the API and pass them to the browser
+        if (!FW.is_client_side) {
+            const set_cookies = response.headers.getSetCookie();
+            console.log("pass Cookies set_cookies", set_cookies);
+            set_cookies.forEach(item => this.set_cookies.push(item));
+            console.log("pass Cookies this.set_cookies", this.set_cookies);
+        }
+        
+        if (!response.ok) {
+            console.error("api_request(", method, path, ")\n", response);
+            
+            throw new Error(`api_request() responded with status code: ${response.status}`);
+        }
+
+        //TODO: somehow set cookies from actix as deno response 
+        const data = await response.json();
+        return data as T;
+    }
+
 }
 
 
@@ -663,19 +741,21 @@ export class FrontworkContext {
  *   @param {EnvironmentPlatform} platform - Web, Desktop or Android
  *   @param {EnvironmentStage} stage - Development, Staging or Production
  *   @param {number} port - Which port should Deno start the webservice
+ *   @param {string} api_protocol_address - The protocol and address for FrontworkContext.api_request. Example: http://localhost:40201. Should use https for staging and production. 
  *   @param {DomainToRouteSelector[]} domain_to_route_selector - Function that selects which routes should work under a domain 
  *   @param {FrontworkMiddleware} middleware - Handler for every edge case like 404er, 500er. You can also execute code before a route executes.
  *   @param {i18n} I18n - Prepare always translations before hand to save time later. For every static string please use the context.i18n.get_translation() method.
  *   @param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
  */
 export interface FrontworkInit {
-    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
+    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, api_protocol_address: string, domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
 }
 
 export class Frontwork {
     protected platform: EnvironmentPlatform;
     protected stage: EnvironmentStage
     protected port: number;
+    protected api_protocol_address: string;
 	protected domain_to_route_selector: DomainToRouteSelector;
 	protected middleware: FrontworkMiddleware;
     protected i18n: I18n
@@ -684,6 +764,7 @@ export class Frontwork {
 		this.platform = init.platform;
 		this.stage = init.stage;
 		this.port = init.port;
+		this.api_protocol_address = init.api_protocol_address;
 		this.domain_to_route_selector = init.domain_to_route_selector;
 		this.middleware = init.middleware;
 		this.i18n = init.i18n;

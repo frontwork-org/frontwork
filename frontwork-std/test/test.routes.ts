@@ -209,14 +209,40 @@ const another_routes: Route[] = [
 	new Route("/", AnotherComponent),
 ];
 
+export interface User {
+    user_id: number,
+    username: string,
+    status: number,
+}
+
+
+async function login_check(context: FrontworkContext): Promise<User> {
+	return await new Promise(async function (resolve, reject) {
+		console.log("login_check context.set_cookies 11111", context.set_cookies);
+		
+		context.api_request<User>("POST", "/api/v1/account/user", {})
+		.then(function(user: User) {
+			console.log("Welcome, " + user.username);
+			console.log("login_check context.set_cookies 2222", context.set_cookies);
+			resolve(user);
+			return user;
+		})
+		.catch(function(err) { reject(err); })
+		;
+	});
+}
+
 const middleware = new FrontworkMiddleware({
 	before_route: {
-		build: (context: FrontworkContext) => {
+		build: async (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
+			login_check(context);
+			console.log("login_check context.set_cookies 33333333333333", context.set_cookies);
+
 		},
 		dom_ready: () => { }
 	},
-	error_handler: (context: FrontworkContext): FrontworkResponse => {
+	error_handler: async (context: FrontworkContext) => {
 		const document_builder = new MyMainDocumentBuilder(context);
 		const h1 = context.document_body.appendChild(document.createElement("h1"));
 		h1.innerText = "ERROR 500 - Internal server error";
@@ -235,6 +261,7 @@ export const APP_CONFIG: FrontworkInit = {
 	platform: EnvironmentPlatform.Web, 
 	stage: EnvironmentStage.Development,
 	port: 8080,
+	api_protocol_address: "http://localhost:40201",
 	domain_to_route_selector: (context: FrontworkContext) => {
 		const domain = context.request.host.split(":")[0];
 		

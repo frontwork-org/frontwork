@@ -346,6 +346,7 @@ export class FrontworkWebservice extends Frontwork {
             const context = new FrontworkContext(
                 this.platform,
                 this.stage,
+                this.api_protocol_address,
                 this.i18n,
                 request,
                 true,
@@ -354,7 +355,10 @@ export class FrontworkWebservice extends Frontwork {
 
             // Middleware: before Route
             try {
-                this.middleware.before_route.build(context);
+                console.log("11111111111", context.set_cookies);
+                
+                await this.middleware.before_route.build(context);
+                console.log("22222222222222", context.set_cookies);
                 // deno-lint-ignore no-explicit-any
             } catch (error: any) {
                 context.request.error("before_route", context, error);
@@ -362,7 +366,23 @@ export class FrontworkWebservice extends Frontwork {
 
             // Route or Not found
             const reb_result = await this.route_execute_build(context, route);
-            return reb_result.reponse.into_response();
+            const reb_response = reb_result.reponse.into_response();
+            
+            // set-cookie headers from the API
+            console.log("context.set_cookies");
+            console.log("context.set_cookies");
+            console.log("context.set_cookies");
+            console.log("context.set_cookies");
+            console.log("context.set_cookies", context.set_cookies);
+            
+            for (let i = 0; i < context.set_cookies.length; i++) {
+                reb_response.headers.append('set-cookie', 
+                    context.set_cookies[i]
+                        .replace(" Secure;", "")
+                );
+            }
+
+            return reb_response;
         } catch (error) {
             console.error("ERROR in middleware.error_handler", error);
         }

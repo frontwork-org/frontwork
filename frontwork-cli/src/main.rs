@@ -559,6 +559,13 @@ fn command_watch() {
         // wait for processes
         build_client_command.wait().ok();
 
+        // deno check // since it is easy to miss an 
+        std::process::Command::new("deno")
+            .arg("check")
+            .arg(format!("{project_path}/*.ts"))
+            .spawn()
+            .expect("Failed to execute deno. Make sure deno is installed on this machine.");
+
         // start/restart service
         if let Some(mut process) = run_service_process {
             process.kill().ok();
