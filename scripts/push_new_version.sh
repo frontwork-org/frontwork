@@ -37,7 +37,7 @@ FILES=(
 )
 
 for file in "${FILES[@]}"; do
-    sed -i "s/@$CURRENT_VERSION/@$NEW_VERSION/g" "$file"
+    sed -i "s/frontwork@$CURRENT_VERSION/frontwork@$NEW_VERSION/g" "$file"
 done
 
 git add -A
