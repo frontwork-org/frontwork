@@ -1,6 +1,6 @@
 {
   "name": "frontwork-std",
-  "version": "0.0.20",
+  "version": "0.1.20",
   "description": "Standard Library for the Frontwork TypeScript framework",
   "main": "frontwork.ts",
   "repository": {

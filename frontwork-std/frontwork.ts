@@ -584,7 +584,7 @@ export class Route {
 }
 
 export interface DomainToRouteSelector {
-    (context: FrontworkContext): Route[]
+    (context: FrontworkContext): Promise<Route[]>
 }
 
 export interface ApiRequestExtras {
@@ -782,9 +782,9 @@ export class Frontwork {
         if(this.stage === EnvironmentStage.Development) FW.verbose_logging = true;
 	}
 
-	protected route_resolver(context: FrontworkContext): Route|null {
+	protected async route_resolver(context: FrontworkContext): Promise<Route | null> {
         // Routes
-        const routes = this.domain_to_route_selector(context);
+        const routes = await this.domain_to_route_selector(context);
         for (let b = 0; b < routes.length; b++) {
             const route = routes[b];
             const route_path_dirs = route.path.split("/");

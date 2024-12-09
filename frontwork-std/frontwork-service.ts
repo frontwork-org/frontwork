@@ -351,7 +351,7 @@ export class FrontworkWebservice extends Frontwork {
                 request,
                 true,
             );
-            const route = this.route_resolver(context);
+            const route = await this.route_resolver(context);
 
             // Middleware: before Route
             try {

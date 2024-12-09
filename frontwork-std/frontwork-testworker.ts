@@ -72,7 +72,7 @@ export class FrontworkTestworker extends Frontwork {
             const domain_request = new FrontworkRequest("GET", domain_url, new Headers(), new PostScope({}));
             const domain_context = new FrontworkContext(this.platform, this.stage, this.api_protocol_address, this.i18n, domain_request, true);
 
-            const routes = this.domain_to_route_selector(domain_context);
+            const routes = await this.domain_to_route_selector(domain_context);
             
 
             for (let r = 0; r < routes.length; r++) {

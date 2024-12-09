@@ -30,9 +30,7 @@ fn print_help(no_error: bool, error_message: &str) {
     println!("  new                             | create a new folder in the current directory and then execute init");
     println!("  component new                   | create a new component");
     println!("  component remove                | remove a component");
-    println!(
-        "  run                             | run the script of the entered name in package.json"
-    );
+    println!("  run                             | run the script of the entered name in package.json");
     println!("  test                            | run main.testworker.ts");
     println!("  build                           | build the application to the dist folder. Optional use: --production or --staging");
     println!("  watch                           | start development server and build the application on changes");
@@ -302,7 +300,7 @@ fn main() {
                         ts_file_content.push_str("                .add_head_meta_data(title, description, \"index,follow\")\n");
                         ts_file_content.push_str("        );\n");
                         ts_file_content.push_str("    }\n\n");
-                        ts_file_content.push_str("    dom_ready(context: FrontworkContext, client: FrontworkClient) {\n        \n    }\n");
+                        ts_file_content.push_str("    async dom_ready(context: FrontworkContext, client: FrontworkClient) {\n        \n    }\n");
                         ts_file_content.push_str("}\n");
 
                         fs::write(
