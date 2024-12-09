@@ -15,6 +15,7 @@ export class MainDocumentBuilder extends DocumentBuilder {
 
 
 class NotFoundComponent implements Component {
+    // deno-lint-ignore require-await
     async build(context: FrontworkContext) {
 		const document_builder = new DocumentBuilder(context);
 		const h1 = context.document_body.appendChild(document.createElement("h1"));
@@ -35,10 +36,10 @@ export const routes: Route[] = [
 
 export const middleware = new FrontworkMiddleware({
 	before_route: {
-		build: (context: FrontworkContext) => {
+		build: async (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
 		},
-		dom_ready: () => { }
+		dom_ready: async () => { }
 	},
 	error_handler: async (context: FrontworkContext) => {
 		const document_builder = new DocumentBuilder(context);

@@ -9,7 +9,7 @@
     "rules": {
       "tags": ["recommended"],
       "include": [], // "no-floating-promises" is not jet implemented in Typescript & Deno. It only exists in ESlint. It will make our lives easier then it is implemented
-      "exclude": ["no-unused-vars"]
+      "exclude": ["no-unused-vars", "require-await"]
     }
   },
   "fmt": {
