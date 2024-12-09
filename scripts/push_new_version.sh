@@ -1,6 +1,7 @@
 #!/bin/bash
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd $SCRIPT_DIR
 
 # Check if there are any uncommitted changes
 if [[ ! -z $(git diff --minimal) ]]; then
@@ -32,6 +33,7 @@ FILES=(
     "../frontwork-cli/template/src/dependencies.ts"
     "../frontwork-cli/template/src/main.service.ts"
     "../frontwork-cli/template/src/main.testworker.ts"
+    "../frontwork-cli/template/deno.lock"
 )
 
 for file in "${FILES[@]}"; do
@@ -39,3 +41,12 @@ for file in "${FILES[@]}"; do
 done
 
 echo "Version updated from $CURRENT_VERSION to $NEW_VERSION"
+
+echo ""
+echo ""
+echo "Starting cargo to publish crate and then installing new version."
+echo ""
+
+cd ../frontwork-cli
+cargo publish
+cargo install --path .
