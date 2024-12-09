@@ -2,8 +2,7 @@ import { FrontworkTestworker } from "https://deno.land/x/frontwork@0.1.21/frontw
 import { APP_CONFIG } from "./environments/environment.ts";
 
 
-new FrontworkTestworker(APP_CONFIG)
-    .test_routes(["localhost"])
-    .print_summary()
-    .exit()
-;
+const worker = new FrontworkTestworker(APP_CONFIG)
+await worker.test_routes(["localhost"]);
+worker.print_summary();
+worker.exit();

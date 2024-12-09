@@ -6,11 +6,11 @@
     },
     "lint": {
       "include": ["src/"],
-      "exclude": [],
+      "exclude": ["dist/"],
       "rules": {
         "tags": ["recommended"],
         "include": [],
-        "exclude": ["no-unused-vars"]
+        "exclude": ["no-unused-vars", "require-await"]
       }
     },
     "fmt": {

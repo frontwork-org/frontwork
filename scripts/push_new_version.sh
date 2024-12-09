@@ -40,6 +40,10 @@ for file in "${FILES[@]}"; do
     sed -i "s/@$CURRENT_VERSION/@$NEW_VERSION/g" "$file"
 done
 
+git add -A
+git commit -m "push v$NEW_VERSION"
+git push
+
 echo "Version updated from $CURRENT_VERSION to $NEW_VERSION"
 
 echo ""
