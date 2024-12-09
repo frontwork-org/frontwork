@@ -182,6 +182,12 @@ class Scope {
         // }
         return value;
     }
+
+    forEach(callback: (key: string, value: string) => void): void {
+        Object.entries(this.items).forEach(([key, value]) => {
+            callback(key, value);
+        });
+    }
 }
 
 export class GetScope extends Scope { constructor(items: ScopeItems) { super(items); } }
@@ -712,15 +718,21 @@ export class FrontworkContext {
         }
         
         
-        // TODO: Deno should pass Cookies from the browser to the API
+        // Deno should pass Cookies from the browser to the API
+        if (!FW.is_client_side) {
+            let cookies_string = "";
+            this.request.COOKIES.forEach((key, name) => {
+                cookies_string += key+"="+name+"; ";
+            });
+            options.headers.set("Cookie", cookies_string);
+        }
+
         const response = await fetch(url, options);
         
         // retrieve set-cookie headers from the API and pass them to the browser
         if (!FW.is_client_side) {
             const set_cookies = response.headers.getSetCookie();
-            console.log("pass Cookies set_cookies", set_cookies);
             set_cookies.forEach(item => this.set_cookies.push(item));
-            console.log("pass Cookies this.set_cookies", this.set_cookies);
         }
         
         if (!response.ok) {
@@ -729,7 +741,6 @@ export class FrontworkContext {
             throw new Error(`api_request() responded with status code: ${response.status}`);
         }
 
-        //TODO: somehow set cookies from actix as deno response 
         const data = await response.json();
         return data as T;
     }

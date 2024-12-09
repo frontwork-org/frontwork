@@ -218,12 +218,9 @@ export interface User {
 
 async function login_check(context: FrontworkContext): Promise<User> {
 	return await new Promise(async function (resolve, reject) {
-		console.log("login_check context.set_cookies 11111", context.set_cookies);
-		
 		context.api_request<User>("POST", "/api/v1/account/user", {})
 		.then(function(user: User) {
 			console.log("Welcome, " + user.username);
-			console.log("login_check context.set_cookies 2222", context.set_cookies);
 			resolve(user);
 			return user;
 		})
@@ -236,9 +233,7 @@ const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: async (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
-			login_check(context);
-			console.log("login_check context.set_cookies 33333333333333", context.set_cookies);
-
+			await login_check(context);
 		},
 		dom_ready: () => { }
 	},
