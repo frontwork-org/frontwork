@@ -30,9 +30,7 @@ fn print_help(no_error: bool, error_message: &str) {
     println!("  new                             | create a new folder in the current directory and then execute init");
     println!("  component new                   | create a new component");
     println!("  component remove                | remove a component");
-    println!(
-        "  run                             | run the script of the entered name in package.json"
-    );
+    println!("  run                             | run the script of the entered name in package.json");
     println!("  test                            | run main.testworker.ts");
     println!("  build                           | build the application to the dist folder. Optional use: --production or --staging");
     println!("  watch                           | start development server and build the application on changes");
@@ -297,12 +295,12 @@ fn main() {
                             componentname_uppercamelcase
                         ));
                         ts_file_content.push_str("        \n");
-                        ts_file_content.push_str("        return new FrontworkResponse(200, \n");
+                        ts_file_content.push_str("        return await new FrontworkResponse(200, \n");
                         ts_file_content.push_str("            document_builder\n");
                         ts_file_content.push_str("                .add_head_meta_data(title, description, \"index,follow\")\n");
                         ts_file_content.push_str("        );\n");
                         ts_file_content.push_str("    }\n\n");
-                        ts_file_content.push_str("    dom_ready(context: FrontworkContext, client: FrontworkClient) {\n        \n    }\n");
+                        ts_file_content.push_str("    async dom_ready(context: FrontworkContext, client: FrontworkClient) {\n        \n    }\n");
                         ts_file_content.push_str("}\n");
 
                         fs::write(
@@ -460,7 +458,7 @@ fn get_project_path() -> String {
     let package_json_path = format!("{}/package.json", project_path);
     let components_path = format!("{}/src/components", project_path);
     if !Path::new(&package_json_path).exists() || !Path::new(&components_path).exists() {
-        println!("The current directory is not a frontwork project directory. Please change directory or run 'fw init' to initialize the project first.");
+        println!("The current directory is not a frontwork project directory. Please change directory or run 'frontwork init' to initialize the project first.");
         process::exit(1);
     }
 
@@ -558,6 +556,13 @@ fn command_watch() {
 
         // wait for processes
         build_client_command.wait().ok();
+
+        // deno check // since it is easy to miss an 
+        std::process::Command::new("deno")
+            .arg("check")
+            .arg(format!("{project_path}/*.ts"))
+            .spawn()
+            .expect("Failed to execute deno. Make sure deno is installed on this machine.");
 
         // start/restart service
         if let Some(mut process) = run_service_process {

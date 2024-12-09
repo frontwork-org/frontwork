@@ -28,7 +28,7 @@ class AnotherComponent implements Component {
 		context.ensure_text_element("p", "another_text1").append_to(main);
 		return new FrontworkResponse(200, document_builder);
 	}
-    dom_ready(): void {}
+    async dom_ready() {}
 }
 
 class TestComponent implements Component {
@@ -75,7 +75,7 @@ class TestComponent implements Component {
 		);
 	}
 	
-    dom_ready(context: FrontworkContext, client: FrontworkClient): void {
+    async dom_ready(context: FrontworkContext, client: FrontworkClient) {
 		try {
 			let times = 0;
 			this.button_event.add_event("click", () => {
@@ -93,10 +93,10 @@ class TestGerman extends TestComponent {
 		context.i18n.set_locale("de");
 		super(context);
 	}
-    override build(context: FrontworkContext) {
-		return super.build(context);
+    override async build(context: FrontworkContext) {
+		return await super.build(context);
 	}
-    override dom_ready(context: FrontworkContext, client: FrontworkClient): void { super.dom_ready(context, client); }
+    override async dom_ready(context: FrontworkContext, client: FrontworkClient) { super.dom_ready(context, client); }
 }
 
 class Test2Component implements Component {
@@ -113,7 +113,7 @@ class Test2Component implements Component {
 				.add_head_meta_data(title1.element.innerText, description.element.innerText, "noindex,nofollow")
 		);
 	}
-    dom_ready(context: FrontworkContext, client: FrontworkClient): void {
+    async dom_ready(context: FrontworkContext, client: FrontworkClient) {
 		setTimeout(() => {
 			client.page_change_to("/", false);
 		}, 1000);
@@ -124,7 +124,7 @@ class Test3Component implements Component {
     async build() {
 		return new FrontworkResponseRedirect("/");	
 	}
-    dom_ready(): void {}
+    async dom_ready() {}
 }
 
 
@@ -136,7 +136,7 @@ class ElementTestComponent implements Component {
 				.add_head_meta_data("element_test", "element_test", "noindex,nofollow")
 		);
 	}
-    dom_ready(): void {}
+    async dom_ready() {}
 }
 
 class HelloWorldPrioTestComponent implements Component {
@@ -144,7 +144,7 @@ class HelloWorldPrioTestComponent implements Component {
 		const content = "Hello this is indeed first come, first served basis";
 		return new FrontworkResponse(200, content);
 	}
-    dom_ready(context: FrontworkContext): void {}
+    async dom_ready(context: FrontworkContext) {}
 }
 
 class HelloWorldComponent implements Component {
@@ -152,17 +152,17 @@ class HelloWorldComponent implements Component {
 		const content = "Hello "+context.request.path_dirs[2];
 		return new FrontworkResponse(200, content);
 	}
-    dom_ready(context: FrontworkContext): void {}
+    async dom_ready(context: FrontworkContext) {}
 }
 
 class CollisionHandlerComponent implements Component {
-    build(context: FrontworkContext) {
+    async build(context: FrontworkContext) {
 		if (context.request.path_dirs[2] === "first-come-first-served") {
 			return new HelloWorldPrioTestComponent().build(context);
 		}
 		return new HelloWorldComponent().build(context);
 	}
-    dom_ready(context: FrontworkContext): void {
+    async dom_ready(context: FrontworkContext) {
 		if (context.request.path_dirs[2] === "first-come-first-served") {
 			new HelloWorldPrioTestComponent().dom_ready(context);
 		}
@@ -176,7 +176,7 @@ class CrashComponent implements Component {
 		// deno-lint-ignore no-unreachable
 		return new FrontworkResponse(200, "this text shall never be seen in the browser");
 	}
-    dom_ready(): void {}
+    async dom_ready() {}
 }
 
 class NotFoundComponent implements Component {
@@ -190,7 +190,7 @@ class NotFoundComponent implements Component {
 				.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
 		);
 	}
-    dom_ready(): void {}
+    async dom_ready() {}
 }
 
 const default_routes: Route[] = [
@@ -209,14 +209,35 @@ const another_routes: Route[] = [
 	new Route("/", AnotherComponent),
 ];
 
+export interface User {
+    user_id: number,
+    username: string,
+    status: number,
+}
+
+
+async function login_check(context: FrontworkContext): Promise<User> {
+	return await new Promise(async function (resolve, reject) {
+		context.api_request<User>("POST", "/api/v1/account/user", {})
+		.then(function(user: User) {
+			console.log("Welcome, " + user.username);
+			resolve(user);
+			return user;
+		})
+		.catch(function(err) { reject(err); })
+		;
+	});
+}
+
 const middleware = new FrontworkMiddleware({
 	before_route: {
-		build: (context: FrontworkContext) => {
+		build: async (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
+			await login_check(context);
 		},
-		dom_ready: () => { }
+		dom_ready: async () => { }
 	},
-	error_handler: (context: FrontworkContext): FrontworkResponse => {
+	error_handler: async (context: FrontworkContext) => {
 		const document_builder = new MyMainDocumentBuilder(context);
 		const h1 = context.document_body.appendChild(document.createElement("h1"));
 		h1.innerText = "ERROR 500 - Internal server error";
@@ -235,7 +256,8 @@ export const APP_CONFIG: FrontworkInit = {
 	platform: EnvironmentPlatform.Web, 
 	stage: EnvironmentStage.Development,
 	port: 8080,
-	domain_to_route_selector: (context: FrontworkContext) => {
+	api_protocol_address: "http://localhost:40201",
+	domain_to_route_selector: async (context: FrontworkContext) => {
 		const domain = context.request.host.split(":")[0];
 		
 		if (domain === "127.0.0.1") return another_routes;

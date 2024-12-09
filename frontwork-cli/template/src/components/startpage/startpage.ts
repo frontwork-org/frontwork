@@ -33,13 +33,13 @@ export class StartpageComponent implements Component {
 		context.ensure_text_element("button", "submit_button", { type: "submit", name: "action", value: "sent" }).append_to(form);
         
 
-        return new FrontworkResponse(200, 
+        return await new FrontworkResponse(200, 
             document_builder
                 .add_head_meta_data(title1.element.innerText, text1.element.innerText, "index,follow")
         );
     }
 
-    dom_ready(context: FrontworkContext, client: FrontworkClient) {
+    async dom_ready(context: FrontworkContext, client: FrontworkClient) {
         
   }
 }

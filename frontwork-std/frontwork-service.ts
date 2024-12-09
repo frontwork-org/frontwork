@@ -346,15 +346,17 @@ export class FrontworkWebservice extends Frontwork {
             const context = new FrontworkContext(
                 this.platform,
                 this.stage,
+                this.api_protocol_address,
                 this.i18n,
                 request,
                 true,
             );
-            const route = this.route_resolver(context);
+            const route = await this.route_resolver(context);
 
             // Middleware: before Route
             try {
-                this.middleware.before_route.build(context);
+                
+                await this.middleware.before_route.build(context);
                 // deno-lint-ignore no-explicit-any
             } catch (error: any) {
                 context.request.error("before_route", context, error);
@@ -362,7 +364,17 @@ export class FrontworkWebservice extends Frontwork {
 
             // Route or Not found
             const reb_result = await this.route_execute_build(context, route);
-            return reb_result.reponse.into_response();
+            const reb_response = reb_result.reponse.into_response();
+            
+            // set-cookie headers from the API
+            for (let i = 0; i < context.set_cookies.length; i++) {
+                reb_response.headers.append('set-cookie', 
+                    context.set_cookies[i]
+                        .replace(" Secure;", "")
+                );
+            }
+
+            return reb_response;
         } catch (error) {
             console.error("ERROR in middleware.error_handler", error);
         }
@@ -377,7 +389,6 @@ export class FrontworkWebservice extends Frontwork {
         const url = _request.url;
         const url_sub = url.substring(url.length - 4, url.length);
 
-        // TODO: clear assets list and redo setup_assets_resolver() for hot-reloading
         if (url_sub === "//ws") {
             let response, socket: WebSocket;
             try {

@@ -15,7 +15,7 @@ export class MainDocumentBuilder extends DocumentBuilder {
 
 
 class NotFoundComponent implements Component {
-    build(context: FrontworkContext) {
+    async build(context: FrontworkContext) {
 		const document_builder = new DocumentBuilder(context);
 		const h1 = context.document_body.appendChild(document.createElement("h1"));
 		h1.innerText = "ERROR 404 - Not found";
@@ -25,7 +25,7 @@ class NotFoundComponent implements Component {
 				.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
 		);
 	}
-    dom_ready(): void {}
+    async dom_ready() {}
 }
 
 
@@ -40,7 +40,7 @@ export const middleware = new FrontworkMiddleware({
 		},
 		dom_ready: () => { }
 	},
-	error_handler: (context: FrontworkContext): FrontworkResponse => {
+	error_handler: async (context: FrontworkContext) => {
 		const document_builder = new DocumentBuilder(context);
 		const h1 = context.document_body.appendChild(document.createElement("h1"));
 		h1.innerText = "ERROR 500 - Internal server error";
@@ -53,6 +53,6 @@ export const middleware = new FrontworkMiddleware({
 	not_found_handler: NotFoundComponent,
 });
 
-export const domain_to_route_selector: DomainToRouteSelector = (context: FrontworkContext) => {
+export const domain_to_route_selector: DomainToRouteSelector = async (context: FrontworkContext) => {
 	return routes;
 }
