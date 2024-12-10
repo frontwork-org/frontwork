@@ -613,8 +613,7 @@ export interface ApiRequestExtras {
 
 export interface ApiErrorResponse {
     status: number;
-    status_text: string;
-    content: string
+    error_message: string
 }
 
 export type Result<T, E> = {
@@ -754,25 +753,18 @@ export class FrontworkContext {
         if (!response.ok) {
             console.error("api_request(", method, path, ")\n", response);
             
-            let responseBody;
             try {
-                responseBody = await response.json();
+                let api_error_response: ApiErrorResponse = await response.json();
+                api_error_response.status = response.status;
+
+                return {
+                    ok: false,
+                    err: api_error_response
+                };
             } catch {
-                try {
-                    responseBody = await response.text();
-                } catch {
-                    responseBody = 'Unable to read response body';
-                }
+                throw new Error("Could not parse ApiErrorResponse for api_request("+method+" "+path+")")
             }
     
-            return {
-                ok: false,
-                err: {
-                    status: response.status,
-                    status_text: response.statusText,
-                    content: responseBody
-                }
-            };
         }
     
         const data = await response.json();
