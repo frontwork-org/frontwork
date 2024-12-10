@@ -611,6 +611,20 @@ export interface ApiRequestExtras {
     signal?: AbortSignal | null;
 }
 
+export interface ApiErrorResponse {
+    status: number;
+    status_text: string;
+    content: string
+}
+
+export type Result<T, E> = {
+    ok: true;
+    val: T;
+} | {
+    ok: false;
+    err: E;
+};
+
 export class FrontworkContext {
     readonly platform: EnvironmentPlatform;
     readonly stage: EnvironmentStage;
@@ -692,7 +706,9 @@ export class FrontworkContext {
     }
 
 
-    async api_request<T>(method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean }, extras: ApiRequestExtras = {}): Promise<T> {
+    async api_request<T>(method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean }, extras: ApiRequestExtras = {}): Promise<Result<T, ApiErrorResponse>> {
+        // TODO: api_request should return <T> on success and an Object on fail.
+        // TODO: api_request ApiErrorResponse should comply with project cyber
         let url = this.api_protocol_address+path;
         
         // Prepare request options
@@ -738,11 +754,32 @@ export class FrontworkContext {
         if (!response.ok) {
             console.error("api_request(", method, path, ")\n", response);
             
-            throw new Error(`api_request() responded with status code: ${response.status}`);
+            let responseBody;
+            try {
+                responseBody = await response.json();
+            } catch {
+                try {
+                    responseBody = await response.text();
+                } catch {
+                    responseBody = 'Unable to read response body';
+                }
+            }
+    
+            return {
+                ok: false,
+                err: {
+                    status: response.status,
+                    status_text: response.statusText,
+                    content: responseBody
+                }
+            };
         }
-
+    
         const data = await response.json();
-        return data as T;
+        return {
+            ok: true,
+            val: data as T
+        };
     }
 
 }

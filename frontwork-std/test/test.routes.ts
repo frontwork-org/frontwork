@@ -219,13 +219,16 @@ export interface User {
 async function login_check(context: FrontworkContext): Promise<User> {
 	return await new Promise(async function (resolve, reject) {
 		context.api_request<User>("POST", "/api/v1/account/user", {})
-		.then(function(user: User) {
-			console.log("Welcome, " + user.username);
-			resolve(user);
-			return user;
+		.then(function(result) {
+			if (result.ok) {
+				console.log("Welcome, " + result.val.username);
+				resolve(result.val);
+				return result.val;
+			} else {
+				reject(new Error("login_check() NON-OK: "+result.err.status));
+			}
 		})
-		.catch(function(err) { reject(err); })
-		;
+		.catch(function(err) { reject(err); });
 	});
 }
 
