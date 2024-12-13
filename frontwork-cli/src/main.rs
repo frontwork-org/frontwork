@@ -83,6 +83,7 @@ impl Arguments {
                 "test" => SubCommand::Test,
                 "build" => SubCommand::Build,
                 "watch" => SubCommand::Watch,
+                "update" => SubCommand::Update,
                 _ => return Err("the entered subcommand is not valid"),
             };
 
