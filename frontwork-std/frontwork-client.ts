@@ -42,11 +42,20 @@ export class FrontworkClient extends Frontwork {
         // FrontworkForm halt sending data to the server and let the client handle it instead
         document.addEventListener('submit', async (event) => {
             const target = event.target as HTMLFormElement;
-            if (target.tagName === 'FORM' && target.getAttribute("fw-form")) {
+            console.log("FrontworkClientTEST target", target);
+            console.log("FrontworkClientTEST target.tagName === FORM", target.tagName === "FORM");
+            console.log("FrontworkClientTEST fw-form", target.getAttribute("fw-form") !== null);
+            console.log("FrontworkClientTEST fw-form", target.getAttribute("fw-form"));
+            
+            if (target.tagName === "FORM" && target.getAttribute("fw-form") !== null) {
                 // Prevent the form from submitting
                 let submit_button = event.submitter as HTMLButtonElement|null;
                 submit_button = submit_button && submit_button.name? submit_button : null;
-                if(await this.page_change_form(target, submit_button)) event.preventDefault();
+                
+                const result = await this.page_change_form(target, submit_button);
+                console.log("page_change_form result", result);
+                
+                if(result) event.preventDefault();
                 
             }
         });
@@ -210,7 +219,7 @@ export class FrontworkClient extends Frontwork {
     }
     
     // function to handle Form submits being handled in client
-    public async page_change_form(form: HTMLFormElement, submit_button: HTMLButtonElement|null) {
+    public async page_change_form(form: HTMLFormElement, submit_button: HTMLButtonElement|null): Promise<boolean> {
         this.page_change_ready = false;
         if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_form", null, null);
         let method = form.getAttribute("method");
@@ -258,7 +267,9 @@ export class FrontworkClient extends Frontwork {
         }
 
         const request = new FrontworkRequest(method, url, new Headers(), POST);
-        const result = await this.page_change(request, true, false);
+        const result = await this.page_change(request, true, true);
+        console.log("page_change_form result inner", result);
+        
         if(result !== null) {
             if(result.is_redirect) return true;
 

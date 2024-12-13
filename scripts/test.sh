@@ -1,13 +1,6 @@
 #!/bin/bash
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-$CURRENT_VERSION = "0.1.27"
-$NEW_VERSION = "0.1.28"
+deno run --config ${SCRIPT_DIR}/../frontwork-std/deno.client.jsonc --allow-all ${SCRIPT_DIR}/../frontwork-std/test/test.bundle.ts
 
-
-$MY_GIT_REPO=$(git config --get remote.origin.url | sed 's/.*[\/:]\/\/github\.com\/\([a-zA-Z0-9_]+\/frontwork\)\.git/\1/')
-gh pr create --repo frontwork-org/frontwork \
-  --base master \
-  --head $MY_GIT_REPO:master \
-  --title "Merge changes for v$NEW_VERSION." \
-  --body "Creating a pull request to merge changes for v$NEW_VERSION from $MY_GIT_REPO into frontwork-org/frontwork"
