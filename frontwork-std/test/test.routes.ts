@@ -122,7 +122,7 @@ class Test2Component implements Component {
 
 class Test3Component implements Component {
     async build() {
-		return new FrontworkResponseRedirect("/");	
+		return new FrontworkResponseRedirect("/", 301);
 	}
     async dom_ready() {}
 }
