@@ -46,12 +46,23 @@ git push
 
 
 # Create pull request
-$MY_GIT_REPO=$(git config --get remote.origin.url | sed 's/.*[\/:]\/\/github\.com\/\([a-zA-Z0-9_]+\/frontwork\)\.git/\1/')
+MY_GIT_REPO=$(git config --get remote.origin.url | sed 's/.*[\/:]\/\/github\.com\/\([a-zA-Z0-9_]+\/frontwork\)\.git/\1/')
 gh pr create --repo frontwork-org/frontwork \
-  --base master \
-  --head $MY_GIT_REPO:master \
-  --title "Merge changes for v$NEW_VERSION." \
-  --body "Creating a pull request to merge changes for v$NEW_VERSION from $MY_GIT_REPO into frontwork-org/frontwork"
+    --title "Merge changes for v$NEW_VERSION." \
+    --body "Creating a pull request to merge changes for v$NEW_VERSION from $MY_GIT_REPO into frontwork-org/frontwork"
+
+# Merge it
+gh pr merge --merge
+
+# Create and push tag
+git tag -a "$NEW_VERSION" -m "Release v$NEW_VERSION"
+git push origin "$NEW_VERSION"
+
+# Create release
+gh release create "$NEW_VERSION" \
+  --title "Frontwork dev-$NEW_VERSION" \
+  --notes "Release notes for version $NEW_VERSION" \
+  --target master
 
 echo "Version updated from $CURRENT_VERSION to $NEW_VERSION"
 

@@ -1,13 +1,16 @@
 #!/bin/bash
 
 
-$CURRENT_VERSION = "0.1.27"
-$NEW_VERSION = "0.1.28"
+CURRENT_VERSION="0.1.27"
+NEW_VERSION="0.1.28"
 
 
-$MY_GIT_REPO=$(git config --get remote.origin.url | sed 's/.*[\/:]\/\/github\.com\/\([a-zA-Z0-9_]+\/frontwork\)\.git/\1/')
-gh pr create --repo frontwork-org/frontwork \
-  --base master \
-  --head $MY_GIT_REPO:master \
-  --title "Merge changes for v$NEW_VERSION." \
-  --body "Creating a pull request to merge changes for v$NEW_VERSION from $MY_GIT_REPO into frontwork-org/frontwork"
+# Create and push tag
+git tag -a "$NEW_VERSION" -m "Release v$NEW_VERSION"
+git push origin "$NEW_VERSION"
+
+# Create release
+gh release create "$NEW_VERSION" \
+  --title "Frontwork dev-$NEW_VERSION" \
+  --notes "Release notes for version $NEW_VERSION" \
+  --target master
