@@ -1,16 +1,6 @@
 #!/bin/bash
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-CURRENT_VERSION="0.1.27"
-NEW_VERSION="0.1.28"
+deno run --config ${SCRIPT_DIR}/../frontwork-std/deno.client.jsonc --allow-all ${SCRIPT_DIR}/../frontwork-std/test/test.bundle.ts
 
-
-# Create and push tag
-git tag -a "$NEW_VERSION" -m "Release v$NEW_VERSION"
-git push origin "$NEW_VERSION"
-
-# Create release
-gh release create "$NEW_VERSION" \
-  --title "Frontwork dev-$NEW_VERSION" \
-  --notes "Release notes for version $NEW_VERSION" \
-  --target master

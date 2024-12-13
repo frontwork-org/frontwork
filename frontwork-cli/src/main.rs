@@ -669,6 +669,8 @@ fn build_client(project_path: &String, dist_web_path: &String) -> process::Child
         .arg("--allow-run")
         .arg(bundle_ts_path)
         .arg(dist_web_file_path)
+        .arg("-c")
+        .arg(format!("{}/deno.jsonc", project_path))
         .spawn()
         .expect("Failed to execute deno. Make sure deno is installed on this machine.")
 }

@@ -238,7 +238,8 @@ const middleware = new FrontworkMiddleware({
 			context.i18n.set_locale("en");
 			await login_check(context);
 		},
-		dom_ready: async () => { }
+		dom_ready: async () => {  console.log("ASDAAAAAAAAA");
+		 }
 	},
 	error_handler: async (context: FrontworkContext) => {
 		const document_builder = new MyMainDocumentBuilder(context);
