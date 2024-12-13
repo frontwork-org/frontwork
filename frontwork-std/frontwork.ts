@@ -537,11 +537,12 @@ export class DocumentBuilder implements DocumentBuilderInterface {
     }
 }
 
+// Generally you use 301 for redirects, but you use 302 for things that should not be cached like redirects after logins.
 export class FrontworkResponseRedirect extends FrontworkResponse {
-    constructor(redirect_path: string) {
+    constructor(redirect_path: string, status_code: number) {
         if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> "+redirect_path, null, null);
         
-        super(301, "redirecting...");
+        super(status_code, "redirecting...");
         this.add_header("Location", redirect_path);
     }
 }
@@ -706,8 +707,6 @@ export class FrontworkContext {
 
 
     async api_request<T>(method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean }, extras: ApiRequestExtras = {}): Promise<Result<T, ApiErrorResponse>> {
-        // TODO: api_request should return <T> on success and an Object on fail.
-        // TODO: api_request ApiErrorResponse should comply with project cyber
         let url = this.api_protocol_address+path;
         
         // Prepare request options
