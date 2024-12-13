@@ -1,6 +1,7 @@
 use convert_case::{Case, Casing};
 use environment_platform::Environment;
 use include_dir::{include_dir, Dir};
+use regex::Regex;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{self, Child};
@@ -34,6 +35,7 @@ fn print_help(no_error: bool, error_message: &str) {
     println!("  test                            | run main.testworker.ts");
     println!("  build                           | build the application to the dist folder. Optional use: --production or --staging");
     println!("  watch                           | start development server and build the application on changes");
+    println!("  update                          | update Frontwork dependencies to the current version of this CLI tool.");
     println!("");
 }
 
@@ -47,6 +49,7 @@ pub enum SubCommand {
     Test,
     Build,
     Watch,
+    Update,
 }
 
 pub enum Flag {
@@ -450,6 +453,12 @@ fn main() {
         SubCommand::Watch => {
             command_watch();
         }
+
+        SubCommand::Update => {
+            if let Err(e) = update_frontwork_deps() {
+                println!("Error while running Subcommand \"update\": \n{:#?}", e);
+            }
+        }
     }
 }
 
@@ -674,4 +683,36 @@ fn run_service(project_path: &String) -> process::Child {
         .arg(format!("{}/src/main.service.ts", project_path))
         .spawn()
         .expect("Failed to execute deno. Make sure deno is installed on this machine.")
+}
+
+
+fn update_frontwork_deps() -> std::io::Result<()> {
+    let project_path = get_project_path();
+    let cargo_pkg_version = env!("CARGO_PKG_VERSION");
+
+    let pattern = Regex::new(r"https://deno\.land/x/frontwork@0\.1\.26/lib\.ts").unwrap();
+    let replacement = format!("https://deno.land/x/frontwork@{}/lib.ts", cargo_pkg_version);
+
+    // You can specify the files you want to search through
+    let files = vec![
+        format!("{project_path}/src/dependencies.ts"),
+        format!("{project_path}/src/main.service.ts"),
+        format!("{project_path}/src/main.testworker.ts"),
+    ];
+
+    for file_path in files {
+        if Path::new(&file_path).exists() {
+            let content = fs::read_to_string(&file_path)?;
+            let new_content = pattern.replace_all(&content, &replacement);
+            
+            if content != new_content {
+                fs::write(&file_path, new_content.as_bytes())?;
+                println!("Updated {}", &file_path);
+            }
+        } else {
+            println!("File not found: {}", file_path);
+        }
+    }
+
+    Ok(())
 }
