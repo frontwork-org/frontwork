@@ -133,6 +133,7 @@ export class FrontworkClient extends Frontwork {
             if (do_building) {
                 const reb_result = await this.route_execute_build(context, route);
                 if (abort_controller.signal.aborted) {
+                    this.page_change_ready = true;
                     return null;
                 }
                 
@@ -147,10 +148,12 @@ export class FrontworkClient extends Frontwork {
                     const redirect_url = reb_result.reponse.get_header("Location");
                     if (redirect_url === null) {
                         FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", context, null);
+                        this.page_change_ready = true;
                         return null;
                     } else {
                         if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, context, null);
                         this.page_change_to(redirect_url, true);
+                        this.page_change_ready = true;
                         return { method: request.method, url: context.request.url, is_redirect: true, status_code: reb_result.reponse.status_code };
                     }
                 }
@@ -179,6 +182,7 @@ export class FrontworkClient extends Frontwork {
                     }
                     
                     reb_result.component.dom_ready(context, this);
+                    this.page_change_ready = true;
                     return { method: request.method, url: request.url, is_redirect: false, status_code: reb_result.reponse.status_code };
                 }
             } else {
