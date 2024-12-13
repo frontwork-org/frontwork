@@ -48,8 +48,12 @@ export function key_value_list_to_object(list: string, list_delimiter: string, k
     for (let i = 0; i < list_split.length; i++) {
         const item = list_split[i];
         const item_split: string[] = item.split(key_value_delimiter);
-        if (item_split.length === 2 && item_split[0] !== "") {
-            result[item_split[0]] = item_split[1];
+        if (item_split[0] !== "") {
+            if (item_split.length === 2) {
+                result[item_split[0]] = item_split[1];
+            } else {
+                result[item_split[0]] = "";
+            }
         }
     }
     return result;
