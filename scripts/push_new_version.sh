@@ -46,7 +46,7 @@ git push
 
 
 # Create pull request
-$MY_GIT_REPO=$(git config --get remote.origin.url | sed 's/.*[\/:]\\{1\\}\\([^\/]*\/[^\.]*\\).*/\\1/')
+$MY_GIT_REPO=$(git config --get remote.origin.url | sed 's/.*[\/:]\/\/github\.com\/\([a-zA-Z0-9_]+\/frontwork\)\.git/\1/')
 gh pr create --repo frontwork-org/frontwork \
   --base master \
   --head $MY_GIT_REPO:master \
