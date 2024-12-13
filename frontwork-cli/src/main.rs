@@ -693,8 +693,8 @@ fn update_frontwork_deps() -> std::io::Result<()> {
     let project_path = get_project_path();
     let cargo_pkg_version = env!("CARGO_PKG_VERSION");
 
-    let pattern = Regex::new(r"https://deno\.land/x/frontwork@0\.1\.26/lib\.ts").unwrap();
-    let replacement = format!("https://deno.land/x/frontwork@{}/lib.ts", cargo_pkg_version);
+    let pattern = Regex::new(r"https://deno\.land/x/frontwork@[0-9]+\.[0-9]+\.[0-9]+/").unwrap();
+    let replacement = format!("https://deno.land/x/frontwork@{}/", cargo_pkg_version);
 
     // You can specify the files you want to search through
     let files = vec![
