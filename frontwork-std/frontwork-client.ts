@@ -117,7 +117,7 @@ export class FrontworkClient extends Frontwork {
             const abort_controller = new AbortController();
             this.page_change_previous_abort_controller = abort_controller;
 
-            const context = new FrontworkContext(this.platform, this.stage, this.api_protocol_address, this.i18n, request, do_building);
+            const context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.i18n, request, do_building);
             const route: Route|null = await this.route_resolver(context);
             
             // Middleware: before Route

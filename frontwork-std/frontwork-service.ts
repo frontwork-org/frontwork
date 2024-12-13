@@ -163,18 +163,15 @@ export class FrontworkWebservice extends Frontwork {
 
                 Deno.serve(
                     { port: this.port, signal: abortController.signal },
-                    (_request: Request) => {
-                        return this.handler_dev(
-                            _request,
-                            service_started_timestamp,
-                        );
+                    (_req: Request, _req_extras) => {
+                        return this.handler_dev(_req, _req_extras, service_started_timestamp);
                     },
                 );
             } else {
                 Deno.serve(
                     { port: this.port, signal: abortController.signal },
-                    (_request: Request) => {
-                        return this.handler(_request);
+                    (_req: Request, _req_extras) => {
+                        return this.handler(_req, _req_extras);
                     },
                 );
             }
@@ -308,12 +305,12 @@ export class FrontworkWebservice extends Frontwork {
         return null;
     }
 
-    private async handler(_request: Request): Promise<Response> {
-        const POST = await new PostScope({}).from_request(_request);
+    private async handler(_req: Request, _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>): Promise<Response> {
+        const POST = await new PostScope({}).from_request(_req);
         const request = new FrontworkRequest(
-            _request.method,
-            _request.url,
-            _request.headers,
+            _req.method,
+            _req.url,
+            _req.headers,
             POST,
         );
 
@@ -340,12 +337,15 @@ export class FrontworkWebservice extends Frontwork {
 
                 if (FW.verbose_logging)
                     request.log("LONELY_SLASH_REDIRECT", null);
-                return new FrontworkResponseRedirect(new_path).into_response();
+                return new FrontworkResponseRedirect(new_path, 301).into_response();
             }
+
+            const client_ip = _req.headers.get("x-forwarded-for") || _req.headers.get("x-real-ip") || _req_extras.remoteAddr.hostname;
 
             const context = new FrontworkContext(
                 this.platform,
                 this.stage,
+                client_ip,
                 this.api_protocol_address,
                 this.i18n,
                 request,
@@ -383,16 +383,17 @@ export class FrontworkWebservice extends Frontwork {
     }
 
     private async handler_dev(
-        _request: Request,
+        _req: Request,
+        _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>,
         service_started_timestamp: string,
     ): Promise<Response> {
-        const url = _request.url;
+        const url = _req.url;
         const url_sub = url.substring(url.length - 4, url.length);
 
         if (url_sub === "//ws") {
             let response, socket: WebSocket;
             try {
-                await ({ response, socket } = Deno.upgradeWebSocket(_request));
+                await ({ response, socket } = Deno.upgradeWebSocket(_req));
             } catch {
                 return new Response(
                     "request isn't trying to upgrade to websocket.",
@@ -405,7 +406,7 @@ export class FrontworkWebservice extends Frontwork {
             };
             return response;
         } else if (url_sub === "//dr") {
-            const POST = await new PostScope({}).from_request(_request);
+            const POST = await new PostScope({}).from_request(_req);
             const report_text = POST.get("report_text");
             if (report_text === null)
                 return new Response("POST.report_text is null");
@@ -413,7 +414,7 @@ export class FrontworkWebservice extends Frontwork {
             console.log("[LOG_FROM_CLIENT]", report_text);
             return new Response("Browser FW.reporter => Dev Server reported");
         } else {
-            return this.handler(_request);
+            return this.handler(_req, _req_extras);
         }
     }
 }
