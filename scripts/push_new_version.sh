@@ -33,12 +33,41 @@ FILES=(
     "../frontwork-cli/template/src/dependencies.ts"
     "../frontwork-cli/template/src/main.service.ts"
     "../frontwork-cli/template/src/main.testworker.ts"
-    "../frontwork-cli/template/deno.lock"
 )
 
 for file in "${FILES[@]}"; do
     sed -i "s/frontwork@$CURRENT_VERSION/frontwork@$NEW_VERSION/g" "$file"
 done
+
+
+# Clean deno.lock
+DENO_LOCK_FILE="../frontwork-cli/template/deno.lock"
+
+# Array of files to check
+FILES=(
+    "dom.ts"
+    "frontwork-client.ts"
+    "frontwork-service.ts"
+    "frontwork-testworker.ts"
+    "frontwork.ts"
+    "lib.ts"
+    "utils.ts"
+)
+
+# First remove old version entries
+for file in "${FILES[@]}"; do
+    sed -i "/frontwork@${CURRENT_VERSION}\/${file}/d" "$DENO_LOCK_FILE"
+done
+
+# Remove trailing comma
+sed -i ':a;N;$!ba;s/,\n  }\n}/\n  }\n}/g' "$DENO_LOCK_FILE"
+
+# Reload cache
+deno cache --reload --lock=deno.lock src/main.testworker.ts
+deno cache --reload --lock=deno.lock src/main.client.ts
+
+echo "deno.lock has been updated with new versions and integrity hashes"
+
 
 git add -A
 git commit -m "push v$NEW_VERSION"

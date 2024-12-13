@@ -628,6 +628,7 @@ export type Result<T, E> = {
 export class FrontworkContext {
     readonly platform: EnvironmentPlatform;
     readonly stage: EnvironmentStage;
+    readonly client_ip: string; // For Deno side use only. On Client side it will be always 127.0.0.1
     readonly api_protocol_address: string;
     readonly i18n: I18n;
     readonly request: FrontworkRequest;
@@ -640,9 +641,10 @@ export class FrontworkContext {
     // Set-Cookie headers for deno side rendering. Deno should retrieve Cookies from the API and pass them to the browser. Should not be used to manually set Cookies. Use the FrontworkResponse.set_cookie method instead
     set_cookies: string[] = [];
 
-    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, api_protocol_address: string, i18n: I18n,request: FrontworkRequest, do_building: boolean) {
+    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, client_ip: string, api_protocol_address: string, i18n: I18n,request: FrontworkRequest, do_building: boolean) {
         this.platform = platform;
         this.stage = stage;
+        this.client_ip = client_ip;
         this.api_protocol_address = api_protocol_address;
         this.i18n = i18n;
         this.request = request;
@@ -732,13 +734,16 @@ export class FrontworkContext {
         }
         
         
-        // Deno should pass Cookies from the browser to the API
         if (!FW.is_client_side) {
+            // Deno should pass Cookies from the browser to the API
             let cookies_string = "";
             this.request.COOKIES.forEach((key, name) => {
                 cookies_string += key+"="+name+"; ";
             });
             options.headers.set("Cookie", cookies_string);
+
+            // Deno should pass the browser IP to the API
+            options.headers.set("X-Forwarded-For", this.client_ip);
         }
 
         const response = await fetch(url, options);
