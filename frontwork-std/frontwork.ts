@@ -174,12 +174,6 @@ class Scope {
     get(key: string): string|null {
         const value = this.items[key]
         if(value === undefined) return null;
-        // for (let i = 0; i < this.items.length; i++) {
-        //     const item = this.items[i];
-        //     if(item.key === key) {
-        //         return item.value;
-        //     }
-        // }
         return value;
     }
 
@@ -540,7 +534,7 @@ export class DocumentBuilder implements DocumentBuilderInterface {
 // Generally you use 301 for redirects, but you use 302 for things that should not be cached like redirects after logins.
 export class FrontworkResponseRedirect extends FrontworkResponse {
     constructor(redirect_path: string, status_code: number) {
-        if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> "+redirect_path, null, null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    ["+status_code+" REDIRECT]-> "+redirect_path, null, null);
         
         super(status_code, "redirecting...");
         this.add_header("Location", redirect_path);
@@ -624,6 +618,8 @@ export type Result<T, E> = {
     ok: false;
     err: E;
 };
+
+export enum PageloadType { Serverside, ClientAfterServerside, ClientDefault }
 
 export class FrontworkContext {
     readonly platform: EnvironmentPlatform;
