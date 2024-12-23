@@ -347,6 +347,7 @@ export class FrontworkWebservice extends Frontwork {
                 this.stage,
                 client_ip,
                 this.api_protocol_address,
+                this.api_protocol_address_ssr,
                 this.i18n,
                 request,
                 true,

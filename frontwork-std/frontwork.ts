@@ -625,7 +625,8 @@ export class FrontworkContext {
     readonly platform: EnvironmentPlatform;
     readonly stage: EnvironmentStage;
     readonly client_ip: string; // For Deno side use only. On Client side it will be always 127.0.0.1
-    readonly api_protocol_address: string;
+    readonly api_protocol_address: string; // API Address Browser should use
+    readonly api_protocol_address_ssr: string; // API Address Deno should use
     readonly i18n: I18n;
     readonly request: FrontworkRequest;
     readonly do_building: boolean;
@@ -637,11 +638,12 @@ export class FrontworkContext {
     // Set-Cookie headers for deno side rendering. Deno should retrieve Cookies from the API and pass them to the browser. Should not be used to manually set Cookies. Use the FrontworkResponse.set_cookie method instead
     set_cookies: string[] = [];
 
-    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, client_ip: string, api_protocol_address: string, i18n: I18n,request: FrontworkRequest, do_building: boolean) {
+    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, client_ip: string, api_protocol_address: string, api_protocol_address_ssr: string, i18n: I18n, request: FrontworkRequest, do_building: boolean) {
         this.platform = platform;
         this.stage = stage;
         this.client_ip = client_ip;
         this.api_protocol_address = api_protocol_address;
+        this.api_protocol_address_ssr = api_protocol_address_ssr;
         this.i18n = i18n;
         this.request = request;
         this.do_building = do_building;
@@ -705,7 +707,7 @@ export class FrontworkContext {
 
 
     async api_request<T>(method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean }, extras: ApiRequestExtras = {}): Promise<Result<T, ApiErrorResponse>> {
-        let url = this.api_protocol_address+path;
+        let url = (FW.is_client_side? this.api_protocol_address : this.api_protocol_address_ssr) + path;
         
         // Prepare request options
         const options: RequestInit = extras; 
@@ -788,7 +790,7 @@ export class FrontworkContext {
  *   @param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
  */
 export interface FrontworkInit {
-    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, api_protocol_address: string, domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
+    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, api_protocol_address: string, api_protocol_address_ssr: string, domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
 }
 
 export class Frontwork {
@@ -796,6 +798,7 @@ export class Frontwork {
     protected stage: EnvironmentStage
     protected port: number;
     protected api_protocol_address: string;
+    protected api_protocol_address_ssr: string;
 	protected domain_to_route_selector: DomainToRouteSelector;
 	protected middleware: FrontworkMiddleware;
     protected i18n: I18n
@@ -805,6 +808,7 @@ export class Frontwork {
 		this.stage = init.stage;
 		this.port = init.port;
 		this.api_protocol_address = init.api_protocol_address;
+		this.api_protocol_address_ssr = init.api_protocol_address_ssr;
 		this.domain_to_route_selector = init.domain_to_route_selector;
 		this.middleware = init.middleware;
 		this.i18n = init.i18n;
