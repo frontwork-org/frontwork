@@ -1,15 +1,17 @@
 #!/bin/bash
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd "$SCRIPT_DIR/../frontwork-std"
+FOLDER=$(pwd)
+pwd
 
-folder="$SCRIPT_DIR/../frontwork-std"
-cmd1="deno run --config ${SCRIPT_DIR}/../frontwork-std/deno.jsonc --allow-net --allow-read ${SCRIPT_DIR}/../frontwork-std/test/test.service.ts"
-cmd2="deno run --config ${SCRIPT_DIR}/../frontwork-std/deno.client.jsonc --allow-all ${SCRIPT_DIR}/../frontwork-std/test/test.bundle.ts"
+cmd1="deno run --config deno.jsonc --allow-net --allow-read test/test.service.ts"
+cmd2="deno run --config deno.client.jsonc --allow-all test/test.bundle.ts"
 last_hash=""
 
 # Function to calculate folder hash
 get_folder_hash() {
-    find "$folder" -type f -exec md5sum {} \; | sort | md5sum
+    find "$FOLDER" -type f -exec md5sum {} \; | sort | md5sum
 }
 
 # Function to run commands
@@ -31,7 +33,7 @@ current_hash=$(get_folder_hash)
 last_hash=$current_hash
 run_commands
 
-echo "Watching folder: $folder"
+echo "Watching folder: $FOLDER"
 
 # Watch loop
 while true; do
