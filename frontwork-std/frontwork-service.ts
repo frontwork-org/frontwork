@@ -1,3 +1,4 @@
+import { context } from 'https://deno.land/x/esbuild@v0.20.1/mod.js';
 import {} from "./dom.ts";
 import {
     Frontwork,
@@ -141,6 +142,7 @@ class Asset {
 export class FrontworkWebservice extends Frontwork {
     private style_css_absolute_path = "";
     private main_js_absolute_path = "";
+    public api_path_prefix = "/api/"
 
     private assets_folder_path = "";
     private assets: Asset[] = [];
@@ -160,7 +162,7 @@ export class FrontworkWebservice extends Frontwork {
                 const service_started_timestamp = new Date()
                     .getTime()
                     .toString();
-
+                
                 Deno.serve(
                     { port: this.port, signal: abortController.signal },
                     (_req: Request, _req_extras) => {
@@ -306,7 +308,7 @@ export class FrontworkWebservice extends Frontwork {
     }
 
     private async handler(_req: Request, _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>): Promise<Response> {
-        const POST = await new PostScope({}).from_request(_req);
+        const POST = await new PostScope({}).from_request(_req);_req_extras
         const request = new FrontworkRequest(
             _req.method,
             _req.url,
@@ -411,11 +413,54 @@ export class FrontworkWebservice extends Frontwork {
             const report_text = POST.get("report_text");
             if (report_text === null)
                 return new Response("POST.report_text is null");
-
+            
             console.log("[LOG_FROM_CLIENT]", report_text);
             return new Response("Browser FW.reporter => Dev Server reported");
+        } else if (url_sub === this.api_path_prefix) {
+            return await this.forward_request_to_api(_req, _req_extras);
         } else {
             return this.handler(_req, _req_extras);
         }
     }
+
+    async forward_request_to_api(
+        _req: Request,
+        _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>
+      ): Promise<Response> {
+        try {
+            const client_ip = _req.headers.get("x-forwarded-for") || _req.headers.get("x-real-ip") || _req_extras.remoteAddr.hostname;
+            const url = new URL(_req.url);
+            
+            // Construct new URL for the backend
+            const apiUrl = new URL(url.pathname, this.api_protocol_address_ssr);
+            url.searchParams.forEach((value, key) => {
+                apiUrl.searchParams.append(key, value);
+            });
+        
+            // Forward original headers and add some extra information
+            const headers = new Headers(_req.headers);
+            headers.append('X-Forwarded-For', client_ip);
+            headers.append('X-Forwarded-Host', url.host);
+            headers.append('X-Original-URL', url.toString());
+        
+            // Prepare request options
+            const requestOptions: RequestInit = {
+                method: _req.method,
+                headers: headers,
+                body: _req.body,
+            };
+        
+            // Make the request to backend
+            const response = await fetch(apiUrl.toString(), requestOptions);
+        
+            return response;
+        } catch (error) {
+            console.error('Error forwarding request:', error);
+            return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+      }
+
 }
