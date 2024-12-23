@@ -430,6 +430,8 @@ fn main() {
             // deno run src/testworker.service.ts
             let process = process::Command::new("deno")
                 .arg("run")
+                .arg("--allow-read")
+                .arg("--allow-net")
                 .arg(main_testworker_file_path)
                 .spawn()
                 .expect("failed to execute process")

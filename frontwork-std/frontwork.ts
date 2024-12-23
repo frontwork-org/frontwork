@@ -174,12 +174,6 @@ class Scope {
     get(key: string): string|null {
         const value = this.items[key]
         if(value === undefined) return null;
-        // for (let i = 0; i < this.items.length; i++) {
-        //     const item = this.items[i];
-        //     if(item.key === key) {
-        //         return item.value;
-        //     }
-        // }
         return value;
     }
 
@@ -540,7 +534,7 @@ export class DocumentBuilder implements DocumentBuilderInterface {
 // Generally you use 301 for redirects, but you use 302 for things that should not be cached like redirects after logins.
 export class FrontworkResponseRedirect extends FrontworkResponse {
     constructor(redirect_path: string, status_code: number) {
-        if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    [REDIRECT]-> "+redirect_path, null, null);
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "    ["+status_code+" REDIRECT]-> "+redirect_path, null, null);
         
         super(status_code, "redirecting...");
         this.add_header("Location", redirect_path);
@@ -625,11 +619,14 @@ export type Result<T, E> = {
     err: E;
 };
 
+export enum PageloadType { Serverside, ClientAfterServerside, ClientDefault }
+
 export class FrontworkContext {
     readonly platform: EnvironmentPlatform;
     readonly stage: EnvironmentStage;
     readonly client_ip: string; // For Deno side use only. On Client side it will be always 127.0.0.1
-    readonly api_protocol_address: string;
+    readonly api_protocol_address: string; // API Address Browser should use
+    readonly api_protocol_address_ssr: string; // API Address Deno should use
     readonly i18n: I18n;
     readonly request: FrontworkRequest;
     readonly do_building: boolean;
@@ -641,11 +638,12 @@ export class FrontworkContext {
     // Set-Cookie headers for deno side rendering. Deno should retrieve Cookies from the API and pass them to the browser. Should not be used to manually set Cookies. Use the FrontworkResponse.set_cookie method instead
     set_cookies: string[] = [];
 
-    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, client_ip: string, api_protocol_address: string, i18n: I18n,request: FrontworkRequest, do_building: boolean) {
+    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, client_ip: string, api_protocol_address: string, api_protocol_address_ssr: string, i18n: I18n, request: FrontworkRequest, do_building: boolean) {
         this.platform = platform;
         this.stage = stage;
         this.client_ip = client_ip;
         this.api_protocol_address = api_protocol_address;
+        this.api_protocol_address_ssr = api_protocol_address_ssr;
         this.i18n = i18n;
         this.request = request;
         this.do_building = do_building;
@@ -709,7 +707,7 @@ export class FrontworkContext {
 
 
     async api_request<T>(method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean }, extras: ApiRequestExtras = {}): Promise<Result<T, ApiErrorResponse>> {
-        let url = this.api_protocol_address+path;
+        let url = (FW.is_client_side? this.api_protocol_address : this.api_protocol_address_ssr) + path;
         
         // Prepare request options
         const options: RequestInit = extras; 
@@ -792,7 +790,7 @@ export class FrontworkContext {
  *   @param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
  */
 export interface FrontworkInit {
-    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, api_protocol_address: string, domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
+    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, api_protocol_address: string, api_protocol_address_ssr: string, domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
 }
 
 export class Frontwork {
@@ -800,6 +798,7 @@ export class Frontwork {
     protected stage: EnvironmentStage
     protected port: number;
     protected api_protocol_address: string;
+    protected api_protocol_address_ssr: string;
 	protected domain_to_route_selector: DomainToRouteSelector;
 	protected middleware: FrontworkMiddleware;
     protected i18n: I18n
@@ -809,6 +808,7 @@ export class Frontwork {
 		this.stage = init.stage;
 		this.port = init.port;
 		this.api_protocol_address = init.api_protocol_address;
+		this.api_protocol_address_ssr = init.api_protocol_address_ssr;
 		this.domain_to_route_selector = init.domain_to_route_selector;
 		this.middleware = init.middleware;
 		this.i18n = init.i18n;

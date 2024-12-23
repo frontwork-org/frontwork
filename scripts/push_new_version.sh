@@ -63,8 +63,8 @@ done
 sed -i ':a;N;$!ba;s/,\n  }\n}/\n  }\n}/g' "$DENO_LOCK_FILE"
 
 # Reload cache
-deno cache --reload --lock=deno.lock src/main.testworker.ts
-deno cache --reload --lock=deno.lock src/main.client.ts
+deno cache --reload --lock=deno.lock ../frontwork-cli/template/src/main.testworker.ts
+deno cache --reload --lock=deno.lock ../frontwork-cli/template/src/main.client.ts
 
 echo "deno.lock has been updated with new versions and integrity hashes"
 
