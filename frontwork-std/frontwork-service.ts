@@ -163,7 +163,7 @@ export class FrontworkWebservice extends Frontwork {
                 const service_started_timestamp = new Date()
                     .getTime()
                     .toString();
-                
+
                 Deno.serve(
                     { port: this.port, signal: abortController.signal },
                     (_req: Request, _req_extras) => {
@@ -359,7 +359,7 @@ export class FrontworkWebservice extends Frontwork {
 
             // Middleware: before Route
             try {
-                
+
                 await this.middleware.before_route.build(context);
                 // deno-lint-ignore no-explicit-any
             } catch (error: any) {
@@ -369,10 +369,10 @@ export class FrontworkWebservice extends Frontwork {
             // Route or Not found
             const reb_result = await this.route_execute_build(context, route);
             const reb_response = reb_result.reponse.into_response();
-            
+
             // set-cookie headers from the API
             for (let i = 0; i < context.set_cookies.length; i++) {
-                reb_response.headers.append('set-cookie', 
+                reb_response.headers.append('set-cookie',
                     context.set_cookies[i]
                         .replace(" Secure;", "")
                 );
@@ -413,49 +413,60 @@ export class FrontworkWebservice extends Frontwork {
             const report_text = POST.get("report_text");
             if (report_text === null)
                 return new Response("POST.report_text is null");
-            
+
             console.log("[LOG_FROM_CLIENT]", report_text);
             return new Response("Browser FW.reporter => Dev Server reported");
         } else if (url.pathname.substring(0, this.api_path_prefix.length) === this.api_path_prefix) {
             // forward_request_to_api
             console.log("[forward_request_to_api]", url.pathname);
-            
+
             return await this.forward_request_to_api(_req, _req_extras);
         } else {
             return this.handler(_req, _req_extras);
         }
     }
 
-    async forward_request_to_api(
+    private async forward_request_to_api(
         _req: Request,
         _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>
       ): Promise<Response> {
         try {
             const client_ip = _req.headers.get("x-forwarded-for") || _req.headers.get("x-real-ip") || _req_extras.remoteAddr.hostname;
             const url = new URL(_req.url);
-            
+
             // Construct new URL for the backend
             const apiUrl = new URL(url.pathname, this.api_protocol_address_ssr);
             url.searchParams.forEach((value, key) => {
                 apiUrl.searchParams.append(key, value);
             });
-        
+
             // Forward original headers and add some extra information
             const headers = new Headers(_req.headers);
             headers.append('X-Forwarded-For', client_ip);
             headers.append('X-Forwarded-Host', url.host);
             headers.append('X-Original-URL', url.toString());
-        
+
             // Prepare request options
             const requestOptions: RequestInit = {
                 method: _req.method,
                 headers: headers,
                 body: _req.body,
             };
-        
+
+            // Handle POST request with form data
+            if (_req.method === 'POST') {
+                const formData = await _req.formData();
+                const formBody = new URLSearchParams();
+                for (const [key, value] of formData) {
+                    formBody.append(key, value.toString());
+                }
+                headers.set('Content-Type', 'application/x-www-form-urlencoded');
+                requestOptions.body = formBody.toString();
+            }
+
             // Make the request to backend
             const response = await fetch(apiUrl.toString(), requestOptions);
-        
+
             return response;
         } catch (error) {
             console.error('Error forwarding request:', error);
@@ -464,6 +475,6 @@ export class FrontworkWebservice extends Frontwork {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
-      }
+    }
 
 }

@@ -753,7 +753,7 @@ export class FrontworkContext {
         }
         
         if (!response.ok) {
-            console.error("api_request(", method, path, ")\n", response);
+            console.error("ERROR executing api_request(", method, path, ")\n", response);
             
             try {
                 let api_error_response: ApiErrorResponse = await response.json();
@@ -764,7 +764,11 @@ export class FrontworkContext {
                     err: api_error_response
                 };
             } catch {
-                throw new Error("Could not parse ApiErrorResponse for api_request("+method+" "+path+")")
+                console.error("Could not parse ApiErrorResponse for api_request("+method+" "+path+")")
+                return {
+                    ok: false,
+                    err: { status: 501, error_message: "API did not returned parsable JSON" }
+                };
             }
     
         }
