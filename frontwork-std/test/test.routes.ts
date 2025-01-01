@@ -260,7 +260,7 @@ export const APP_CONFIG: FrontworkInit = {
 	platform: EnvironmentPlatform.Web, 
 	stage: EnvironmentStage.Development,
 	port: 8080,
-	api_protocol_address: "http://localhost:40201",
+	api_protocol_address: "",
 	api_protocol_address_ssr: "http://localhost:40201",
 	domain_to_route_selector: async (context: FrontworkContext) => {
 		const domain = context.request.host.split(":")[0];

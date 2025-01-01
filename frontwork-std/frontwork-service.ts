@@ -11,6 +11,7 @@ import {
     FrontworkResponseRedirect,
     FrontworkContext,
 } from "./frontwork.ts";
+import { urlToEsbuildResolution } from 'jsr:@luca/esbuild-deno-loader@0.9';
 
 class Asset {
     absolute_path: string;
@@ -308,7 +309,7 @@ export class FrontworkWebservice extends Frontwork {
     }
 
     private async handler(_req: Request, _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>): Promise<Response> {
-        const POST = await new PostScope({}).from_request(_req);_req_extras
+        const POST = await new PostScope({}).from_request(_req);
         const request = new FrontworkRequest(
             _req.method,
             _req.url,
@@ -390,10 +391,9 @@ export class FrontworkWebservice extends Frontwork {
         _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>,
         service_started_timestamp: string,
     ): Promise<Response> {
-        const url = _req.url;
-        const url_sub = url.substring(url.length - 4, url.length);
+        const url = new URL(_req.url);
 
-        if (url_sub === "//ws") {
+        if (url.pathname === "//ws") {
             let response, socket: WebSocket;
             try {
                 await ({ response, socket } = Deno.upgradeWebSocket(_req));
@@ -408,7 +408,7 @@ export class FrontworkWebservice extends Frontwork {
                 socket.send(service_started_timestamp);
             };
             return response;
-        } else if (url_sub === "//dr") {
+        } else if (url.pathname === "//dr") {
             const POST = await new PostScope({}).from_request(_req);
             const report_text = POST.get("report_text");
             if (report_text === null)
@@ -416,7 +416,10 @@ export class FrontworkWebservice extends Frontwork {
             
             console.log("[LOG_FROM_CLIENT]", report_text);
             return new Response("Browser FW.reporter => Dev Server reported");
-        } else if (url_sub === this.api_path_prefix) {
+        } else if (url.pathname.substring(0, this.api_path_prefix.length) === this.api_path_prefix) {
+            // forward_request_to_api
+            console.log("[forward_request_to_api]", url.pathname);
+            
             return await this.forward_request_to_api(_req, _req_extras);
         } else {
             return this.handler(_req, _req_extras);

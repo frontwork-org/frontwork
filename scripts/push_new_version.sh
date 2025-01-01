@@ -62,12 +62,6 @@ done
 # Remove trailing comma
 sed -i ':a;N;$!ba;s/,\n  }\n}/\n  }\n}/g' "$DENO_LOCK_FILE"
 
-# Reload cache
-deno cache --reload --lock=deno.lock ../frontwork-cli/template/src/main.testworker.ts
-deno cache --reload --lock=deno.lock ../frontwork-cli/template/src/main.client.ts
-
-echo "deno.lock has been updated with new versions and integrity hashes"
-
 
 git add -A
 git commit -m "push v$NEW_VERSION"
@@ -103,3 +97,10 @@ echo ""
 cd ../frontwork-cli
 cargo publish
 cargo install --path .
+
+
+# Reload cache
+deno cache --reload --lock=deno.lock ../frontwork-cli/template/src/main.testworker.ts
+deno cache --reload --lock=deno.lock ../frontwork-cli/template/src/main.client.ts
+
+echo "deno.lock has been updated with new versions and integrity hashes"
