@@ -57,29 +57,36 @@ export const FW =  {
 
 /**
  * Utility functions for DOM element manipulation.
+ * Methods will only execute if do_building is true
  */
 export class HTMLElementWrapper<T extends HTMLElement> {
-    public element: T;
+    readonly element: T;
+    readonly created_element: boolean; // true if element was created; Otherwise false the element already exists
 
-    constructor(element: T) {
+    constructor(element: T, used_building: boolean) {
         this.element = element;
+        this.created_element = used_building;
     }
 
     append_to(parent: HTMLElementWrapper<HTMLElement>): this {
-        parent.element.appendChild(this.element);
+        if(this.created_element) parent.element.appendChild(this.element);
         return this;
     }
 
     add_event(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
-        this.element.addEventListener(type, listener, options);
+        if(this.created_element) this.element.addEventListener(type, listener, options);
     }
 
     replace_text(search: string, replace: string) {
-        this.element.innerText = this.element.innerText.split(search).join(replace);
+        if(this.created_element) this.element.innerText = this.element.innerText.split(search).join(replace);
     }
 
     replace_html(search: string, replace: string) {
-        this.element.innerHTML = this.element.innerHTML.split(search).join(replace);
+        if(this.created_element) this.element.innerHTML = this.element.innerHTML.split(search).join(replace);
+    }
+
+    then(runnable: () => void) {
+        if(this.created_element) runnable();
     }
 }
 
@@ -88,7 +95,7 @@ export class HTMLElementWrapper<T extends HTMLElement> {
  */
 export class FrontworkForm extends HTMLElementWrapper<HTMLFormElement> {
     constructor(context: FrontworkContext, id: string, action: string, method: string) {
-        super(context.ensure_element("form", id, { action: action, method: method }).element);
+        super(context.ensure_element("form", id, { action: action, method: method }).element, context.do_building);
         this.element.setAttribute("fw-form", "1");
     }
 }
@@ -661,13 +668,13 @@ export class FrontworkContext {
      * @returns HTMLElementWrapper
      */
     create_element<K extends keyof HTMLElementTagNameMap>(tag: K, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
-        const element = document.createElement(tag);
+        const elem = document.createElement(tag);
         if (attributes) {
             for (const key in attributes) {
-                element.setAttribute(key, attributes[key]);
+                elem.setAttribute(key, attributes[key]);
             }
         }
-        return new HTMLElementWrapper(element);
+        return new HTMLElementWrapper(elem, this.do_building);
     }
 
     /**
@@ -679,11 +686,16 @@ export class FrontworkContext {
      */
     ensure_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
         const elem = this.do_building? this.document_html.querySelector("#"+id) : document.getElementById(id);
-        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K]);
+        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K], this.do_building);
         
-        const elem2 = this.create_element(tag, attributes);
-        elem2.element.id = id;
-        return elem2;
+        const elem2 = document.createElement(tag);
+        elem2.id = id;
+        if (attributes) {
+            for (const key in attributes) {
+                elem2.setAttribute(key, attributes[key]);
+            }
+        }
+        return new HTMLElementWrapper(elem2, true);
     }
 
     /**
@@ -696,13 +708,17 @@ export class FrontworkContext {
      */
     ensure_text_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
         const elem = this.do_building? this.document_html.querySelector("#"+id) : document.getElementById(id);
-        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K]);
+        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K], this.do_building);
         
-        const elem2 = this.create_element(tag, attributes);
-        elem2.element.id = id;
-        elem2.element.innerText = this.i18n.get_translation(id);
-
-        return elem2;
+        const elem2 = document.createElement(tag);
+        elem2.id = id;
+        elem2.innerText = this.i18n.get_translation(id);
+        if (attributes) {
+            for (const key in attributes) {
+                elem2.setAttribute(key, attributes[key]);
+            }
+        }
+        return new HTMLElementWrapper(elem2, true);
     }
 
 
