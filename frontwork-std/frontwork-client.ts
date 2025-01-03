@@ -201,7 +201,7 @@ export class FrontworkClient extends Frontwork {
     }
     
     // function replacement for window.location; accessible for the Component method dom_ready
-    public async page_change_to(url_or_path: string, ignore_not_ready: boolean) {
+    public async page_change_to(url_or_path: string, ignore_not_ready?: boolean) {
         if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "    page_change_to: " + url_or_path, null, null);
         let url;
         const test = url_or_path.indexOf("//");
@@ -212,7 +212,7 @@ export class FrontworkClient extends Frontwork {
         }
 
         const request = new FrontworkRequest("GET", url, new Headers(), new PostScope({}));
-        const result = await this.page_change(request, true, ignore_not_ready);
+        const result = await this.page_change(request, true, ignore_not_ready === true);
         if(result !== null) {
             if(result.is_redirect) return true;
 
