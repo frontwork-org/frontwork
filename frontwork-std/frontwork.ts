@@ -741,7 +741,7 @@ export class FrontworkContext {
         }
 
         if (method === "GET") {
-            url += "?"+params_string;
+            if(params_string.length > 0) url += "?"+params_string;
         } else {
             options.body = params_string;
             options.headers.set("Content-Type", "application/x-www-form-urlencoded");

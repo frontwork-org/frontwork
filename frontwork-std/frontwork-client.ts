@@ -30,7 +30,30 @@ export class FrontworkClient extends Frontwork {
             if (target.tagName === 'A') {
                 if (this.page_change_ready) {
                     if (await this.page_change_to(target.href, false)) {
-                        // only prevent default if page_change_to fails. It fails if the link is external or unknown.
+                        // only prevent default if page_change_to does not fail. It fails if the link is external or unknown.
+                        event.preventDefault();
+                    }
+                } else {
+                    event.preventDefault();
+                }
+            }
+        }, false);
+
+        document.addEventListener('click', async (event) => {
+            const target = event.target as HTMLAnchorElement;
+            if (target.tagName === 'A' && (target.target === "" || target.target === "_self")) {
+                // Create a URL object to easily access hostname
+                const url = new URL(target.href);
+                
+                // Check if hostname exists and is different from current hostname
+                if (url.hostname !== '' && url.hostname !== window.location.hostname) {
+                    // External link - let it proceed normally
+                    return;
+                }
+        
+                if (this.page_change_ready) {
+                    if (await this.page_change_to(target.href, false)) {
+                        // only prevent default if page_change_to fails
                         event.preventDefault();
                     }
                 } else {
