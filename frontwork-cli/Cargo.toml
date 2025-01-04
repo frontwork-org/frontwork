@@ -1,6 +1,6 @@
 [package]
 name = "frontwork"
-version = "0.1.38"
+version = "0.1.39"
 edition = "2021"
 authors = ["LuceusXylian <luceusxylian@gmail.com>", "frontwork-org Contributors <https://github.com/frontwork-org>"]
 description = "The TypeScript Framework using Deno & Webassembly"

@@ -1,4 +1,3 @@
-import { context } from 'https://deno.land/x/esbuild@v0.20.1/mod.js';
 import {} from "./dom.ts";
 import {
     Frontwork,
@@ -11,9 +10,9 @@ import {
     FrontworkResponseRedirect,
     FrontworkContext,
 } from "./frontwork.ts";
-import { urlToEsbuildResolution } from 'jsr:@luca/esbuild-deno-loader@0.9';
 
-class Asset {
+
+export class Asset {
     absolute_path: string;
     relative_path: string;
     content_type: string;
@@ -140,10 +139,13 @@ class Asset {
     }
 }
 
+//TODO: Consider: FrontworkSubservice
+export interface FrontworkSubservice { (_req: Request, _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>): Response|null };
+
 export class FrontworkWebservice extends Frontwork {
     private style_css_absolute_path = "";
     private main_js_absolute_path = "";
-    public api_path_prefix = "/api/"
+    public api_path_prefixes = ["/api/"];
 
     private assets_folder_path = "";
     private assets: Asset[] = [];
@@ -416,14 +418,19 @@ export class FrontworkWebservice extends Frontwork {
 
             console.log("[LOG_FROM_CLIENT]", report_text);
             return new Response("Browser FW.reporter => Dev Server reported");
-        } else if (url.pathname.substring(0, this.api_path_prefix.length) === this.api_path_prefix) {
-            // forward_request_to_api
-            console.log("[forward_request_to_api]", url.pathname);
-
-            return await this.forward_request_to_api(_req, _req_extras);
-        } else {
-            return this.handler(_req, _req_extras);
         }
+
+        for (let i = 0; i < this.api_path_prefixes.length; i++) {
+            const api_path_prefix = this.api_path_prefixes[i];
+            if (url.pathname.substring(0, api_path_prefix.length) === api_path_prefix) {
+                // forward_request_to_api
+                console.log("[forward_request_to_api]", url.pathname);
+    
+                return await this.forward_request_to_api(_req, _req_extras);
+            }
+        }
+
+        return this.handler(_req, _req_extras);
     }
 
     private async forward_request_to_api(
