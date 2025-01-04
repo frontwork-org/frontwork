@@ -453,17 +453,6 @@ export class FrontworkWebservice extends Frontwork {
                 body: _req.body,
             };
 
-            // Handle POST request with form data
-            if (_req.method === 'POST') {
-                const formData = await _req.formData();
-                const formBody = new URLSearchParams();
-                for (const [key, value] of formData) {
-                    formBody.append(key, value.toString());
-                }
-                headers.set('Content-Type', 'application/x-www-form-urlencoded');
-                requestOptions.body = formBody.toString();
-            }
-
             // Make the request to backend
             const response = await fetch(apiUrl.toString(), requestOptions);
 
