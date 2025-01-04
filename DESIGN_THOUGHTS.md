@@ -38,4 +38,4 @@ May develop bad habits to use the constructor for rendering
 ## Test an document.create_element method that creates only the element and append to parent IF it does not exit on its parent.
 Not possible / unknown how to find element for ClientAfterServerside
 
-## TODO: Context.pageload_type { Serverside, ClientAfterServerside, ClientDefault }
+## TODO: Consider: Context.pageload_type { Serverside, ClientAfterServerside, ClientDefault }
