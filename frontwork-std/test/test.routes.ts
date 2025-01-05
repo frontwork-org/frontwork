@@ -236,10 +236,9 @@ const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: async (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
-			await login(context, "TestUser", "doesNotExist");
+			// await login(context, "TestUser", "doesNotExist");
 		},
-		dom_ready: async () => {  console.log("ASDAAAAAAAAA");
-		 }
+		dom_ready: async () => {  console.log("ASDAAAAAAAAA"); }
 	},
 	error_handler: async (context: FrontworkContext) => {
 		const document_builder = new MyMainDocumentBuilder(context);

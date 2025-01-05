@@ -237,16 +237,42 @@ export class FrontworkWebservice extends Frontwork {
         return this;
     }
 
-    private assets_resolver(request: FrontworkRequest): Response | null {
+    private async create_etag(path: string) {
+        const fileInfo = await Deno.stat(this.style_css_absolute_path);
+        return `W/"${fileInfo.size}-${fileInfo.mtime?.getTime() || ''}"`;
+    }
+
+    private async create_file_response(request: FrontworkRequest, path: string, content_type: string) {
+        // Caching implementation:
+        const etag = await this.create_etag(path);
+        const cache_header = request.headers.get("if-none-match");
+        if (etag === cache_header) {
+            return new Response(null, {
+                status: 304,
+                headers: {
+                    "content-type": content_type,
+                    'Cache-Control': 'public, max-age=0, must-revalidate',
+                    "ETag": etag,
+                },
+            });
+        }
+
+        const file = Deno.readFileSync(path);
+        const response = new Response(file, {
+            headers: {
+                "content-type": "text/css; charset=utf-8",
+                'Cache-Control': 'public, max-age=0, must-revalidate',
+                "ETag": etag,
+            }
+        });
+
+        return response;
+    }
+
+    private async assets_resolver(request: FrontworkRequest): Promise<Response | null> {
         if (request.path === "/assets/style.css") {
             try {
-                const file = Deno.readFileSync(this.style_css_absolute_path);
-                const response = new Response(file);
-                response.headers.append(
-                    "content-type",
-                    "text/css; charset=utf-8",
-                );
-                return response;
+                return this.create_file_response(request, this.style_css_absolute_path, "text/css; charset=utf-8");
                 // deno-lint-ignore no-explicit-any
             } catch (error: any) {
                 FW.reporter(
@@ -262,13 +288,7 @@ export class FrontworkWebservice extends Frontwork {
             }
         } else if (request.path === "/assets/main.js") {
             try {
-                const file = Deno.readFileSync(this.main_js_absolute_path);
-                const response = new Response(file);
-                response.headers.append(
-                    "content-type",
-                    "text/javascript; charset=utf-8",
-                );
-                return response;
+                return this.create_file_response(request, this.main_js_absolute_path, "text/javascript; charset=utf-8");
                 // deno-lint-ignore no-explicit-any
             } catch (error: any) {
                 FW.reporter(
@@ -287,10 +307,7 @@ export class FrontworkWebservice extends Frontwork {
         for (const asset of this.assets) {
             if (asset.relative_path === request.path) {
                 try {
-                    const file = Deno.readFileSync(asset.absolute_path);
-                    const response = new Response(file);
-                    response.headers.append("content-type", asset.content_type);
-                    return response;
+                    return this.create_file_response(request, asset.absolute_path, asset.content_type);
                     // deno-lint-ignore no-explicit-any
                 } catch (error: any) {
                     FW.reporter(
@@ -321,7 +338,7 @@ export class FrontworkWebservice extends Frontwork {
 
         try {
             // Assets resolver
-            const resolved_asset = this.assets_resolver(request);
+            const resolved_asset = await this.assets_resolver(request);
             if (resolved_asset !== null) {
                 if (FW.verbose_logging) request.log("ASSET", null);
                 return resolved_asset;

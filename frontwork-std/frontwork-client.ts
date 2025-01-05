@@ -25,20 +25,6 @@ export class FrontworkClient extends Frontwork {
         });
 
         // add event listener for page change on link click
-        document.addEventListener('click', async (event) =>  {
-            const target = event.target as HTMLAnchorElement;
-            if (target.tagName === 'A') {
-                if (this.page_change_ready) {
-                    if (await this.page_change_to(target.href, false)) {
-                        // only prevent default if page_change_to does not fail. It fails if the link is external or unknown.
-                        event.preventDefault();
-                    }
-                } else {
-                    event.preventDefault();
-                }
-            }
-        }, false);
-
         document.addEventListener('click', async (event) => {
             const target = event.target as HTMLAnchorElement;
             if (target.tagName === 'A' && (target.target === "" || target.target === "_self")) {
@@ -53,7 +39,7 @@ export class FrontworkClient extends Frontwork {
         
                 if (this.page_change_ready) {
                     if (await this.page_change_to(target.href, false)) {
-                        // only prevent default if page_change_to fails
+                        // only prevent default if page_change_to does not fail
                         event.preventDefault();
                     }
                 } else {
@@ -65,10 +51,6 @@ export class FrontworkClient extends Frontwork {
         // FrontworkForm halt sending data to the server and let the client handle it instead
         document.addEventListener('submit', async (event) => {
             const target = event.target as HTMLFormElement;
-            console.log("FrontworkClientTEST target", target);
-            console.log("FrontworkClientTEST target.tagName === FORM", target.tagName === "FORM");
-            console.log("FrontworkClientTEST fw-form", target.getAttribute("fw-form") !== null);
-            console.log("FrontworkClientTEST fw-form", target.getAttribute("fw-form"));
             
             if (target.tagName === "FORM" && target.getAttribute("fw-form") !== null) {
                 // Prevent the form from submitting
