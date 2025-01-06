@@ -1,4 +1,4 @@
-import { FrontworkWebservice } from "https://deno.land/x/frontwork@0.1.40/frontwork-service.ts";
+import { FrontworkWebservice } from "https://deno.land/x/frontwork@0.1.41/frontwork-service.ts";
 import { APP_CONFIG } from "./environments/environment.ts";
 import { EnvironmentStage } from './dependencies.ts';
 

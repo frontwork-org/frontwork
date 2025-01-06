@@ -518,13 +518,13 @@ export class DocumentBuilder implements DocumentBuilderInterface {
         const style_css = this.context.document_head.appendChild( document.createElement("link") );
         style_css.setAttribute("id", "fw-style");
         style_css.setAttribute("rel", "stylesheet");
-        style_css.setAttribute("href", "/assets/style.css");
+        style_css.setAttribute("href", "/css/style.css");
         style_css.setAttribute("type", "text/css");
 
         // force adding main.js to the end of the body
         const main_js = this.context.document_body.appendChild( document.createElement("script") );
         main_js.setAttribute("id", "fw-script");
-        main_js.setAttribute("src", "/assets/main.js");
+        main_js.setAttribute("src", "/js/main.js");
         main_js.setAttribute("type", "text/javascript");
 
         return this.context.document_html;
