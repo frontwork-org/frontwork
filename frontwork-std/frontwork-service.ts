@@ -16,126 +16,94 @@ export class Asset {
     absolute_path: string;
     relative_path: string;
     content_type: string;
+    etag: string;
 
-    constructor(absolute_path: string, relative_file_path: string) {
+    constructor(absolute_path: string, relative_file_path: string, content_type: string|null) {
         this.absolute_path = absolute_path;
         this.relative_path = relative_file_path;
+        this.content_type = content_type === null? this.guess_content_type() : content_type;
+        this.etag = this.create_etag(absolute_path);
+    }
 
-        const file_dot_split = relative_file_path.split(".");
+    private guess_content_type() {
+        const file_dot_split = this.relative_path.split(".");
         const file_extention = file_dot_split[file_dot_split.length - 1];
         switch (file_extention) {
-            case "js":
-                this.content_type = "text/javascript; charset=utf-8";
-                break;
-            case "css":
-                this.content_type = "text/css; charset=utf-8";
-                break;
-            case "txt":
-                this.content_type = "text/txt; charset=utf-8";
-                break;
-            case "csv":
-                this.content_type = "text/csv; charset=utf-8";
-                break;
+            case "js": return "text/javascript; charset=utf-8";
+            case "css": return "text/css; charset=utf-8";
+            case "txt": return "text/txt; charset=utf-8";
+            case "csv": return "text/csv; charset=utf-8";
 
-            case "xml":
-                this.content_type = "application/xml";
-                break;
-            case "json":
-                this.content_type = "application/json";
-                break;
+            case "xml": return "application/xml";
+            case "json": return "application/json";
 
-            case "webp":
-                this.content_type = "image/webp";
-                break;
-            case "ico":
-                this.content_type = "image/x-icon";
-                break;
-            case "png":
-                this.content_type = "image/png";
-                break;
-            case "jpg":
-                this.content_type = "image/jpeg";
-                break;
-            case "jpeg":
-                this.content_type = "image/jpeg";
-                break;
-            case "gif":
-                this.content_type = "image/gif";
-                break;
+            case "webp": return "image/webp";
+            case "ico": return "image/x-icon";
+            case "png": return "image/png";
+            case "jpg": return "image/jpeg";
+            case "jpeg": return "image/jpeg";
+            case "gif": return "image/gif";
 
-            case "otf":
-                this.content_type = "font/otf";
-                break;
-            case "ttf":
-                this.content_type = "font/ttf";
-                break;
-            case "woff":
-                this.content_type = "font/woff";
-                break;
-            case "woff2":
-                this.content_type = "font/woff2";
-                break;
-            case "eot":
-                this.content_type = "application/vnd.ms-fontobject";
-                break;
+            case "otf": return "font/otf";
+            case "ttf": return "font/ttf";
+            case "woff": return "font/woff";
+            case "woff2": return "font/woff2";
+            case "eot": return "application/vnd.ms-fontobject";
 
-            case "weba":
-                this.content_type = "audio/webm";
-                break;
-            case "opus":
-                this.content_type = "audio/x-opus";
-                break;
-            case "flac":
-                this.content_type = "audio/x-flac";
-                break;
-            case "m4a":
-                this.content_type = "audio/x-m4a";
-                break;
-            case "wav":
-                this.content_type = "audio/x-wav";
-                break;
-            case "mp3":
-                this.content_type = "audio/mp3";
-                break;
-            case "aac":
-                this.content_type = "audio/aac";
-                break;
+            case "weba": return "audio/webm";
+            case "opus": return "audio/x-opus";
+            case "flac": return "audio/x-flac";
+            case "m4a": return "audio/x-m4a";
+            case "wav": return "audio/x-wav";
+            case "mp3": return "audio/mp3";
+            case "aac": return "audio/aac";
 
-            case "webm":
-                this.content_type = "video/webm";
-                break;
-            case "mp4":
-                this.content_type = "video/mp4";
-                break;
-            case "m4v":
-                this.content_type = "video/x-m4v";
-                break;
-            case "mkv":
-                this.content_type = "video/x-matroska";
-                break;
-            case "mk3d":
-                this.content_type = "video/x-matroska";
-                break;
-            case "mks":
-                this.content_type = "video/x-matroska";
-                break;
-            case "avi":
-                this.content_type = "video/x-msvideo";
-                break;
-
-            default:
-                this.content_type = "unknown";
-                FW.reporter(
-                    LogType.Warn,
-                    "ASSET",
-                    "Unknown mime type for file extention '" +
-                        file_extention +
-                        "'. Please use only compatible and efficient file types for the web.",
-                    null,
-                    null,
-                );
-                break;
+            case "webm": return "video/webm";
+            case "mp4": return "video/mp4";
+            case "m4v": return "video/x-m4v";
+            case "mkv": return "video/x-matroska";
+            case "mk3d": return "video/x-matroska";
+            case "mks": return "video/x-matroska";
+            case "avi": return "video/x-msvideo";
         }
+
+        FW.reporter(
+            LogType.Warn,
+            "ASSET",
+            "Unknown mime type for file extention '" +
+                file_extention +
+                "'. Please use only compatible and efficient file types for the web.",
+            null,
+            null,
+        );
+        return "unknown";
+    }
+
+    private create_etag(absolute_path: string) {
+        const fileInfo = Deno.statSync(absolute_path);
+        return `W/"${fileInfo.size}-${fileInfo.mtime?.getTime() || ''}"`;
+    }
+
+    create_file_response(request: FrontworkRequest, cache_max_age: number) {
+        // Caching implementation:
+        const headers: HeadersInit = {
+            "content-type": this.content_type,
+            "Cache-Control": "public, max-age="+cache_max_age.toString()+", must-revalidate",
+            "ETag": this.etag,
+        };
+        const cache_header = request.headers.get("if-none-match");
+        if (this.etag === cache_header) {
+            return new Response(null, {
+                status: 304,
+                headers: headers,
+            });
+        }
+
+        const file = Deno.readFileSync(this.absolute_path);
+        return new Response(file, {
+            status: 200,
+            headers: headers,
+        });
     }
 }
 
@@ -143,9 +111,10 @@ export class Asset {
 export interface FrontworkSubservice { (_req: Request, _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>): Response|null };
 
 export class FrontworkWebservice extends Frontwork {
-    private style_css_absolute_path = "";
-    private main_js_absolute_path = "";
-    public api_path_prefixes = ["/api/"];
+    private style_css!: Asset;
+    private main_js!: Asset;
+    private cache_max_age = 0;
+    private api_path_prefixes = ["/api/"];
 
     private assets_folder_path = "";
     private assets: Asset[] = [];
@@ -212,6 +181,7 @@ export class FrontworkWebservice extends Frontwork {
                         new Asset(
                             dir_path + dirEntry.name,
                             relative_path + dirEntry.name,
+                            null
                         ),
                     );
                 } else if (dirEntry.isDirectory) {
@@ -228,75 +198,51 @@ export class FrontworkWebservice extends Frontwork {
     }
 
     setup_style_css(style_css_absolute_path: string) {
-        this.style_css_absolute_path = style_css_absolute_path;
+        this.style_css = new Asset(style_css_absolute_path, "/css/style.css", "text/css; charset=utf-8");
         return this;
     }
-
+    
     setup_main_js(main_js_absolute_path: string) {
-        this.main_js_absolute_path = main_js_absolute_path;
+        this.main_js = new Asset(main_js_absolute_path, "/js/main.js", "text/javascript; charset=utf-8");
         return this;
     }
-
-    private async create_etag(path: string) {
-        const fileInfo = await Deno.stat(this.style_css_absolute_path);
-        return `W/"${fileInfo.size}-${fileInfo.mtime?.getTime() || ''}"`;
+    
+    set_cache_max_age(cache_max_age: number) {
+        this.cache_max_age = cache_max_age;
+        return this;
     }
-
-    private async create_file_response(request: FrontworkRequest, path: string, content_type: string) {
-        // Caching implementation:
-        const etag = await this.create_etag(path);
-        const cache_header = request.headers.get("if-none-match");
-        if (etag === cache_header) {
-            return new Response(null, {
-                status: 304,
-                headers: {
-                    "content-type": content_type,
-                    'Cache-Control': 'public, max-age=0, must-revalidate',
-                    "ETag": etag,
-                },
-            });
-        }
-
-        const file = Deno.readFileSync(path);
-        const response = new Response(file, {
-            headers: {
-                "content-type": content_type,
-                'Cache-Control': 'public, max-age=0, must-revalidate',
-                "ETag": etag,
-            }
-        });
-
-        return response;
+    
+    set_api_path_prefixes(api_path_prefixes: string[]) {
+        this.api_path_prefixes = api_path_prefixes;
+        return this;
     }
 
     private async assets_resolver(request: FrontworkRequest): Promise<Response | null> {
-        if (request.path === "/css/style.css") {
+        if (request.path === this.style_css.relative_path) {
             try {
-                return this.create_file_response(request, this.style_css_absolute_path, "text/css; charset=utf-8");
+                return this.style_css.create_file_response(request, this.cache_max_age);
                 // deno-lint-ignore no-explicit-any
             } catch (error: any) {
                 FW.reporter(
                     LogType.Error,
                     "ASSET",
-                    "ERROR can not load style.css from '" +
-                        this.style_css_absolute_path +
-                        "'\n",
+                    "ERROR can not load style.css from '"
+                        + this.style_css.absolute_path + "'\n",
                     null,
                     error,
                 );
                 return null;
             }
-        } else if (request.path === "/js/main.js") {
+        } else if (request.path === this.main_js.relative_path) {
             try {
-                return this.create_file_response(request, this.main_js_absolute_path, "text/javascript; charset=utf-8");
+                return this.main_js.create_file_response(request, this.cache_max_age);
                 // deno-lint-ignore no-explicit-any
             } catch (error: any) {
                 FW.reporter(
                     LogType.Error,
                     "ASSET",
-                    "ERROR can not load main.js from '" +
-                        this.main_js_absolute_path +
-                        "'\n",
+                    "ERROR can not load main.js from '"
+                        + this.main_js.absolute_path + "'\n",
                     null,
                     error,
                 );
@@ -307,7 +253,7 @@ export class FrontworkWebservice extends Frontwork {
         for (const asset of this.assets) {
             if (asset.relative_path === request.path) {
                 try {
-                    return this.create_file_response(request, asset.absolute_path, asset.content_type);
+                    return asset.create_file_response(request, this.cache_max_age);
                     // deno-lint-ignore no-explicit-any
                 } catch (error: any) {
                     FW.reporter(
