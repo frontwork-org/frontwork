@@ -270,7 +270,7 @@ export class FrontworkWebservice extends Frontwork {
     }
 
     private async assets_resolver(request: FrontworkRequest): Promise<Response | null> {
-        if (request.path === "/assets/style.css") {
+        if (request.path === "/css/style.css") {
             try {
                 return this.create_file_response(request, this.style_css_absolute_path, "text/css; charset=utf-8");
                 // deno-lint-ignore no-explicit-any
@@ -286,7 +286,7 @@ export class FrontworkWebservice extends Frontwork {
                 );
                 return null;
             }
-        } else if (request.path === "/assets/main.js") {
+        } else if (request.path === "/js/main.js") {
             try {
                 return this.create_file_response(request, this.main_js_absolute_path, "text/javascript; charset=utf-8");
                 // deno-lint-ignore no-explicit-any
