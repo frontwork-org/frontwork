@@ -260,7 +260,7 @@ export class FrontworkWebservice extends Frontwork {
         const file = Deno.readFileSync(path);
         const response = new Response(file, {
             headers: {
-                "content-type": "text/css; charset=utf-8",
+                "content-type": content_type,
                 'Cache-Control': 'public, max-age=0, must-revalidate',
                 "ETag": etag,
             }
