@@ -137,11 +137,17 @@ export class I18n {
         return this.selected_locale.get_translation(key);
     }
 
-    get_translation_with_replace(key: string, search: string, replace: string): string {
+    get_translation_replace(key: string, search: string, replace: string): string {
         return this.get_translation(key).split(search).join(replace);
     }
-    
-}
+
+    get_translation_replace_number(number: number, key_one: string, key_multiple: string): string {
+        if (number === 1) return this.selected_locale.get_translation(key_one);
+        return this.selected_locale.get_translation(key_multiple);
+    }
+
+}    
+
 
 export class I18nLocale {
     locale: string;
