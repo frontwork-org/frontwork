@@ -57,15 +57,15 @@ export const FW =  {
 
 /**
  * Utility functions for DOM element manipulation.
- * Methods will only execute if do_building is true
+ * Some methods will only execute if do_building is true
  */
 export class HTMLElementWrapper<T extends HTMLElement> {
     readonly element: T;
     readonly created_element: boolean; // true if element was created; Otherwise false the element already exists
 
-    constructor(element: T, used_building: boolean) {
+    constructor(element: T, created_element: boolean) {
         this.element = element;
-        this.created_element = used_building;
+        this.created_element = created_element;
     }
 
     append_to(parent: HTMLElementWrapper<HTMLElement>): this {
@@ -73,16 +73,12 @@ export class HTMLElementWrapper<T extends HTMLElement> {
         return this;
     }
 
-    add_event(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
-        if(this.created_element) this.element.addEventListener(type, listener, options);
-    }
-
     replace_text(search: string, replace: string) {
-        if(this.created_element) this.element.innerText = this.element.innerText.split(search).join(replace);
+        this.element.innerText = this.element.innerText.split(search).join(replace);
     }
 
     replace_html(search: string, replace: string) {
-        if(this.created_element) this.element.innerHTML = this.element.innerHTML.split(search).join(replace);
+        this.element.innerHTML = this.element.innerHTML.split(search).join(replace);
     }
 
     then(runnable: () => void) {
@@ -559,6 +555,7 @@ export interface DomReadyEvent {
 export declare interface Component {
     build: BuildEvent;
     dom_ready: DomReadyEvent;
+    on_destroy: (context: FrontworkContext, client: FrontworkClient) => void;
 }
 
 export interface ErrorHandler {
@@ -674,7 +671,7 @@ export class FrontworkContext {
                 elem.setAttribute(key, attributes[key]);
             }
         }
-        return new HTMLElementWrapper(elem, this.do_building);
+        return new HTMLElementWrapper(elem, true);
     }
 
     /**
@@ -686,7 +683,7 @@ export class FrontworkContext {
      */
     ensure_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
         const elem = this.do_building? this.document_html.querySelector("#"+id) : document.getElementById(id);
-        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K], this.do_building);
+        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K], false);
         
         const elem2 = document.createElement(tag);
         elem2.id = id;
@@ -708,7 +705,7 @@ export class FrontworkContext {
      */
     ensure_text_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
         const elem = this.do_building? this.document_html.querySelector("#"+id) : document.getElementById(id);
-        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K], this.do_building);
+        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K], false);
         
         const elem2 = document.createElement(tag);
         elem2.id = id;
@@ -866,16 +863,16 @@ export class Frontwork {
         return null;
 	}
 
-	protected async route_execute_build(context: FrontworkContext, route: Route|null): Promise<{ reponse: FrontworkResponse; component: Component; }> {
+	protected async route_execute_build(context: FrontworkContext, route: Route|null): Promise<{ response: FrontworkResponse; component: Component; }> {
         // Route
         if (route) {
             try {
                 const component = new route.component(context);
-                return { reponse: await component.build(context), component: component };
+                return { response: await component.build(context), component: component };
             // deno-lint-ignore no-explicit-any
             } catch (error: any) {
                 context.request.error("ROUTE #" + route.id + " ("+route.path+")", context, error);
-                return { reponse: await this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
+                return { response: await this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
             }
         }
 
@@ -883,11 +880,11 @@ export class Frontwork {
         if(FW.verbose_logging) context.request.log("NOT_FOUND", context);
         try {
             const component = new this.middleware.not_found_handler(context);
-            return { reponse: await component.build(context), component: component };
+            return { response: await component.build(context), component: component };
         // deno-lint-ignore no-explicit-any
         } catch (error: any) {
             context.request.error("NOT_FOUND", context, error);
-            return { reponse: await this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
+            return { response: await this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
         }
 	}
 
@@ -916,7 +913,8 @@ export class FrontworkMiddleware {
                 context.document_body.innerHTML = "";
                 return init.error_handler(context); 
             },
-            dom_ready() {}
+            dom_ready() {},
+            on_destroy() {},
         }
         this.not_found_handler = init.not_found_handler;
         this.before_route = init.before_route;

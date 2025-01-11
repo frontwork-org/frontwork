@@ -333,7 +333,7 @@ export class FrontworkWebservice extends Frontwork {
 
             // Route or Not found
             const reb_result = await this.route_execute_build(context, route);
-            const reb_response = reb_result.reponse.into_response();
+            const reb_response = reb_result.response.into_response();
 
             // set-cookie headers from the API
             for (let i = 0; i < context.set_cookies.length; i++) {
