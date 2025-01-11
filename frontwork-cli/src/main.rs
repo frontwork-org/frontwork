@@ -305,6 +305,7 @@ fn main() {
                         ts_file_content.push_str("        );\n");
                         ts_file_content.push_str("    }\n\n");
                         ts_file_content.push_str("    async dom_ready(context: FrontworkContext, client: FrontworkClient) {\n        \n    }\n");
+                        ts_file_content.push_str("    async on_destroy(context: FrontworkContext, client: FrontworkClient) {\n        \n    }\n");
                         ts_file_content.push_str("}\n");
 
                         fs::write(

@@ -1,4 +1,4 @@
-import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkInit, EnvironmentStage, LogType, FW, Route, FrontworkContext } from "./frontwork.ts";
+import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkInit, EnvironmentStage, LogType, FW, Route, FrontworkContext, Component } from "./frontwork.ts";
 import { html_element_set_attributes } from "./utils.ts";
 
 
@@ -11,6 +11,8 @@ export class FrontworkClient extends Frontwork {
     private page_change_ready = true;
     private page_change_previous_abort_controller: AbortController|null = null;
     public is_page_change_ready(): boolean { return this.page_change_ready }
+    previous_component: Component|null = null;
+    previous_context: FrontworkContext|null = null;
 
     constructor(init: FrontworkInit) {
         super(init);
@@ -122,8 +124,13 @@ export class FrontworkClient extends Frontwork {
             const abort_controller = new AbortController();
             this.page_change_previous_abort_controller = abort_controller;
 
+            // Page changed, so we trigger the on_destroy method from the previous route. Uses the context of the previous component.
+            if(this.previous_component !== null && this.previous_context !== null ) await this.previous_component.on_destroy(this.previous_context, this);
+
             const context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, this.i18n, request, do_building);
+            this.previous_context = context;
             const route: Route|null = await this.route_resolver(context);
+            
             
             // Middleware: before Route
             try {
@@ -142,15 +149,16 @@ export class FrontworkClient extends Frontwork {
                     return null;
                 }
                 
-                reb_result.reponse.cookies.forEach(cookie => {
+                for (let i = 0; i < reb_result.response.cookies.length; i++) {
+                    const cookie = reb_result.response.cookies[i];
                     if (cookie.http_only === false) {
                         document.cookie = cookie.toString();
                     }
-                });
+                }
 
-                if (reb_result.reponse.status_code === 301 || reb_result.reponse.status_code === 302) {
+                if (reb_result.response.status_code === 301 || reb_result.response.status_code === 302) {
                     // redirect
-                    const redirect_url = reb_result.reponse.get_header("Location");
+                    const redirect_url = reb_result.response.get_header("Location");
                     if (redirect_url === null) {
                         FW.reporter(LogType.Error, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", context, null);
                         this.page_change_ready = true;
@@ -159,12 +167,12 @@ export class FrontworkClient extends Frontwork {
                         if(FW.verbose_logging) FW.reporter(LogType.Info, "REDIRECT", "Redirect to: " + redirect_url, context, null);
                         this.page_change_to(redirect_url, true);
                         this.page_change_ready = true;
-                        return { method: request.method, url: context.request.url, is_redirect: true, status_code: reb_result.reponse.status_code };
+                        return { method: request.method, url: context.request.url, is_redirect: true, status_code: reb_result.response.status_code };
                     }
                 }
         
 
-                const resolved_content = <DocumentBuilder> reb_result.reponse.content;
+                const resolved_content = <DocumentBuilder> reb_result.response.content;
                 if (typeof resolved_content.context.document_html !== "undefined") {
                     resolved_content.html();
 
@@ -187,15 +195,19 @@ export class FrontworkClient extends Frontwork {
                     }
                     
                     reb_result.component.dom_ready(context, this);
+                    this.previous_component = reb_result.component;
                     this.page_change_ready = true;
-                    return { method: request.method, url: request.url, is_redirect: false, status_code: reb_result.reponse.status_code };
+                    return { method: request.method, url: request.url, is_redirect: false, status_code: reb_result.response.status_code };
                 }
             } else {
-                if (route) {
+                if (route !== null) {
                     const route_component = new route.component(context);
                     route_component.dom_ready(context, this);
+                    this.previous_component = route_component;
                 } else {
-                    new this.middleware.not_found_handler(context).dom_ready(context, this);
+                    const not_found_component = new this.middleware.not_found_handler(context);
+                    not_found_component.dom_ready(context, this);
+                    this.previous_component = not_found_component;
                 }
             }
 

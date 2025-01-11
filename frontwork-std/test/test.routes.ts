@@ -29,6 +29,7 @@ class AnotherComponent implements Component {
 		return new FrontworkResponse(200, document_builder);
 	}
     async dom_ready() {}
+    async on_destroy() {}
 }
 
 class TestComponent implements Component {
@@ -78,7 +79,7 @@ class TestComponent implements Component {
     async dom_ready(context: FrontworkContext, client: FrontworkClient) {
 		try {
 			let times = 0;
-			this.button_event.add_event("click", () => {
+			this.button_event.element.addEventListener("click", () => {
 				times++;
 				this.button_event.element.innerHTML = "Changed "+times+" times";
 			})
@@ -86,6 +87,7 @@ class TestComponent implements Component {
 			console.error(error);
 		}
 	}
+	async on_destroy() {}
 }
 
 class TestGerman extends TestComponent {
@@ -118,6 +120,7 @@ class Test2Component implements Component {
 			client.page_change_to("/", false);
 		}, 1000);
 	}
+	async on_destroy() {console.log("on_destroy test");}
 }
 
 class Test3Component implements Component {
@@ -125,6 +128,7 @@ class Test3Component implements Component {
 		return new FrontworkResponseRedirect("/", 301);
 	}
     async dom_ready() {}
+	async on_destroy() {}
 }
 
 
@@ -137,6 +141,7 @@ class ElementTestComponent implements Component {
 		);
 	}
     async dom_ready() {}
+	async on_destroy() {}
 }
 
 class HelloWorldPrioTestComponent implements Component {
@@ -145,6 +150,7 @@ class HelloWorldPrioTestComponent implements Component {
 		return new FrontworkResponse(200, content);
 	}
     async dom_ready(context: FrontworkContext) {}
+	async on_destroy() {}
 }
 
 class HelloWorldComponent implements Component {
@@ -153,6 +159,7 @@ class HelloWorldComponent implements Component {
 		return new FrontworkResponse(200, content);
 	}
     async dom_ready(context: FrontworkContext) {}
+    async on_destroy(context: FrontworkContext) {}
 }
 
 class CollisionHandlerComponent implements Component {
@@ -168,6 +175,7 @@ class CollisionHandlerComponent implements Component {
 		}
 		new HelloWorldComponent().dom_ready(context);
 	}
+	async on_destroy() {}
 }
 
 class CrashComponent implements Component {
@@ -177,6 +185,7 @@ class CrashComponent implements Component {
 		return new FrontworkResponse(200, "this text shall never be seen in the browser");
 	}
     async dom_ready() {}
+	async on_destroy() {}
 }
 
 class NotFoundComponent implements Component {
@@ -191,6 +200,7 @@ class NotFoundComponent implements Component {
 		);
 	}
     async dom_ready() {}
+	async on_destroy() {}
 }
 
 const default_routes: Route[] = [

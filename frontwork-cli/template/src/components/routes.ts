@@ -27,6 +27,7 @@ class NotFoundComponent implements Component {
 		);
 	}
     async dom_ready() {}
+	async on_destroy() {}
 }
 
 
