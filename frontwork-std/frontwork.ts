@@ -725,7 +725,7 @@ export class FrontworkContext {
     }
 
 
-    async api_request<T>(method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean }, extras: ApiRequestExtras = {}): Promise<Result<T, ApiErrorResponse>> {
+    async api_request<T>(method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean | string[]|number[]|boolean[] }, extras: ApiRequestExtras = {}): Promise<Result<T, ApiErrorResponse>> {
         let url = (FW.is_client_side? this.api_protocol_address : this.api_protocol_address_ssr) + path;
         
         // Prepare request options
