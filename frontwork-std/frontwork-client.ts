@@ -56,14 +56,20 @@ export class FrontworkClient extends Frontwork {
             
             if (target.tagName === "FORM" && target.getAttribute("fw-form") !== null) {
                 // Prevent the form from submitting
-                let submit_button = event.submitter as HTMLButtonElement|null;
-                submit_button = submit_button && submit_button.name? submit_button : null;
-                
-                const result = await this.page_change_form(target, submit_button);
-                console.log("page_change_form result", result);
-                
-                if(result) event.preventDefault();
-                
+                event.preventDefault();
+
+                if (target.ariaDisabled === "true") {
+                    console.log("fw-form is ariaDisabled. Because it already has been submitted.", target);
+                } else {
+                    target.ariaDisabled = "true";
+                    
+                    let submit_button = event.submitter as HTMLButtonElement|null;
+                    submit_button = submit_button && submit_button.name? submit_button : null;
+                    
+                    const result = await this.page_change_form(target, submit_button);
+                    console.log("page_change_form result", result);
+                    target.ariaDisabled = "false";
+                }
             }
         });
 
@@ -245,6 +251,7 @@ export class FrontworkClient extends Frontwork {
         if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_form", null, null);
         let method = form.getAttribute("method");
         if(method === null) method = "POST";// In Web Browsers, if a form's method attribute is empty, it defaults to "POST".
+        if(submit_button) submit_button.disabled = true;
         
         let url: string;
         const action = form.getAttribute("action");
@@ -298,6 +305,8 @@ export class FrontworkClient extends Frontwork {
             history.pushState(result, document.title, url);
             return true;
         }
+
+        if(submit_button) submit_button.disabled = true;
         return false;
     }
 }
