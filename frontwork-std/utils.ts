@@ -173,13 +173,16 @@ interface ObserverRetrieverFunction<T> {
             this.error_listeners.forEach(listener => listener(error));
             throw error;
         } else {
+            this.renew_is_running = true;
             this.retriever_listeners.forEach(listener => listener());
 
             try {
                 const value = await this.retriever();
                 this.set(value);
+                this.renew_is_running = false;
                 return value;
             } catch (error) {
+                this.renew_is_running = false;
                 this.error_listeners.forEach(listener => listener(error as Error));
                 return null;
             }
