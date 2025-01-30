@@ -1,4 +1,4 @@
-import { FrontworkTestworker } from "https://deno.land/x/frontwork@0.1.50/frontwork-testworker.ts";
+import { FrontworkTestworker } from "https://deno.land/x/frontwork@0.1.51/frontwork-testworker.ts";
 import { APP_CONFIG } from "./environments/environment.ts";
 
 
