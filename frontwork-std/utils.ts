@@ -129,6 +129,11 @@ interface ObserverRetrieverFunction<T> {
         this.observers.forEach(observer => observer(value));
     }
 
+    // Set value to null. DOES NOT NOTIFY.
+    set_null(): void {
+        this.value = null;
+    }
+
     // Notify all observers with a value if value is unknown
     set_once(value: T): void {
         if (this.value === null) {
