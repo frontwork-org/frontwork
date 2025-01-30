@@ -2,6 +2,7 @@
 import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm, Result, ApiErrorResponse } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
+import { Observer } from '../utils.ts';
 
 
 class MyMainDocumentBuilder extends DocumentBuilder {
@@ -37,7 +38,6 @@ class TestComponent implements Component {
 	
 	constructor(context: FrontworkContext) {
 		this.button_event = context.ensure_text_element("button", "event_button_tester", { type: "button" });
-		
 	}
 
     async build(context: FrontworkContext) {
@@ -226,27 +226,28 @@ export interface User {
 }
 
 
-export function login(context: FrontworkContext, username: string, password: string): Promise<Result<User, ApiErrorResponse>> {
-    console.log('login');
-    return new Promise(function (resolve, reject) {
-        context.api_request<User>("POST", "/api/v1/account/login", {username: username, password: password})
-            .then(function(result) {
-                if (result.ok) {
-                    console.log("LOGIN SUCCESS");
-                    console.log("Hello, " + result.val);
-                }
-                resolve(result);
-            })
-            .catch(function(msg) { reject(msg) })
-        ;
-    });
+const user = new Observer<User>;
+export function login_check(context: FrontworkContext): Promise<User> {
+	return new Promise(function (resolve, reject) {
+		context.api_request<User>("POST", "/api/v1/account/user", {})
+		.then(function(result) {
+			if (result.ok) {
+				console.log("Welcome, " + result.val.username);
+                resolve(result.val);
+			} else {
+				reject(new Error("login_check() NON-OK: "+result.err.status));
+			}
+		})
+		.catch(function(err) { reject(err); });
+	});
 }
 
 const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: async (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
-			// await login(context, "TestUser", "doesNotExist");
+			context.api_request_observer<User>(user, "POST", "/api/v1/account/user", {});
+			user.renew();
 		},
 		dom_ready: async () => {  console.log("ASDAAAAAAAAA"); }
 	},
