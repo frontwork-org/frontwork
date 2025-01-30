@@ -82,6 +82,7 @@ interface ObserverRetrieverFunction<T> {
     private observers: ObserverFunction<T>[] = [];
     private retriever: ObserverRetrieverFunction<T>|null = null;
     private value: T|null = null;
+    private retriever_listeners: (() => void)[] = [];
     private error_listeners: ((error: Error) => void)[] = [];
     renew_is_running = false;
 
@@ -95,20 +96,31 @@ interface ObserverRetrieverFunction<T> {
         this.retriever = null;
     }
 
-    // Add a new observer
+    // Observer listener
     subscribe(fn: ObserverFunction<T>): void {
         if (this.value !== null) fn(this.value);
         this.observers.push(fn);
     }
-
-    // Remove an observer
     unsubscribe(fn: ObserverFunction<T>): void {
         this.observers = this.observers.filter(observer => observer !== fn);
     }
 
-    // Add error listener
+    /**
+     * Retriever listener: executed before the retriever starts
+     */
+    add_retriever_listener(fn: () => void): void {
+        this.retriever_listeners.push(fn);
+    }
+    remove_retriever_listener(fn: () => void): void {
+        this.retriever_listeners = this.retriever_listeners.filter(listeners => listeners !== fn);
+    }
+
+    // Error listener
     add_error_listener(fn: (error: Error) => void): void {
         this.error_listeners.push(fn);
+    }
+    remove_error_listener(fn: (error: Error) => void): void {
+        this.error_listeners = this.error_listeners.filter(listeners => listeners !== fn);
     }
 
     // Notify all observers with a value
@@ -161,6 +173,8 @@ interface ObserverRetrieverFunction<T> {
             this.error_listeners.forEach(listener => listener(error));
             throw error;
         } else {
+            this.retriever_listeners.forEach(listener => listener());
+
             try {
                 const value = await this.retriever();
                 this.set(value);

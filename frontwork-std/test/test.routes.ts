@@ -247,7 +247,6 @@ const middleware = new FrontworkMiddleware({
 		build: async (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
 			context.api_request_observer<User>(user, "POST", "/api/v1/account/user", {});
-			user.renew();
 		},
 		dom_ready: async () => {  console.log("ASDAAAAAAAAA"); }
 	},

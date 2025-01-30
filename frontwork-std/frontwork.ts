@@ -818,6 +818,7 @@ export class FrontworkContext {
         }
             
         observer.define_retriever(retriever);
+        observer.renew();
     }
 
 }
