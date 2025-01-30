@@ -1,4 +1,4 @@
-import { parse_url, key_value_list_to_object } from "./utils.ts";
+import { parse_url, key_value_list_to_object, Observer } from "./utils.ts";
 import { FrontworkClient } from './frontwork-client.ts'
 
 
@@ -763,40 +763,61 @@ export class FrontworkContext {
             options.headers.set("X-Forwarded-For", this.client_ip);
         }
 
-        const response = await fetch(url, options);
-        
-        // retrieve set-cookie headers from the API and pass them to the browser
-        if (!FW.is_client_side) {
-            const set_cookies = response.headers.getSetCookie();
-            set_cookies.forEach(item => this.set_cookies.push(item));
-        }
-        
-        if (!response.ok) {
-            console.error("ERROR executing api_request(", method, path, ")\n", response);
+        try {
+            const response = await fetch(url, options);
             
-            try {
-                let api_error_response: ApiErrorResponse = await response.json();
-                api_error_response.status = response.status;
-
-                return {
-                    ok: false,
-                    err: api_error_response
-                };
-            } catch {
-                console.error("Could not parse ApiErrorResponse for api_request("+method+" "+path+")")
-                return {
-                    ok: false,
-                    err: { status: 501, error_message: "API did not returned parsable JSON" }
-                };
+            // retrieve set-cookie headers from the API and pass them to the browser
+            if (!FW.is_client_side) {
+                const set_cookies = response.headers.getSetCookie();
+                set_cookies.forEach(item => this.set_cookies.push(item));
             }
+            
+            if (!response.ok) {
+                console.error("ERROR executing api_request(", method, path, ")\n", response);
+                
+                try {
+                    let api_error_response: ApiErrorResponse = await response.json();
+                    api_error_response.status = response.status;
     
+                    return {
+                        ok: false,
+                        err: api_error_response
+                    };
+                } catch {
+                    console.error("Could not parse ApiErrorResponse for api_request("+method+" "+path+")");
+                    return {
+                        ok: false,
+                        err: { status: 501, error_message: "API did not returned parsable JSON" }
+                    };
+                }
+        
+            }
+        
+            const data = await response.json();
+            return {
+                ok: true,
+                val: data as T
+            };
+        } catch (error: any) {
+            console.error("ERROR executing api_request("+method+" "+path+")", error);
+            return {
+                ok: false,
+                err: { status: 503, error_message: error }
+            };
         }
-    
-        const data = await response.json();
-        return {
-            ok: true,
-            val: data as T
-        };
+    }
+
+    /* Set the retriever of an Observer to be a specified api_request */
+    api_request_observer<T>(observer: Observer<T>, method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean | string[]|number[]|boolean[] }, extras: ApiRequestExtras = {}): void {
+        const retriever = async () => {
+            const result = await this.api_request<T>(method, path, params, extras);
+            if (result.ok) {
+                return result.val;
+            }
+            throw new Error("ERROR NON-OK executing the retriever in api_request_observer()");
+        }
+            
+        observer.define_retriever(retriever);
     }
 
 }
