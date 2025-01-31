@@ -14,10 +14,9 @@ if (APP_CONFIG.stage !== EnvironmentStage.Development || __dir.includes("/tmp/")
 // Remove last slash if exist
 if (__dir.slice(-1) === "/") __dir = __dir.slice(0, -1);
 
-const service = new FrontworkWebservice(APP_CONFIG)
+new FrontworkWebservice(APP_CONFIG)
     .setup_assets_resolver(__dir + '/assets')
     .setup_style_css(__dir + '/dist/style.css')
-    .setup_main_js(__dir + '/dist/main.js');
-
-service.api_path_prefixes.push("/files/");
-service.start();
+    .setup_main_js(__dir + '/dist/main.js')
+    .set_api_path_prefixes(["/files/"])
+    .start();

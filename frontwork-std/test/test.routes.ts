@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-unused-vars
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm, Result, ApiErrorResponse } from "../frontwork.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
 import { Observer } from '../utils.ts';
@@ -77,6 +77,17 @@ class TestComponent implements Component {
 	}
 	
     async dom_ready(context: FrontworkContext, client: FrontworkClient) {
+		// user.get();
+		// try {
+		// 	// const uuu = await user.get();
+		// 	console.log("OK UUU", uuu);
+		// } catch (error) {
+		// 	console.error(error);
+			
+		// }
+		
+		
+
 		try {
 			let times = 0;
 			this.button_event.element.addEventListener("click", () => {
@@ -246,7 +257,7 @@ const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: async (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
-			context.api_request_observer<User>(user, "POST", "/api/v1/account/user", {});
+			context.api_request_observer<User>(user, "POST", "/api/v1/account/user/ERROR", {});
 		},
 		dom_ready: async () => {  console.log("ASDAAAAAAAAA"); }
 	},
