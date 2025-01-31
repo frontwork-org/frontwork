@@ -41,6 +41,8 @@ class TestComponent implements Component {
 	}
 
     async build(context: FrontworkContext) {
+		await user.get();
+
 		const document_builder = new MyMainDocumentBuilder(context);
 
 		const title = context.ensure_text_element("h1", "title1").append_to(document_builder.main)
@@ -77,17 +79,6 @@ class TestComponent implements Component {
 	}
 	
     async dom_ready(context: FrontworkContext, client: FrontworkClient) {
-		// user.get();
-		// try {
-		// 	// const uuu = await user.get();
-		// 	console.log("OK UUU", uuu);
-		// } catch (error) {
-		// 	console.error(error);
-			
-		// }
-		
-		
-
 		try {
 			let times = 0;
 			this.button_event.element.addEventListener("click", () => {
@@ -257,7 +248,7 @@ const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: async (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
-			context.api_request_observer<User>(user, "POST", "/api/v1/account/user/ERROR", {});
+			context.api_request_observer<User>(user, "POST", "/api/v1/account/user", {});
 		},
 		dom_ready: async () => {  console.log("ASDAAAAAAAAA"); }
 	},

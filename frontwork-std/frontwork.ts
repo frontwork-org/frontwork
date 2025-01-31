@@ -806,7 +806,7 @@ export class FrontworkContext {
             if (result.ok) {
                 return { ok: true, val: result.val };
             } else {
-                return { ok: false, err: result.err.error_message };
+                return { ok: false, err: new Error(result.err.error_message) };
             }
         }
             
