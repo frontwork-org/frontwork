@@ -237,6 +237,7 @@ export class FrontworkClient extends Frontwork {
         const request = new FrontworkRequest("GET", url, new Headers(), new PostScope({}));
         const result = await this.page_change(request, true, ignore_not_ready === true);
         if(result !== null) {
+            //if(result.is_redirect) return true;
             history.pushState(result, document.title, url);
             return true;
         }
@@ -297,6 +298,7 @@ export class FrontworkClient extends Frontwork {
         console.log("page_change_form result inner", result);
         
         if(result !== null) {
+            //if(result.is_redirect) return true;
             history.pushState(result, document.title, url);
             return true;
         }

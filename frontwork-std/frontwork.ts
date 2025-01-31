@@ -1,4 +1,4 @@
-import { parse_url, key_value_list_to_object, Observer } from "./utils.ts";
+import { parse_url, key_value_list_to_object, Observer, Result, ObserverRetrieverFunction } from "./utils.ts";
 import { FrontworkClient } from './frontwork-client.ts'
 
 
@@ -621,14 +621,6 @@ export interface ApiErrorResponse {
     error_message: string
 }
 
-export type Result<T, E> = {
-    ok: true;
-    val: T;
-} | {
-    ok: false;
-    err: E;
-};
-
 export enum PageloadType { Serverside, ClientAfterServerside, ClientDefault }
 
 export class FrontworkContext {
@@ -809,16 +801,17 @@ export class FrontworkContext {
 
     /* Set the retriever of an Observer to be a specified api_request */
     api_request_observer<T>(observer: Observer<T>, method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean | string[]|number[]|boolean[] }, extras: ApiRequestExtras = {}): void {
-        const retriever = async () => {
+        const retriever: ObserverRetrieverFunction<T> = async () => {
             const result = await this.api_request<T>(method, path, params, extras);
             if (result.ok) {
-                return result.val;
+                return { ok: true, val: result.val };
+            } else {
+                return { ok: false, err: new Error(result.err.error_message) };
             }
-            throw new Error("ERROR NON-OK executing the retriever in api_request_observer()");
         }
             
         observer.define_retriever(retriever);
-        observer.renew();
+        observer.renew().catch(_error => {});
     }
 
 }

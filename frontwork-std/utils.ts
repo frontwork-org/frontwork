@@ -1,3 +1,5 @@
+
+
 export function parse_url(url:string): {protocol:string, host:string, path:string, query_string:string, fragment:string} {
     const url_protocol_split = url.split("://");
     if(url_protocol_split.length < 2) throw new Error("Invalid URL: " + url);
@@ -66,13 +68,20 @@ export function html_element_set_attributes(html_element: HTMLElement, attribute
     }
 }
 
+export type Result<T, E> = {
+    ok: true;
+    val: T;
+} | {
+    ok: false;
+    err: E;
+};
 
-interface ObserverFunction<T> {
-    (value: T): void;
+export interface ObserverFunction<T> {
+    (value: Result<T, Error>): void;
 }
 
-interface ObserverRetrieverFunction<T> {
-    (): Promise<T>;
+export interface ObserverRetrieverFunction<T> {
+    (): Promise<Result<T, Error>>;
 }
 
 /**
@@ -81,9 +90,8 @@ interface ObserverRetrieverFunction<T> {
  export class Observer<T> {
     private observers: ObserverFunction<T>[] = [];
     private retriever: ObserverRetrieverFunction<T>|null = null;
-    private value: T|null = null;
+    private value: Result<T, Error>|null = null;
     private retriever_listeners: (() => void)[] = [];
-    private error_listeners: ((error: Error) => void)[] = [];
     renew_is_running = false;
 
     // Set the retriever function that will be used in the get function
@@ -115,16 +123,8 @@ interface ObserverRetrieverFunction<T> {
         this.retriever_listeners = this.retriever_listeners.filter(listeners => listeners !== fn);
     }
 
-    // Error listener
-    add_error_listener(fn: (error: Error) => void): void {
-        this.error_listeners.push(fn);
-    }
-    remove_error_listener(fn: (error: Error) => void): void {
-        this.error_listeners = this.error_listeners.filter(listeners => listeners !== fn);
-    }
-
     // Notify all observers with a value
-    set(value: T): void {
+    set(value: Result<T, Error>): void {
         this.value = value;
         this.observers.forEach(observer => observer(value));
     }
@@ -137,47 +137,73 @@ interface ObserverRetrieverFunction<T> {
     // Notify all observers with a value if value is unknown
     set_once(value: T): void {
         if (this.value === null) {
-            this.set(value);
+            this.set({ ok: true, val: value });
         }
     }
 
     // Get the value as Promise by this.value, with the retriever or by subscribe and unsubscribe
     get(): Promise<T> {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             if (this.value === null) {
                 if (this.retriever === null || this.renew_is_running) {
                     // Get the value by subscribe and unsubscribe
-                    const sub: ObserverFunction<T> = (value: T) => { resolve(value); this.unsubscribe(sub); };
+                    const sub: ObserverFunction<T> = (value: Result<T, Error>) => {
+                        if (value.ok) {
+                            resolve(value.val);
+                        } else {
+                            reject(value.err);
+                        }
+                        this.unsubscribe(sub);
+                    };
                     this.subscribe(sub);
                 } else {
                     // Get the value using the retriever
-                    this.get_renew().then(() => resolve(this.value!))
+                    this.get_renew()
+                        .then((value) => resolve(value))
+                        .catch((error) => reject(error));
                 }
             } else {
-                resolve(this.value);
+                if (this.value.ok) {
+                    resolve(this.value.val);
+                } else {
+                    reject(this.value.err);
+                }
             }
-        })
+        });
     }
 
-    // Get the value as Promise with the retriever if set or by subscribe and unsubscribe
-    async get_renew(): Promise<T> {
-        return new Promise((resolve) => {
+    // Fix the get_renew method
+    get_renew(): Promise<T> {
+        return new Promise(async (resolve, reject) => {
             if (this.renew_is_running) {
-                const sub: ObserverFunction<T> = (value: T) => { resolve(value); this.unsubscribe(sub); };
+                const sub: ObserverFunction<T> = (value: Result<T, Error>) => {
+                    if (value.ok) {
+                        resolve(value.val);
+                    } else {
+                        reject(value.err);
+                    }
+                    this.unsubscribe(sub);
+                };
                 this.subscribe(sub);
             } else {
-                this.renew().then(() => resolve(this.value!))
+                const result = await this.renew();
+                if (result.ok) {
+                    resolve(result.val);
+                } else {
+                    reject(result.err);
+                }
             }
-        })
+        });
     }
 
-    // Use the retriever function to get the value and notify all observers
-    async renew() {
-        if (this.retriever === null) {
-            const error = new Error("For Observer.renew() the retriever must be defined");
-            this.error_listeners.forEach(listener => listener(error));
-            throw error;
-        } else {
+    // Fix the renew method
+    renew(): Promise<Result<T, Error>> {
+        return new Promise(async (resolve, reject) => {
+            if (this.retriever === null) {
+                reject(new Error("For Observer.renew() the retriever must be defined"));
+                return;
+            }
+
             this.renew_is_running = true;
             this.retriever_listeners.forEach(listener => listener());
 
@@ -185,13 +211,22 @@ interface ObserverRetrieverFunction<T> {
                 const value = await this.retriever();
                 this.set(value);
                 this.renew_is_running = false;
-                return value;
+
+                if (value.ok) {
+                    resolve(value);
+                } else {
+                    console.error("ERROR executing Observer.retriever()", value.err);
+                    resolve(value); // Still resolve with the error result
+                }
             } catch (error) {
                 this.renew_is_running = false;
-                this.error_listeners.forEach(listener => listener(error as Error));
-                return null;
+                const errorResult: Result<T, Error> = {
+                    ok: false,
+                    err: error instanceof Error ? error : new Error(String(error))
+                };
+                reject(errorResult);
             }
-        }
+        });
     }
 
     // Get the current number of observers

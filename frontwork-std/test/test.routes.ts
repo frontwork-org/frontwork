@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-unused-vars
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm, Result, ApiErrorResponse } from "../frontwork.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
 import { Observer } from '../utils.ts';
@@ -41,6 +41,8 @@ class TestComponent implements Component {
 	}
 
     async build(context: FrontworkContext) {
+		await user.get();
+
 		const document_builder = new MyMainDocumentBuilder(context);
 
 		const title = context.ensure_text_element("h1", "title1").append_to(document_builder.main)
