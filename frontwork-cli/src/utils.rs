@@ -83,8 +83,10 @@ pub fn sass(src: String, dest: String) {
         style: output::Style::Compressed,
         .. Default::default()
     };
-    let css = compile_scss_path(src.as_ref(), format).unwrap();
-    fs::write(Path::new(&dest), css).expect("can not write css file");
+    match compile_scss_path(src.as_ref(), format) {
+        Ok(css) => fs::write(Path::new(&dest), css).expect("can not write css file"),
+        Err(error) => println!("Unable to compile sass: {}", error),
+    }
 }
 
 pub struct TransversedFile {
