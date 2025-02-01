@@ -129,6 +129,11 @@ export interface ObserverRetrieverFunction<T> {
         this.observers.forEach(observer => observer(value));
     }
 
+    // Notify all observers with a value
+    set_value(value: T): void {
+        this.set({ ok: true, val: value });
+    }
+
     // Set value to null. DOES NOT NOTIFY.
     set_null(): void {
         this.value = null;
