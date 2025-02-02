@@ -2,7 +2,6 @@
 import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
-import { Observer } from '../utils.ts';
 
 
 class MyMainDocumentBuilder extends DocumentBuilder {
@@ -41,7 +40,9 @@ class TestComponent implements Component {
 	}
 
     async build(context: FrontworkContext) {
-		await user.get();
+		const user = await context.get_observer<User>("user").get();
+		console.log("The User is asdasdasdasdasdasd", user);
+		
 
 		const document_builder = new MyMainDocumentBuilder(context);
 
@@ -228,7 +229,6 @@ export interface User {
 }
 
 
-const user = new Observer<User>;
 export function login_check(context: FrontworkContext): Promise<User> {
 	return new Promise(function (resolve, reject) {
 		context.api_request<User>("POST", "/api/v1/account/user", {})
@@ -248,7 +248,8 @@ const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: async (context: FrontworkContext) => {
 			context.i18n.set_locale("en");
-			context.api_request_observer<User>(user, "POST", "/api/v1/account/user", {});
+			const observer = context.get_observer<User>("user");
+			if(observer.is_null()) context.api_request_observer<User>(observer, "POST", "/api/v1/account/user", {});
 		},
 		dom_ready: async () => {  console.log("ASDAAAAAAAAA"); }
 	},
@@ -281,5 +282,5 @@ export const APP_CONFIG: FrontworkInit = {
 	},
 	middleware: middleware,
 	i18n: i18n,
-	build_on_page_load: false
+	build_on_page_load: false,
 };

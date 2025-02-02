@@ -1,9 +1,10 @@
 import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkInit, EnvironmentStage, LogType, FW, Route, FrontworkContext, Component } from "./frontwork.ts";
-import { html_element_set_attributes } from "./utils.ts";
+import { html_element_set_attributes, Observer } from "./utils.ts";
 
 
 export class FrontworkClient extends Frontwork {
     private build_on_page_load: boolean;
+    private readonly client_observers: {[key: string]: Observer<any>} = {};
 
     // page_change() behaviour: 
     // It kills the previous Promise so that it will not execute its Component build function since it is not needed because the user already clicked to the next page.
@@ -237,7 +238,7 @@ export class FrontworkClient extends Frontwork {
         const request = new FrontworkRequest("GET", url, new Headers(), new PostScope({}));
         const result = await this.page_change(request, true, ignore_not_ready === true);
         if(result !== null) {
-            //if(result.is_redirect) return true;
+            if(result.is_redirect) return true;
             history.pushState(result, document.title, url);
             return true;
         }
@@ -298,7 +299,7 @@ export class FrontworkClient extends Frontwork {
         console.log("page_change_form result inner", result);
         
         if(result !== null) {
-            //if(result.is_redirect) return true;
+            if(result.is_redirect) return true;
             history.pushState(result, document.title, url);
             return true;
         }
