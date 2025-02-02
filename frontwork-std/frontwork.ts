@@ -623,6 +623,8 @@ export interface ApiErrorResponse {
 
 export enum PageloadType { Serverside, ClientAfterServerside, ClientDefault }
 
+const client_observers: {[key: string]: Observer<any>} = {};
+
 export class FrontworkContext {
     readonly platform: EnvironmentPlatform;
     readonly stage: EnvironmentStage;
@@ -637,7 +639,9 @@ export class FrontworkContext {
     readonly document_head: HTMLHeadElement;
     readonly document_body: HTMLBodyElement;
 
-    // Set-Cookie headers for deno side rendering. Deno should retrieve Cookies from the API and pass them to the browser. Should not be used to manually set Cookies. Use the FrontworkResponse.set_cookie method instead
+    /**
+     * Set-Cookie headers for deno side rendering. Deno should retrieve Cookies from the API and pass them to the browser. Should not be used to manually set Cookies. Use the FrontworkResponse.set_cookie method instead
+     */
     set_cookies: string[] = [];
 
     constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, client_ip: string, api_protocol_address: string, api_protocol_address_ssr: string, i18n: I18n, request: FrontworkRequest, do_building: boolean) {
@@ -653,6 +657,30 @@ export class FrontworkContext {
         this.document_html = document.createElement("html");
         this.document_head = this.document_html.appendChild( document.createElement("head") );
         this.document_body = this.document_html.appendChild( document.createElement("body") );
+    }
+
+
+    private readonly server_observers: {[key: string]: Observer<any>} = {};
+
+    get_observer<T>(key: string): Observer<T> {
+        console.log("FW.is_client_side", FW.is_client_side);
+        
+        if (FW.is_client_side) {
+            // Client: Reuse existing observer or create new one
+            console.log("all client_observers", client_observers);
+            
+            if (!client_observers[key]) {
+                client_observers[key] = new Observer<T>();
+                console.log("new client_observers", client_observers[key]);
+            }
+            return client_observers[key];
+        } else {
+            // Deno Server: Reuse existing observer or create new one
+            if (!this.server_observers[key]) {
+                this.server_observers[key] = new Observer<T>();
+            }
+            return this.server_observers[key];
+        }
     }
 
 
@@ -828,7 +856,8 @@ export class FrontworkContext {
  *   @param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
  */
 export interface FrontworkInit {
-    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, api_protocol_address: string, api_protocol_address_ssr: string, domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
+    platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, api_protocol_address: string, api_protocol_address_ssr: string, 
+    domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
 }
 
 export class Frontwork {

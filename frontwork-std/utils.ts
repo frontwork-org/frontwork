@@ -139,6 +139,13 @@ export interface ObserverRetrieverFunction<T> {
         this.value = null;
     }
 
+    /**
+     * Returns true if value is null
+     */
+    is_null(): boolean {
+        return this.value === null;
+    }
+
     // Notify all observers with a value if value is unknown
     set_once(value: T): void {
         if (this.value === null) {

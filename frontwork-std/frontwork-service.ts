@@ -110,6 +110,8 @@ export class Asset {
 //TODO: Consider: FrontworkSubservice
 export interface FrontworkSubservice { (_req: Request, _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>): Response|null };
 
+const abort_controller = new AbortController();
+
 export class FrontworkWebservice extends Frontwork {
     private style_css!: Asset;
     private main_js!: Asset;
@@ -127,7 +129,6 @@ export class FrontworkWebservice extends Frontwork {
         console.info(
             "Deno started webservice on http://localhost:" + this.port,
         );
-        const abortController = new AbortController();
 
         try {
             if (this.stage === EnvironmentStage.Development) {
@@ -136,14 +137,14 @@ export class FrontworkWebservice extends Frontwork {
                     .toString();
 
                 Deno.serve(
-                    { port: this.port, signal: abortController.signal },
+                    { port: this.port, signal: abort_controller.signal },
                     (_req: Request, _req_extras) => {
                         return this.handler_dev(_req, _req_extras, service_started_timestamp);
                     },
                 );
             } else {
                 Deno.serve(
-                    { port: this.port, signal: abortController.signal },
+                    { port: this.port, signal: abort_controller.signal },
                     (_req: Request, _req_extras) => {
                         return this.handler(_req, _req_extras);
                     },
@@ -166,7 +167,7 @@ export class FrontworkWebservice extends Frontwork {
             console.error("");
         }
 
-        globalThis.addEventListener("unload", () => abortController.abort());
+        globalThis.addEventListener("unload", () => abort_controller.abort());
     }
 
     setup_assets_resolver(assets_folder_path: string) {
@@ -387,7 +388,7 @@ export class FrontworkWebservice extends Frontwork {
             const api_path_prefix = this.api_path_prefixes[i];
             if (url.pathname.substring(0, api_path_prefix.length) === api_path_prefix) {
                 // forward_request_to_api
-                console.log("[forward_request_to_api]", url.pathname);
+                console.log("[forward_request_to_api]", _req.method, url.pathname);
     
                 return await this.forward_request_to_api(_req, _req_extras);
             }
