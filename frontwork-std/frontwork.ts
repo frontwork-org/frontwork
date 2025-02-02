@@ -663,15 +663,10 @@ export class FrontworkContext {
     private readonly server_observers: {[key: string]: Observer<any>} = {};
 
     get_observer<T>(key: string): Observer<T> {
-        console.log("FW.is_client_side", FW.is_client_side);
-        
         if (FW.is_client_side) {
             // Client: Reuse existing observer or create new one
-            console.log("all client_observers", client_observers);
-            
             if (!client_observers[key]) {
                 client_observers[key] = new Observer<T>();
-                console.log("new client_observers", client_observers[key]);
             }
             return client_observers[key];
         } else {

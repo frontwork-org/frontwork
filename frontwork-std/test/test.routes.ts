@@ -41,7 +41,7 @@ class TestComponent implements Component {
 
     async build(context: FrontworkContext) {
 		const user = await context.get_observer<User>("user").get();
-		console.log("The User is asdasdasdasdasdasd", user);
+		console.log("The User is", user);
 		
 
 		const document_builder = new MyMainDocumentBuilder(context);
