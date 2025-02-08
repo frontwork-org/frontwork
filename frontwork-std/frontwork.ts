@@ -141,9 +141,9 @@ export class I18n {
         return this.selected_locale.get_translation(key).split(search).join(replace);
     }
 
-    get_translation_replace_number(key_one: string, key_multiple: string, search: string, number: number): string {
-        if (number === 1) return this.selected_locale.get_translation(key_one).split(search).join(number.toString());
-        return this.selected_locale.get_translation(key_multiple).split(search).join(number.toString());
+    get_translation_replace_number(key: string, search: string, number: number): string {
+        if (number === 1) return this.selected_locale.get_translation(key+"_one");
+        return this.selected_locale.get_translation(key).split(search).join(number.toString());
     }
 
 }    
