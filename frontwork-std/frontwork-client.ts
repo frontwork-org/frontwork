@@ -251,12 +251,22 @@ export class FrontworkClient extends Frontwork {
         if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_form", null, null);
         let method = form.getAttribute("method");
         if(method === null) method = "POST";// In Web Browsers, if a form's method attribute is empty, it defaults to "POST".
+        const IS_METHOD_GET = method === "GET";
         if(submit_button) submit_button.disabled = true;
         
         let url: string;
         const action = form.getAttribute("action");
         if (action === "") {
-            url = location.protocol+"//"+location.host+window.location.pathname.toString();
+            if (this.previous_context) {
+                if (IS_METHOD_GET) {
+                    url = this.previous_context.request.protocol+"//"+this.previous_context.request.host+this.previous_context.request.path;
+                } else {
+                    url = this.previous_context.request.url;
+                }
+            } else {
+                url = location.protocol+"//"+location.host+window.location.pathname.toString();
+                if (IS_METHOD_GET && location.search !== "") url += location.search;
+            }
         } else {
             url = location.protocol+"//"+location.host+action;
         }
@@ -270,7 +280,7 @@ export class FrontworkClient extends Frontwork {
         const form_data = new FormData(form);
         
         const POST = new PostScope({});
-        if (method === "GET") {
+        if (IS_METHOD_GET) {
             let first = true;
             form_data.forEach((value, key) => {
                 if (first) {
