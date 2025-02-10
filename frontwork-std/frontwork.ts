@@ -1,5 +1,6 @@
 import { parse_url, key_value_list_to_object, Observer, Result, ObserverRetrieverFunction } from "./utils.ts";
 import { FrontworkClient } from './frontwork-client.ts'
+import { context } from 'https://deno.land/x/esbuild@v0.20.1/mod.d.ts';
 
 
 export enum LogType {
@@ -788,7 +789,9 @@ export class FrontworkContext {
             }
             
             if (!response.ok) {
-                console.error("ERROR executing api_request(", method, path, ")\n", response);
+                FW.reporter(LogType.Error, "api_request", "ERROR executing api_request( "+method+" "+path+" )", this, null);
+                console.error(response);
+                
                 
                 try {
                     let api_error_response: ApiErrorResponse = await response.json();
@@ -798,8 +801,9 @@ export class FrontworkContext {
                         ok: false,
                         err: api_error_response
                     };
-                } catch {
-                    console.error("Could not parse ApiErrorResponse for api_request("+method+" "+path+")");
+                } catch (error: any) {
+                    FW.reporter(LogType.Error, "api_request", "Could not parse ApiErrorResponse for api_request("+method+" "+path+")", this, error);
+
                     return {
                         ok: false,
                         err: { status: 501, error_message: "API did not returned parsable JSON" }
@@ -814,7 +818,7 @@ export class FrontworkContext {
                 val: data as T
             };
         } catch (error: any) {
-            console.error("ERROR executing api_request("+method+" "+path+")", error);
+            FW.reporter(LogType.Error, "api_request", "ERROR executing api_request( "+method+" "+path+" )", this, error);
             return {
                 ok: false,
                 err: { status: 503, error_message: error }
