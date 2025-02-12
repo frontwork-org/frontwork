@@ -1,5 +1,6 @@
 import { parse_url, key_value_list_to_object, Observer, Result, ObserverRetrieverFunction } from "./utils.ts";
 import { FrontworkClient } from './frontwork-client.ts'
+import { context } from 'https://deno.land/x/esbuild@v0.20.1/mod.d.ts';
 
 
 export enum LogType {
@@ -696,6 +697,24 @@ export class FrontworkContext {
     }
 
     /**
+     * Creates a new element and appends I18n text. DOES NOT CHECK IF ALREADY EXIST.
+     * @param tag The tag name of the element to create.
+     * @param i18n_key The keyword specified in the english.json. Uses innerText to set the translated text.
+     * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
+     * @returns HTMLElementWrapper
+     */
+    create_text_element<K extends keyof HTMLElementTagNameMap>(tag: K, i18n_key: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
+        const elem = document.createElement(tag);
+        elem.innerText = this.i18n.get_translation(i18n_key);
+        if (attributes) {
+            for (const key in attributes) {
+                elem.setAttribute(key, attributes[key]);
+            }
+        }
+        return new HTMLElementWrapper(elem, true);
+    }
+
+    /**
      * Ensures the existence of an HTML element by ID. Creates a new element if it doesn't exist.
      * @param tag The tag name of the element to create if it doesn't exist.
      * @param id The ID of the element to search for or create. Must be unique!
@@ -788,7 +807,9 @@ export class FrontworkContext {
             }
             
             if (!response.ok) {
-                console.error("ERROR executing api_request(", method, path, ")\n", response);
+                FW.reporter(LogType.Error, "api_request", "ERROR executing api_request( "+method+" "+path+" )", this, null);
+                console.error(response);
+                
                 
                 try {
                     let api_error_response: ApiErrorResponse = await response.json();
@@ -798,8 +819,9 @@ export class FrontworkContext {
                         ok: false,
                         err: api_error_response
                     };
-                } catch {
-                    console.error("Could not parse ApiErrorResponse for api_request("+method+" "+path+")");
+                } catch (error: any) {
+                    FW.reporter(LogType.Error, "api_request", "Could not parse ApiErrorResponse for api_request("+method+" "+path+")", this, error);
+
                     return {
                         ok: false,
                         err: { status: 501, error_message: "API did not returned parsable JSON" }
@@ -814,7 +836,7 @@ export class FrontworkContext {
                 val: data as T
             };
         } catch (error: any) {
-            console.error("ERROR executing api_request("+method+" "+path+")", error);
+            FW.reporter(LogType.Error, "api_request", "ERROR executing api_request( "+method+" "+path+" )", this, error);
             return {
                 ok: false,
                 err: { status: 503, error_message: error }

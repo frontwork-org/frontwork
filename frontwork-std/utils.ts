@@ -1,3 +1,4 @@
+import { FW, LogType } from './frontwork.ts';
 
 
 export function parse_url(url:string): {protocol:string, host:string, path:string, query_string:string, fragment:string} {
@@ -227,7 +228,7 @@ export interface ObserverRetrieverFunction<T> {
                 if (value.ok) {
                     resolve(value);
                 } else {
-                    console.error("ERROR executing Observer.retriever()", value.err);
+                    FW.reporter(LogType.Error, "Observer", "ERROR executing Observer.retriever()", null, value.err);
                     resolve(value); // Still resolve with the error result
                 }
             } catch (error) {
