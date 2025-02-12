@@ -697,6 +697,24 @@ export class FrontworkContext {
     }
 
     /**
+     * Creates a new element and appends I18n text. DOES NOT CHECK IF ALREADY EXIST.
+     * @param tag The tag name of the element to create.
+     * @param i18n_key The keyword specified in the english.json. Uses innerText to set the translated text.
+     * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
+     * @returns HTMLElementWrapper
+     */
+    create_text_element<K extends keyof HTMLElementTagNameMap>(tag: K, i18n_key: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
+        const elem = document.createElement(tag);
+        elem.innerText = this.i18n.get_translation(i18n_key);
+        if (attributes) {
+            for (const key in attributes) {
+                elem.setAttribute(key, attributes[key]);
+            }
+        }
+        return new HTMLElementWrapper(elem, true);
+    }
+
+    /**
      * Ensures the existence of an HTML element by ID. Creates a new element if it doesn't exist.
      * @param tag The tag name of the element to create if it doesn't exist.
      * @param id The ID of the element to search for or create. Must be unique!
