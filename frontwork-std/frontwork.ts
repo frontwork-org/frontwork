@@ -69,8 +69,13 @@ export class HTMLElementWrapper<T extends HTMLElement> {
         this.created_element = created_element;
     }
 
+    prepend_to(parent: HTMLElementWrapper<HTMLElement>): this {
+        if(this.created_element) parent.element.prepend(this.element);
+        return this;
+    }
+
     append_to(parent: HTMLElementWrapper<HTMLElement>): this {
-        if(this.created_element) parent.element.appendChild(this.element);
+        if(this.created_element) parent.element.append(this.element);
         return this;
     }
 
