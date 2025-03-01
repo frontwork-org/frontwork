@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-unused-vars
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm } from "../frontwork.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm, ApiErrorResponse } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
 
@@ -283,4 +283,9 @@ export const APP_CONFIG: FrontworkInit = {
 	middleware: middleware,
 	i18n: i18n,
 	build_on_page_load: false,
+	api_error_event: (context: FrontworkContext, client: FrontworkClient|null, method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean | string[]|number[]|boolean[] }, error: ApiErrorResponse) => {
+		if (context.request.path !== "/" && client !== null && error.status === 401) {
+			client.page_change_to("/", true);
+		}
+	}
 };

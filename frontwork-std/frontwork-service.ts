@@ -9,6 +9,7 @@ import {
     FW,
     FrontworkResponseRedirect,
     FrontworkContext,
+    ApiErrorEvent,
 } from "./frontwork.ts";
 
 
@@ -317,9 +318,11 @@ export class FrontworkWebservice extends Frontwork {
                 client_ip,
                 this.api_protocol_address,
                 this.api_protocol_address_ssr,
+                this.api_error_event,
                 this.i18n,
                 request,
                 true,
+                null,
             );
             const route = await this.route_resolver(context);
 
