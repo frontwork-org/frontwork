@@ -134,7 +134,7 @@ export class FrontworkClient extends Frontwork {
             // Page changed, so we trigger the on_destroy method from the previous route. Uses the context of the previous component.
             if(this.previous_component !== null && this.previous_context !== null ) await this.previous_component.on_destroy(this.previous_context, this);
 
-            const context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, this.i18n, request, do_building);
+            const context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, this.api_error_event, this.i18n, request, do_building, this);
             this.previous_context = context;
             const route: Route|null = await this.route_resolver(context);
             

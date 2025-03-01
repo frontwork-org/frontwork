@@ -1,6 +1,5 @@
 import { parse_url, key_value_list_to_object, Observer, Result, ObserverRetrieverFunction } from "./utils.ts";
 import { FrontworkClient } from './frontwork-client.ts'
-import { context } from 'https://deno.land/x/esbuild@v0.20.1/mod.d.ts';
 
 
 export enum LogType {
@@ -627,6 +626,10 @@ export interface ApiErrorResponse {
     error_message: string
 }
 
+export interface ApiErrorEvent {
+    ( context: FrontworkContext, client: FrontworkClient|null, method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean | string[]|number[]|boolean[] }, error: ApiErrorResponse ): void
+}
+
 export enum PageloadType { Serverside, ClientAfterServerside, ClientDefault }
 
 const client_observers: {[key: string]: Observer<any>} = {};
@@ -645,20 +648,25 @@ export class FrontworkContext {
     readonly document_head: HTMLHeadElement;
     readonly document_body: HTMLBodyElement;
 
+    private api_error_event: ApiErrorEvent;
+    private client: FrontworkClient|null;
+
     /**
      * Set-Cookie headers for deno side rendering. Deno should retrieve Cookies from the API and pass them to the browser. Should not be used to manually set Cookies. Use the FrontworkResponse.set_cookie method instead
      */
     set_cookies: string[] = [];
 
-    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, client_ip: string, api_protocol_address: string, api_protocol_address_ssr: string, i18n: I18n, request: FrontworkRequest, do_building: boolean) {
+    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, client_ip: string, api_protocol_address: string, api_protocol_address_ssr: string, api_error_event: ApiErrorEvent, i18n: I18n, request: FrontworkRequest, do_building: boolean, client: FrontworkClient|null) {
         this.platform = platform;
         this.stage = stage;
         this.client_ip = client_ip;
         this.api_protocol_address = api_protocol_address;
         this.api_protocol_address_ssr = api_protocol_address_ssr;
+        this.api_error_event = api_error_event;
         this.i18n = i18n;
         this.request = request;
         this.do_building = do_building;
+        this.client = client;
 
         this.document_html = document.createElement("html");
         this.document_head = this.document_html.appendChild( document.createElement("head") );
@@ -819,6 +827,7 @@ export class FrontworkContext {
                 try {
                     let api_error_response: ApiErrorResponse = await response.json();
                     api_error_response.status = response.status;
+                    this.api_error_event(this, this.client, method, path, params, api_error_response);
     
                     return {
                         ok: false,
@@ -826,10 +835,12 @@ export class FrontworkContext {
                     };
                 } catch (error: any) {
                     FW.reporter(LogType.Error, "api_request", "Could not parse ApiErrorResponse for api_request("+method+" "+path+")", this, error);
+                    let api_error_response: ApiErrorResponse = { status: 501, error_message: "API did not returned parsable JSON" }
+                    this.api_error_event(this, this.client, method, path, params, api_error_response);
 
                     return {
                         ok: false,
-                        err: { status: 501, error_message: "API did not returned parsable JSON" }
+                        err: api_error_response
                     };
                 }
         
@@ -842,9 +853,12 @@ export class FrontworkContext {
             };
         } catch (error: any) {
             FW.reporter(LogType.Error, "api_request", "ERROR executing api_request( "+method+" "+path+" )", this, error);
+            let api_error_response: ApiErrorResponse = { status: 503, error_message: error }
+            this.api_error_event(this, this.client, method, path, params, api_error_response);
+
             return {
                 ok: false,
-                err: { status: 503, error_message: error }
+                err: api_error_response
             };
         }
     }
@@ -879,7 +893,7 @@ export class FrontworkContext {
  */
 export interface FrontworkInit {
     platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, api_protocol_address: string, api_protocol_address_ssr: string, 
-    domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean
+    domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean, api_error_event?: ApiErrorEvent;
 }
 
 export class Frontwork {
@@ -891,6 +905,7 @@ export class Frontwork {
 	protected domain_to_route_selector: DomainToRouteSelector;
 	protected middleware: FrontworkMiddleware;
     protected i18n: I18n
+    protected api_error_event: ApiErrorEvent;
 
 	constructor(init: FrontworkInit) {
 		this.platform = init.platform;
@@ -901,6 +916,7 @@ export class Frontwork {
 		this.domain_to_route_selector = init.domain_to_route_selector;
 		this.middleware = init.middleware;
 		this.i18n = init.i18n;
+		this.api_error_event = init.api_error_event === undefined? ()=>{} : init.api_error_event;
         if(this.stage === EnvironmentStage.Development) FW.verbose_logging = true;
 	}
 
