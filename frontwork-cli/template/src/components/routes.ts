@@ -38,7 +38,7 @@ export const routes: Route[] = [
 export const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: async (context: FrontworkContext) => {
-			context.i18n.set_locale("en");
+			context.set_locale("en");
 		},
 		dom_ready: async () => { }
 	},
