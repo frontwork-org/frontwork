@@ -114,45 +114,7 @@ export enum EnvironmentStage {
     Production,
 }
 
-export class I18n {
-    locales: I18nLocale[];
-    selected_locale: I18nLocale;
-
-    constructor(locales: I18nLocale[]) {
-        if(locales.length === 0) throw new Error("I18n: No locales provided");
-        
-        this.locales = locales;
-        this.selected_locale = locales[0];
-    }
-
-    set_locale(locale: string) {
-        if(FW.verbose_logging) FW.reporter(LogType.Info, "I18n", "    Setting locale to \"" + locale + "\"", null, null);
-        const locale_found = this.locales.find(l => l.locale === locale);
-
-        if(locale_found === undefined) {
-            FW.reporter(LogType.Error, "I18n", "Locale '"+locale+"' does not exist", null, null);
-            return false;
-        }
-        
-        this.selected_locale = locale_found;
-        return true;
-    }
-
-    get_translation(key: string): string {
-        return this.selected_locale.get_translation(key);
-    }
-
-    get_translation_replace(key: string, search: string, replace: string): string {
-        return this.selected_locale.get_translation(key).split(search).join(replace);
-    }
-
-    get_translation_replace_number(key: string, search: string, number: number): string {
-        if (number === 1) return this.selected_locale.get_translation(key+"_one");
-        return this.selected_locale.get_translation(key).split(search).join(number.toString());
-    }
-
-}    
-
+export type I18n = I18nLocale[];
 
 export class I18nLocale {
     locale: string;
@@ -435,7 +397,7 @@ export class DocumentBuilder implements DocumentBuilderInterface {
     constructor(context: FrontworkContext) {
         this.context = context;
         this.doctype = "<!DOCTYPE html>";
-        this.set_html_lang(context.i18n.selected_locale.locale);
+        this.set_html_lang(context.selected_locale.locale);
     }
 
     //
@@ -655,6 +617,7 @@ export class FrontworkContext {
      * Set-Cookie headers for deno side rendering. Deno should retrieve Cookies from the API and pass them to the browser. Should not be used to manually set Cookies. Use the FrontworkResponse.set_cookie method instead
      */
     set_cookies: string[] = [];
+    selected_locale: I18nLocale;
 
     constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, client_ip: string, api_protocol_address: string, api_protocol_address_ssr: string, api_error_event: ApiErrorEvent, i18n: I18n, request: FrontworkRequest, do_building: boolean, client: FrontworkClient|null) {
         this.platform = platform;
@@ -663,7 +626,6 @@ export class FrontworkContext {
         this.api_protocol_address = api_protocol_address;
         this.api_protocol_address_ssr = api_protocol_address_ssr;
         this.api_error_event = api_error_event;
-        this.i18n = i18n;
         this.request = request;
         this.do_building = do_building;
         this.client = client;
@@ -671,6 +633,37 @@ export class FrontworkContext {
         this.document_html = document.createElement("html");
         this.document_head = this.document_html.appendChild( document.createElement("head") );
         this.document_body = this.document_html.appendChild( document.createElement("body") );
+        
+        // I18n
+        if(i18n.length === 0) throw new Error("I18n: No locales provided");
+        this.i18n = i18n;
+        this.selected_locale = i18n[0];
+    }
+
+    set_locale(locale: string) {
+        if(FW.verbose_logging) FW.reporter(LogType.Info, "I18n", "    Setting locale to \"" + locale + "\"", null, null);
+        const locale_found = this.i18n.find(l => l.locale === locale);
+
+        if(locale_found === undefined) {
+            FW.reporter(LogType.Error, "I18n", "Locale '"+locale+"' does not exist", null, null);
+            return false;
+        }
+        
+        this.selected_locale = locale_found;
+        return true;
+    }
+
+    get_translation(key: string): string {
+        return this.selected_locale.get_translation(key);
+    }
+
+    get_translation_replace(key: string, search: string, replace: string): string {
+        return this.selected_locale.get_translation(key).split(search).join(replace);
+    }
+
+    get_translation_replace_number(key: string, search: string, number: number): string {
+        if (number === 1) return this.selected_locale.get_translation(key+"_one");
+        return this.selected_locale.get_translation(key).split(search).join(number.toString());
     }
 
 
@@ -718,7 +711,7 @@ export class FrontworkContext {
      */
     create_text_element<K extends keyof HTMLElementTagNameMap>(tag: K, i18n_key: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
         const elem = document.createElement(tag);
-        elem.innerText = this.i18n.get_translation(i18n_key);
+        elem.innerText = this.get_translation(i18n_key);
         if (attributes) {
             for (const key in attributes) {
                 elem.setAttribute(key, attributes[key]);
@@ -762,7 +755,7 @@ export class FrontworkContext {
         
         const elem2 = document.createElement(tag);
         elem2.id = id;
-        elem2.innerText = this.i18n.get_translation(id);
+        elem2.innerText = this.get_translation(id);
         if (attributes) {
             for (const key in attributes) {
                 elem2.setAttribute(key, attributes[key]);
@@ -888,7 +881,7 @@ export class FrontworkContext {
  *   @param {string} api_protocol_address - The protocol and address for FrontworkContext.api_request. Example: http://localhost:40201. Should use https for staging and production. 
  *   @param {DomainToRouteSelector[]} domain_to_route_selector - Function that selects which routes should work under a domain 
  *   @param {FrontworkMiddleware} middleware - Handler for every edge case like 404er, 500er. You can also execute code before a route executes.
- *   @param {i18n} I18n - Prepare always translations before hand to save time later. For every static string please use the context.i18n.get_translation() method.
+ *   @param {i18n} I18n - Prepare always translations before hand to save time later. For every static string please use the context.get_translation() method.
  *   @param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
  */
 export interface FrontworkInit {
