@@ -13,8 +13,6 @@ if(Deno.build.os === "windows" && __dir.charAt(0) === "/") __dir.substring(1, __
 if (APP_CONFIG.stage !== EnvironmentStage.Development || __dir.includes("/tmp/") || __dir.includes("/temp/")) {
     __dir = Deno.execPath().split("/").slice(0, -1).join("/");
 } else {
-    console.log("__dir", __dir);
-    
     __dir_dist = __dir.substring(0, __dir.length - "/src".length) + "/dist/development-web"
 }
 
