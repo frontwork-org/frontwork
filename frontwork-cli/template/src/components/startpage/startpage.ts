@@ -39,7 +39,6 @@ export class StartpageComponent implements Component {
         );
     }
 
-    async dom_ready(context: FrontworkContext, client: FrontworkClient) {
-        
-  }
+    async dom_ready(context: FrontworkContext, client: FrontworkClient) {}
+    async on_destroy(context: FrontworkContext, client: FrontworkClient) {}
 }
