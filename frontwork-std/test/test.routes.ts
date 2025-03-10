@@ -95,7 +95,7 @@ class TestComponent implements Component {
 
 class TestGerman extends TestComponent {
     constructor(context: FrontworkContext) {
-		context.i18n.set_locale("de");
+		context.set_locale("de");
 		super(context);
 	}
     override async build(context: FrontworkContext) {
@@ -247,7 +247,7 @@ export function login_check(context: FrontworkContext): Promise<User> {
 const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: async (context: FrontworkContext) => {
-			context.i18n.set_locale("en");
+			context.set_locale("en");
 			const observer = context.get_observer<User>("user");
 			if(observer.is_null()) context.api_request_observer<User>(observer, "POST", "/api/v1/account/user", {});
 		},

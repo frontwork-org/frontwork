@@ -16,11 +16,11 @@ export class FrontworkTestworker extends Frontwork {
         FW.reporter = (log_type: LogType, category: string, text: string, context: FrontworkContext|null, error: Error|null) => {
             if (log_type === LogType.Error) {
                 this.fail_count++;
-                if(error === null) console.error(text);
-                else console.error(text, error);
+                if(error === null) console.error(red(text));
+                else console.error(red(text), red(error.toString()));
             } else if (log_type === LogType.Warn) {
                 this.warn_count++;
-                console.warn(text); 
+                console.warn(yellow(text)); 
             }
         };
     }
@@ -70,7 +70,7 @@ export class FrontworkTestworker extends Frontwork {
         for (let d = 0; d < domains.length; d++) {
             const domain_url = "http://"+domains[d]+":"+this.port;
             const domain_request = new FrontworkRequest("GET", domain_url, new Headers(), new PostScope({}));
-            const domain_context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, this.i18n, domain_request, true);
+            const domain_context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, ()=>{}, this.i18n, domain_request, true, null);
 
             const routes = await this.domain_to_route_selector(domain_context);
             
@@ -82,7 +82,7 @@ export class FrontworkTestworker extends Frontwork {
 
                     const route_url = domain_url+route.path;
                     const route_request = new FrontworkRequest("GET", route_url, new Headers(), new PostScope({}));
-                    const route_context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, this.i18n, route_request, true);
+                    const route_context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, ()=>{}, this.i18n, route_request, true, null);
 
     
                     await this.assert_function(async () => {
@@ -110,7 +110,11 @@ export class FrontworkTestworker extends Frontwork {
         const time_taken = (time_finished - this.time_start) / 1000;
         console.info("\n"+"test result:", status_text, this.fail_count + " failures / " + this.test_count + " tests; finished in "+time_taken.toFixed(2)+"s"+"\n");
         if (this.warn_count > 0) {
-            console.info("Please note that there are ", yellow(this.warn_count.toString()) + " warnings.\n");
+            if (this.warn_count === 1) {
+                console.info("Please note that there is ", yellow("1") + " warning.\n");
+            } else {
+                console.info("Please note that there are ", yellow(this.warn_count.toString()) + " warnings.\n");
+            }
         }
         return this;
     }
