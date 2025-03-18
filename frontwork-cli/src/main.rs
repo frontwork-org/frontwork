@@ -720,5 +720,6 @@ fn update_frontwork_deps() -> std::io::Result<()> {
         }
     }
 
+    println!("\nYou may want restarting your Deno language server to fix linting issues.");
     Ok(())
 }

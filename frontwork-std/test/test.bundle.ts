@@ -10,7 +10,7 @@ esbuild.build({
   platform: "browser",
   format: "esm",
   target: "esnext",
-  minify: true,
+  minify: false,
   sourcemap: false,
   treeShaking: true,
 });

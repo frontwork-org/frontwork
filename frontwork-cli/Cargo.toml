@@ -1,6 +1,6 @@
 [package]
 name = "frontwork"
-version = "0.1.66"
+version = "0.1.67"
 edition = "2021"
 authors = ["LuceusXylian <luceusxylian@gmail.com>", "frontwork-org Contributors <https://github.com/frontwork-org>"]
 description = "The TypeScript Framework using Deno & Webassembly"
@@ -11,15 +11,15 @@ repository = "https://github.com/frontwork-org/frontwork"
 
 [dependencies]
 reqwest = {version = "0.12.4", features = ["blocking"] }
-error-chain = "0.12.4"
+anyhow = "1.0.97"
 shell = "0.3.2"
 time = "0.3.36"
 include_dir = "0.7.3"
-convert_case = "0.6.0"
+convert_case = "0.8.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.117"
 rusync = "0.7.2"
-rsass = "0.28.8"
+rsass = "0.29.0"
 zip = "2.1.0"
 zip-extensions = "0.8.0"
 regex = "1.11.1"
