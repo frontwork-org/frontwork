@@ -1,5 +1,5 @@
 import { } from "./dom.ts";
-import { Frontwork, FrontworkInit, FrontworkRequest, LogType, PostScope, FW, FrontworkContext } from "./frontwork.ts";
+import { Frontwork, FrontworkInit, FrontworkRequest, LogType, PostScope, FW, FrontworkContext, I18nLocale } from "./frontwork.ts";
 import { green, red, yellow } from "https://deno.land/std@0.224.0/fmt/colors.ts";
 
 
@@ -66,32 +66,39 @@ export class FrontworkTestworker extends Frontwork {
         return this;
     }
 
+    create_context(url: string, locale: I18nLocale) {
+        const request = new FrontworkRequest("GET", url, new Headers(), new PostScope({}));
+        const context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, ()=>{}, this.i18n, request, true, null);
+        context.selected_locale = locale;
+        return context;
+    }
+
     async test_routes(domains: string[]) {
-        for (let d = 0; d < domains.length; d++) {
-            const domain_url = "http://"+domains[d]+":"+this.port;
-            const domain_request = new FrontworkRequest("GET", domain_url, new Headers(), new PostScope({}));
-            const domain_context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, ()=>{}, this.i18n, domain_request, true, null);
-
-            const routes = await this.domain_to_route_selector(domain_context);
+        for (let l = 0; l < this.i18n.length; l++) {
+            const locale = this.i18n[l];
+            console.log("\nStart testing with locale '"+locale.locale+"'");
             
-
-            for (let r = 0; r < routes.length; r++) {
-                const route = routes[r];
-                if (route.path.indexOf('*') === -1) {
-                    // Test only if the path is static
-
-                    const route_url = domain_url+route.path;
-                    const route_request = new FrontworkRequest("GET", route_url, new Headers(), new PostScope({}));
-                    const route_context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, ()=>{}, this.i18n, route_request, true, null);
-
+            for (let d = 0; d < domains.length; d++) {
+                const domain_url = "http://"+domains[d]+":"+this.port;
+                const domain_context = this.create_context(domain_url, locale);
+                const routes = await this.domain_to_route_selector(domain_context);
     
-                    await this.assert_function(async () => {
-                        // Middleware: before Routes
-                        await this.middleware.before_route.build(route_context);
-
-                        // Route
-                        await new route.component(route_context).build(route_context);
-                    });
+                for (let r = 0; r < routes.length; r++) {
+                    const route = routes[r];
+                    if (route.path.indexOf('*') === -1) {
+                        // Test only if the path is static
+    
+                        const route_url = domain_url+route.path;
+                        const route_context = this.create_context(route_url, locale);
+        
+                        await this.assert_function(async () => {
+                            // Middleware: before Routes
+                            await this.middleware.before_route.build(route_context);
+    
+                            // Route
+                            await new route.component(route_context).build(route_context);
+                        });
+                    }
                 }
             }
         }
