@@ -89,6 +89,15 @@ export class HTMLElementWrapper<T extends HTMLElement> {
     then(runnable: () => void) {
         if(this.created_element) runnable();
     }
+
+    show() {
+        const attr_value = this.element.getAttribute("style");
+        if (attr_value) this.element.setAttribute("style", attr_value.replace("display: none;", ""));
+    }
+
+    hide() {
+        this.element.setAttribute("style", "display: none;");
+    }
 }
 
 /**

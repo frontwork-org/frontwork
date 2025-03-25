@@ -79,6 +79,7 @@ gh pr create --repo frontwork-org/frontwork \
     --body "Creating a pull request to merge changes for v$NEW_VERSION from $MY_GIT_REPO into frontwork-org/frontwork"
 
 # Merge it
+gh repo set-default frontwork-org/frontwork
 gh pr merge --merge
 
 # Create and push tag
