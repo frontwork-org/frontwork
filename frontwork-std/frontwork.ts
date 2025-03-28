@@ -96,7 +96,12 @@ export class HTMLElementWrapper<T extends HTMLElement> {
     }
 
     hide() {
-        this.element.setAttribute("style", "display: none;");
+        const current_style = this.element.getAttribute("style");
+        if (current_style === null) {
+            this.element.setAttribute("style", "display: none;");
+        } else {
+            this.element.setAttribute("style", current_style + " display: none;");
+        }
     }
 }
 
