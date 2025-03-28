@@ -100,7 +100,7 @@ export class HTMLElementWrapper<T extends HTMLElement> {
         if (current_style === null) {
             this.element.setAttribute("style", "display: none;");
         } else {
-            this.element.setAttribute("style", current_style + " display: none;");
+            if(!current_style.includes("display: none;")) this.element.setAttribute("style", current_style + " display: none;");
         }
     }
 }
