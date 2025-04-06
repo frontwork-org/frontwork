@@ -6,9 +6,9 @@ export class FrontworkClient extends Frontwork {
     private build_on_page_load: boolean;
     private readonly client_observers: {[key: string]: Observer<any>} = {};
 
-    // page_change() behaviour: 
-    // It kills the previous Promise so that it will not execute its Component build function since it is not needed because the user already clicked to the next page.
-    // But we should wait for page_change_form because we want ensure that the data is transmitted.
+    /** page_change() behaviour: 
+        It kills the previous Promise so that it will not execute its Component build function since it is not needed because the user already clicked to the next page.
+        But we should wait for page_change_form because we want ensure that the data is transmitted. */
     private page_change_ready = true;
     private page_change_previous_abort_controller: AbortController|null = null;
     public is_page_change_ready(): boolean { return this.page_change_ready }
@@ -224,7 +224,7 @@ export class FrontworkClient extends Frontwork {
         return null;
     }
     
-    // function replacement for window.location; accessible for the Component method dom_ready
+    // function replacement for window.location; accessible for the Component method dom_ready */
     public async page_change_to(url_or_path: string, ignore_not_ready?: boolean) {
         if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "    page_change_to: " + url_or_path, null, null);
         let url;
@@ -245,7 +245,7 @@ export class FrontworkClient extends Frontwork {
         return false;
     }
     
-    // function to handle Form submits being handled in client
+    /** function to handle Form submits being handled in client */
     public async page_change_form(form: HTMLFormElement, submit_button: HTMLButtonElement|null): Promise<boolean> {
         this.page_change_ready = false;
         if(FW.verbose_logging) FW.reporter(LogType.Info, "PageChange", "page_change_form", null, null);
@@ -316,6 +316,10 @@ export class FrontworkClient extends Frontwork {
 
         if(submit_button) submit_button.disabled = true;
         return false;
+    }
+
+    public refresh() {
+        return this.page_change_to(window.location.toString(), true);
     }
 }
 
