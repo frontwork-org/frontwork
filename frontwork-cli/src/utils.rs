@@ -1,7 +1,8 @@
 #![allow(dead_code)]
-use std::{io::{stdout, Write}, os::unix::fs::PermissionsExt, path::Path, process::Child, time::SystemTime};
+use std::{fs::File, io::{stdout, Write}, os::unix::fs::PermissionsExt, path::{Path, PathBuf}, process::Child, time::SystemTime};
 use std::fs;
 use rsass::{compile_scss_path, output};
+use zip::{result::ZipResult, ZipArchive};
 
 
 pub fn find_optional_arg(args: &[String], find: &str) -> Option<String> {
@@ -122,6 +123,12 @@ pub fn make_file_executable(file_path: &str) -> std::result::Result<(), std::io:
     fs::set_permissions(file_path, fs::Permissions::from_mode(0o775))
 }
 
+/// Extracts a ZIP file to the given directory.
+pub fn zip_extract(archive_file: &PathBuf, target_dir: &PathBuf) -> ZipResult<()> {
+    let file = File::open(archive_file)?;
+    let mut archive = ZipArchive::new(file)?;
+    archive.extract(target_dir)
+}
 
 // pub fn move_file(from_filepath: &String, to_filepath: &String) {
 //     if std::fs::rename(&from_filepath, to_filepath).is_err()  {
