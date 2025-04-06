@@ -1,4 +1,1479 @@
-function X(a){let e=a.split("://");if(e.length<2)throw new Error("Invalid URL: "+a);let t=e[0]+":",r=e[1].split("?"),n=r[0].split("/"),o=n[0],l;if(n.length<2)l="/";else{l="";for(let s=1;s<n.length;s++)l+="/"+n[s]}let i,c;if(r.length>1){let s=r[1].split("#");i=s[0],c=s.length>1?s[1]:""}else i="",c="";return{protocol:t,host:o,path:l,query_string:i,fragment:c}}function C(a,e,t){let r={},n=a.split(e);for(let o=0;o<n.length;o++){let i=n[o].split(t);i[0]!==""&&(i.length===2?r[i[0]]=i[1]:r[i[0]]="")}return r}function I(a,e){for(let t=0;t<e.length;t++){let r=e[t];a.setAttribute(r.name,r.value)}}var y=class{observers=[];retriever=null;value=null;retriever_listeners=[];renew_is_running=!1;define_retriever(e){this.retriever=e}remove_retriever(){this.retriever=null}subscribe(e){this.value!==null&&e(this.value),this.observers.push(e)}unsubscribe(e){this.observers=this.observers.filter(t=>t!==e)}add_retriever_listener(e){this.retriever_listeners.push(e)}remove_retriever_listener(e){this.retriever_listeners=this.retriever_listeners.filter(t=>t!==e)}set(e){this.value=e,this.observers.forEach(t=>t(e))}set_value(e){this.set({ok:!0,val:e})}set_null(){this.value=null}is_null(){return this.value===null}set_once(e){this.value===null&&this.set({ok:!0,val:e})}get(){return new Promise((e,t)=>{if(this.value===null)if(this.retriever===null||this.renew_is_running){let r=n=>{n.ok?e(n.val):t(n.err),this.unsubscribe(r)};this.subscribe(r)}else this.get_renew().then(r=>e(r)).catch(r=>t(r));else this.value.ok?e(this.value.val):t(this.value.err)})}get_renew(){return new Promise(async(e,t)=>{if(this.renew_is_running){let r=n=>{n.ok?e(n.val):t(n.err),this.unsubscribe(r)};this.subscribe(r)}else{let r=await this.renew();r.ok?e(r.val):t(r.err)}})}renew(){return new Promise(async(e,t)=>{if(this.retriever===null){t(new Error("For Observer.renew() the retriever must be defined"));return}this.renew_is_running=!0,this.retriever_listeners.forEach(r=>r());try{let r=await this.retriever();this.set(r),this.renew_is_running=!1,r.ok||u.reporter(2,"Observer","ERROR executing Observer.retriever()",null,r.err),e(r)}catch(r){this.renew_is_running=!1;let n={ok:!1,err:r instanceof Error?r:new Error(String(r))};t(n)}})}get count(){return this.observers.length}clear(){this.observers=[],this.value=null}};var u={is_client_side:!0,reporter_client_to_server:!0,verbose_logging:!1,reporter:function(a,e,t,r,n){u.reporter_client_to_server&&u.is_client_side&&fetch(location.protocol+"//"+location.host+"//dr",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({report_text:t})}),a===2?n===null?console.error(t):console.error(t,n):a===1?console.warn(t):a===0&&console.log(t)}},m=class{element;created_element;constructor(e,t){this.element=e,this.created_element=t}prepend_to(e){return this.created_element&&e.element.prepend(this.element),this}append_to(e){return this.created_element&&e.element.append(this.element),this}replace_text(e,t){this.element.innerText=this.element.innerText.split(e).join(t)}replace_html(e,t){this.element.innerHTML=this.element.innerHTML.split(e).join(t)}then(e){this.created_element&&e()}},F=class extends m{constructor(e,t,r,n){super(e.ensure_element("form",t,{action:r,method:n}).element,e.do_building),this.element.setAttribute("fw-form","1")}};var R=class{locales;selected_locale;constructor(e){if(e.length===0)throw new Error("I18n: No locales provided");this.locales=e,this.selected_locale=e[0]}set_locale(e){u.verbose_logging&&u.reporter(0,"I18n",'    Setting locale to "'+e+'"',null,null);let t=this.locales.find(r=>r.locale===e);return t===void 0?(u.reporter(2,"I18n","Locale '"+e+"' does not exist",null,null),!1):(this.selected_locale=t,!0)}get_translation(e){return this.selected_locale.get_translation(e)}get_translation_replace(e,t,r){return this.selected_locale.get_translation(e).split(t).join(r)}get_translation_replace_number(e,t,r){return r===1?this.selected_locale.get_translation(e+"_one"):this.selected_locale.get_translation(e).split(t).join(r.toString())}},v=class{locale;translations;constructor(e,t){this.locale=e,this.translations=t}get_translation(e){let t=this.translations[e];return t===void 0?(u.reporter(2,"I18n","    Missing translation for the locale '"+this.locale+`': ,"`+e+'": "translated_text"',null,null),""):t}},T=class{items;constructor(e){this.items=e}get(e){let t=this.items[e];return t===void 0?null:t}forEach(e){Object.entries(this.items).forEach(([t,r])=>{e(t,r)})}},D=class extends T{constructor(e){super(e)}},f=class extends T{constructor(e){super(e)}async from_request(e){let t=e.headers.get("content-type");if(t!==null&&(t=t.split(";")[0],e.body!==null)){if(t==="application/x-www-form-urlencoded"){let r=e.body.getReader();r!==null&&await r.read().then(n=>{if(n.value!==null){let o=new TextDecoder().decode(n.value);this.items=C(o,"&","=")}})}else if(t==="application/json"){let r=e.body.getReader();r!==null&&await r.read().then(n=>{if(n.value!==null){let o=new TextDecoder().decode(n.value);this.items=JSON.parse(o)}})}}return this}},P=class extends T{constructor(e){super(e)}};var b=class{headers;method;url;protocol;host;path;path_dirs;query_string;fragment;GET;POST;COOKIES;constructor(e,t,r,n){let o=X(t);this.headers=r,this.method=e,this.url=t,this.protocol=o.protocol,this.host=o.host,this.path=o.path,this.path_dirs=decodeURIComponent(o.path.replace(/\+/g,"%20")).split("/"),this.query_string=o.query_string,this.fragment=o.fragment,this.GET=new D(C(o.query_string,"&","=")),this.POST=n;let l=this.headers.get("cookie");this.COOKIES=new P(l===null?{}:C(l,"; ","="))}__request_text(e){let t=this.method+" "+this.path;this.query_string!==""&&(t+="?"+this.query_string),t+=" ["+e+"]";let r=Object.keys(this.POST.items);return r.length!==0&&(t+=`
-    Scope POST: `,r.forEach(n=>{t+=`
-        `+n+' = "'+this.POST.items[n]+'"'})),t}log(e,t){u.verbose_logging&&u.reporter(0,e,this.__request_text(e),t,null)}error(e,t,r){u.reporter(2,e,this.__request_text(e),t,r)}},p=class{status_code;mime_type="text/html";content;headers=[];cookies=[];constructor(e,t){this.status_code=e,this.content=t}set_mime_type(e){return this.mime_type=e,this}add_header(e,t){return this.headers.push([e,t]),this}get_header(e){for(let t of this.headers)if(t[0]===e)return t[1];return null}set_cookie(e){for(let t=0;t<this.cookies.length;t++)if(this.cookies[t].name===e.name)return this.cookies[t]=e,this;return this.cookies.push(e),this}into_response(){let e=new Response(this.content.toString(),{status:this.status_code});e.headers.set("content-type",this.mime_type);for(let t=0;t<this.headers.length;t++){let r=this.headers[t];e.headers.set(r[0],r[1])}for(let t=0;t<this.cookies.length;t++){let r=this.cookies[t];e.headers.append("set-cookie",r.to_string())}return e}},E=class{context;doctype;constructor(e){this.context=e,this.doctype="<!DOCTYPE html>",this.set_html_lang(e.i18n.selected_locale.locale)}head_append_tag(e,t){let r=document.createElement(e);if(t)for(let n in t)r.setAttribute(n,t[n]);return this.context.document_head.append(r),this}add_head_meta_data(e,t,r){this.context.document_head.appendChild(document.createElement("meta")).setAttribute("charset","UTF-8");let o=this.context.document_head.appendChild(document.createElement("meta"));o.setAttribute("http-equiv","X-UA-Compatible"),o.setAttribute("content","IE=edge");let l=this.context.document_head.appendChild(document.createElement("meta"));l.setAttribute("name","viewport"),l.setAttribute("content","width=device-width, initial-scale=1, maximum-scale=1");let i=this.context.document_head.appendChild(document.createElement("title"));i.innerHTML=e;let c=this.context.document_head.appendChild(document.createElement("meta"));c.setAttribute("name","description"),c.setAttribute("content",t);let s=this.context.document_head.appendChild(document.createElement("meta"));return s.setAttribute("name","robots"),s.setAttribute("content",r),this}add_head_meta_opengraph_website(e,t,r,n){let o=this.context.document_head.appendChild(document.createElement("meta"));o.setAttribute("property","og:type"),o.setAttribute("content","website");let l=this.context.document_head.appendChild(document.createElement("meta"));l.setAttribute("property","og:url"),l.setAttribute("content",r);let i=this.context.document_head.appendChild(document.createElement("meta"));i.setAttribute("property","og:title"),i.setAttribute("content",e);let c=this.context.document_head.appendChild(document.createElement("meta"));c.setAttribute("property","og:description"),c.setAttribute("content",t);let s=this.context.document_head.appendChild(document.createElement("meta"));return s.setAttribute("property","og:image"),s.setAttribute("content",n),this}set_html_lang(e){return this.context.document_html.setAttribute("lang",e),this}body_append(e){return this.context.document_body.append(e.element),e}html(){let e=this.context.document_head.appendChild(document.createElement("link"));e.setAttribute("id","fw-style"),e.setAttribute("rel","stylesheet"),e.setAttribute("href","/css/style.css"),e.setAttribute("type","text/css");let t=this.context.document_body.appendChild(document.createElement("script"));return t.setAttribute("id","fw-script"),t.setAttribute("src","/js/main.js"),t.setAttribute("type","text/javascript"),this.context.document_html}toString(){let e=this.html();return this.doctype+`
-`+e.outerHTML}},L=class extends p{constructor(e,t){u.verbose_logging&&u.reporter(0,"REDIRECT","    ["+t+" REDIRECT]-> "+e,null,null),super(t,"redirecting..."),this.add_header("Location",e)}},z=0,h=class{id;path;component;constructor(e,t){this.path=e,this.component=t,this.id=z,z+=1}};var q={},A=class{platform;stage;client_ip;api_protocol_address;api_protocol_address_ssr;i18n;request;do_building;document_html;document_head;document_body;api_error_event;client;set_cookies=[];constructor(e,t,r,n,o,l,i,c,s,d){this.platform=e,this.stage=t,this.client_ip=r,this.api_protocol_address=n,this.api_protocol_address_ssr=o,this.api_error_event=l,this.i18n=i,this.request=c,this.do_building=s,this.client=d,this.document_html=document.createElement("html"),this.document_head=this.document_html.appendChild(document.createElement("head")),this.document_body=this.document_html.appendChild(document.createElement("body"))}server_observers={};get_observer(e){return u.is_client_side?(q[e]||(q[e]=new y),q[e]):(this.server_observers[e]||(this.server_observers[e]=new y),this.server_observers[e])}create_element(e,t){let r=document.createElement(e);if(t)for(let n in t)r.setAttribute(n,t[n]);return new m(r,!0)}create_text_element(e,t,r){let n=document.createElement(e);if(n.innerText=this.get_translation(t),r)for(let o in r)n.setAttribute(o,r[o]);return new m(n,!0)}ensure_element(e,t,r){let n=this.do_building?this.document_html.querySelector("#"+t):document.getElementById(t);if(n!==null)return new m(n,!1);let o=document.createElement(e);if(o.id=t,r)for(let l in r)o.setAttribute(l,r[l]);return new m(o,!0)}ensure_text_element(e,t,r){let n=this.do_building?this.document_html.querySelector("#"+t):document.getElementById(t);if(n!==null)return new m(n,!1);let o=document.createElement(e);if(o.id=t,o.innerText=this.get_translation(t),r)for(let l in r)o.setAttribute(l,r[l]);return new m(o,!0)}async api_request(e,t,r,n={}){let o=(u.is_client_side?this.api_protocol_address:this.api_protocol_address_ssr)+t,l=n;l.method=e,l.headers=n.headers?n.headers:new Headers;let i="",c=Object.entries(r);if(c.length>0){i+=c[0][0]+"="+c[0][1];for(let s=1;s<c.length;s++)i+="&"+c[s][0]+"="+c[s][1]}if(e==="GET"?i.length>0&&(o+="?"+i):(l.body=i,l.headers.set("Content-Type","application/x-www-form-urlencoded")),!u.is_client_side){let s="";this.request.COOKIES.forEach((d,_)=>{s+=d+"="+_+"; "}),l.headers.set("Cookie",s),l.headers.set("X-Forwarded-For",this.client_ip)}try{let s=await fetch(o,l);if(u.is_client_side||s.headers.getSetCookie().forEach(g=>this.set_cookies.push(g)),!s.ok){u.reporter(2,"api_request","ERROR executing api_request( "+e+" "+t+" )",this,null),console.error(s);try{let _=await s.json();return _.status=s.status,this.api_error_event(this,this.client,e,t,r,_),{ok:!1,err:_}}catch(_){u.reporter(2,"api_request","Could not parse ApiErrorResponse for api_request("+e+" "+t+")",this,_);let g={status:501,error_message:"API did not returned parsable JSON"};return this.api_error_event(this,this.client,e,t,r,g),{ok:!1,err:g}}}return{ok:!0,val:await s.json()}}catch(s){u.reporter(2,"api_request","ERROR executing api_request( "+e+" "+t+" )",this,s);let d={status:503,error_message:s};return this.api_error_event(this,this.client,e,t,r,d),{ok:!1,err:d}}}api_request_observer(e,t,r,n,o={}){let l=async()=>{let i=await this.api_request(t,r,n,o);return i.ok?{ok:!0,val:i.val}:{ok:!1,err:new Error(i.err.error_message)}};e.define_retriever(l),e.renew().catch(i=>{})}},S=class{platform;stage;port;api_protocol_address;api_protocol_address_ssr;domain_to_route_selector;middleware;i18n;api_error_event;constructor(e){this.platform=e.platform,this.stage=e.stage,this.port=e.port,this.api_protocol_address=e.api_protocol_address,this.api_protocol_address_ssr=e.api_protocol_address_ssr,this.domain_to_route_selector=e.domain_to_route_selector,this.middleware=e.middleware,this.i18n=e.i18n,this.api_error_event=e.api_error_event===void 0?()=>{}:e.api_error_event,this.stage===0&&(u.verbose_logging=!0)}async route_resolver(e){let t=await this.domain_to_route_selector(e);for(let r=0;r<t.length;r++){let n=t[r],o=n.path.split("/");if(e.request.path_dirs.length===o.length){for(let l=0;l<o.length;l++)if(e.request.path_dirs.length===o.length){let i=!0;for(let c=0;c<o.length;c++){let s=o[c];if(s!=="*"&&s!==e.request.path_dirs[c]){i=!1;break}}if(i)return u.verbose_logging&&e.request.log("ROUTE #"+n.id+" ("+n.path+")",e),n}}}return null}async route_execute_build(e,t){if(t)try{let r=new t.component(e);return{response:await r.build(e),component:r}}catch(r){return e.request.error("ROUTE #"+t.id+" ("+t.path+")",e,r),{response:await this.middleware.error_handler_component.build(e),component:this.middleware.error_handler_component}}u.verbose_logging&&e.request.log("NOT_FOUND",e);try{let r=new this.middleware.not_found_handler(e);return{response:await r.build(e),component:r}}catch(r){return e.request.error("NOT_FOUND",e,r),{response:await this.middleware.error_handler_component.build(e),component:this.middleware.error_handler_component}}}},M=class{error_handler;error_handler_component;not_found_handler;before_route;redirect_lonely_slash;constructor(e){this.error_handler=e.error_handler,this.error_handler_component={async build(t){return t.document_head.innerHTML="",t.document_body.innerHTML="",e.error_handler(t)},dom_ready(){},on_destroy(){}},this.not_found_handler=e.not_found_handler,this.before_route=e.before_route,this.redirect_lonely_slash=e&&e.redirect_lonely_slash?e.redirect_lonely_slash:!0}};var O=class extends S{build_on_page_load;client_observers={};page_change_ready=!0;page_change_previous_abort_controller=null;is_page_change_ready(){return this.page_change_ready}previous_component=null;previous_context=null;constructor(e){if(super(e),typeof e.build_on_page_load=="boolean"?this.build_on_page_load=e.build_on_page_load:this.build_on_page_load=!1,document.addEventListener("DOMContentLoaded",()=>{let t=new b("GET",location.toString(),new Headers,new f({}));this.page_change(t,this.build_on_page_load,!1)}),document.addEventListener("click",async t=>{let r=t.target;if(r.tagName==="A"&&(r.target===""||r.target==="_self")){let n=new URL(r.href);if(n.hostname!==""&&n.hostname!==window.location.hostname)return;this.page_change_ready?await this.page_change_to(r.href,!1)&&t.preventDefault():t.preventDefault()}},!1),document.addEventListener("submit",async t=>{let r=t.target;if(r.tagName==="FORM"&&r.getAttribute("fw-form")!==null)if(t.preventDefault(),r.ariaDisabled==="true")console.log("fw-form is ariaDisabled. Because it already has been submitted.",r);else{r.ariaDisabled="true";let n=t.submitter;n=n&&n.name?n:null;let o=await this.page_change_form(r,n);console.log("page_change_form result",o),r.ariaDisabled="false"}}),addEventListener("popstate",t=>{if(this.page_change_ready){let r=t.state;if(r&&r.url){let n=new b("GET",r.url,new Headers,new f({}));this.page_change(n,!0,!0)}}else history.pushState(null,"",window.location.pathname)}),this.stage===0){console.info("hot-reloading is enabled; Make sure this is the development environment");let t=0,r=()=>{let n=new WebSocket("ws://"+location.host+"//ws");n.onopen=function(){n.send("REQUEST::SERVICE_STARTED"),t===2?location.reload():t=1},n.onclose=function(){t=2,setTimeout(r,1e3)},n.onerror=function(){n.close()}};r()}}async page_change(e,t,r){if(this.page_change_ready||r){this.page_change_previous_abort_controller!==null&&this.page_change_previous_abort_controller.abort();let n=new AbortController;this.page_change_previous_abort_controller=n,this.previous_component!==null&&this.previous_context!==null&&await this.previous_component.on_destroy(this.previous_context,this);let o=new A(this.platform,this.stage,"127.0.0.1",this.api_protocol_address,this.api_protocol_address_ssr,this.api_error_event,this.i18n,e,t,this);this.previous_context=o;let l=await this.route_resolver(o);try{this.middleware.before_route.build(o),this.middleware.before_route.dom_ready(o,this)}catch(i){o.request.error("before_route",o,i)}if(t){let i=await this.route_execute_build(o,l);if(n.signal.aborted)return this.page_change_ready=!0,null;for(let s=0;s<i.response.cookies.length;s++){let d=i.response.cookies[s];d.http_only===!1&&(document.cookie=d.toString())}if(i.response.status_code===301||i.response.status_code===302){let s=i.response.get_header("Location");return s===null?(u.reporter(2,"REDIRECT","Tried to redirect: Status Code is 301, but Location header is null",o,null),this.page_change_ready=!0,null):(u.verbose_logging&&u.reporter(0,"REDIRECT","Redirect to: "+s,o,null),this.page_change_to(s,!0),this.page_change_ready=!0,{method:e.method,url:o.request.url,is_redirect:!0,status_code:i.response.status_code})}let c=i.response.content;if(typeof c.context.document_html<"u"){c.html(),I(document.children[0],c.context.document_html.attributes),I(document.head,c.context.document_head.attributes),document.head.innerHTML=c.context.document_head.innerHTML;let s=document.body.parentElement;if(document.body!==null&&document.body.remove(),s!==null){for(let d=0;d<o.document_body.children.length;d++){let _=o.document_body.children[d];_.tagName==="SCRIPT"&&_.remove()}s.append(o.document_body)}return i.component.dom_ready(o,this),this.previous_component=i.component,this.page_change_ready=!0,{method:e.method,url:e.url,is_redirect:!1,status_code:i.response.status_code}}}else if(l!==null){let i=new l.component(o);i.dom_ready(o,this),this.previous_component=i}else{let i=new this.middleware.not_found_handler(o);i.dom_ready(o,this),this.previous_component=i}this.page_change_ready=!0}return null}async page_change_to(e,t){u.verbose_logging&&u.reporter(0,"PageChange","    page_change_to: "+e,null,null);let r,n=e.indexOf("//");n===0||n===5||n===6?r=e:r=location.protocol+"//"+location.host+e;let o=new b("GET",r,new Headers,new f({})),l=await this.page_change(o,!0,t===!0);return l!==null?(l.is_redirect||history.pushState(l,document.title,r),!0):!1}async page_change_form(e,t){this.page_change_ready=!1,u.verbose_logging&&u.reporter(0,"PageChange","page_change_form",null,null);let r=e.getAttribute("method");r===null&&(r="POST");let n=r==="GET";t&&(t.disabled=!0);let o,l=e.getAttribute("action");l===""?this.previous_context?n?o=this.previous_context.request.protocol+"//"+this.previous_context.request.host+this.previous_context.request.path:o=this.previous_context.request.url:(o=location.protocol+"//"+location.host+window.location.pathname.toString(),n&&location.search!==""&&(o+=location.search)):o=location.protocol+"//"+location.host+l,this.middleware.redirect_lonely_slash&&o.substring(o.length-1)==="/"&&(o=o.substring(0,o.length-1));let i=new FormData(e),c=new f({});if(n){let _=!0;i.forEach((g,ee)=>{_?(_=!1,o+="?"):o+="&",o+=ee+"="+encodeURIComponent(g.toString())}),t!==null&&(o+=(_?"?":"&")+t.name+"="+t.value)}else i.forEach((_,g)=>c.items[g]=_.toString()),t!==null&&(c.items[t.name]=t.value);let s=new b(r,o,new Headers,c),d=await this.page_change(s,!0,!0);return console.log("page_change_form result inner",d),d!==null?(d.is_redirect||history.pushState(d,document.title,o),!0):(t&&(t.disabled=!0),!1)}};var Q={title1:"Frontwork Test Page",text1:"This is a test page for the Frontwork framework.",title2:"Test Form","test-page2":"Test Page 2",another_title1:"Hello from 127.0.0.1",another_text1:"Yes you can have different domains :)","a-home":"Home","a-test2":"Test2","a-test3":"Test3","a-german":"German","a-crash":"Crash",event_button_tester:"Event Button Tester",formtest_title_fail:"This form test was sent to the Deno server!",formtest_title_ok:"This form test was not sent to the Deno server :)",submit_button:"Submit"};var V={title1:"Frontwork Test Seite",text1:"Dies ist eine deutsche Test Seite f\xFCr das Frontwork framework.",title2:"Test Formular","a-home":"Startseite","a-test2":"Testseite2","a-test3":"Testseite3","a-german":"Deutsch","a-crash":"Absturz",event_button_tester:"Ereignistastentester",formtest_title_fail:"Dieser Formtest wurde an den Deno Server gesendet!",formtest_title_ok:"Dieser Formtest wurde nicht an den Deno Server gesendet :)",submit_button:"Senden"};var Z=new R([new v("en",Q),new v("de",V)]);var w=class extends E{main;constructor(e){super(e);let t=this.body_append(e.create_element("header"));e.ensure_text_element("a","a-home",{href:"/"}).append_to(t),e.ensure_text_element("a","a-test2",{href:"/test2"}).append_to(t),e.ensure_text_element("a","a-test3",{href:"/test3"}).append_to(t),e.ensure_text_element("a","a-german",{href:"/german"}).append_to(t),e.ensure_text_element("a","a-crash",{href:"/crash"}).append_to(t),this.main=this.body_append(e.create_element("main"))}},N=class{async build(e){let t=new E(e),r=t.body_append(e.create_element("main"));return e.ensure_text_element("h1","another_title1").append_to(r),e.ensure_text_element("p","another_text1").append_to(r),new p(200,t)}async dom_ready(){}async on_destroy(){}},H=class{button_event;constructor(e){this.button_event=e.ensure_text_element("button","event_button_tester",{type:"button"})}async build(e){let t=await e.get_observer("user").get();console.log("The User is",t);let r=new w(e),n=e.ensure_text_element("h1","title1").append_to(r.main),o=e.ensure_text_element("p","text1").append_to(r.main);this.button_event.append_to(r.main);let l=e.create_element("section").append_to(r.main);if(e.ensure_text_element("h2","title2").append_to(l),e.request.GET.get("action")!==null){e.ensure_text_element("h3","formtest_title_"+(u.is_client_side?"ok":"fail")).append_to(l);for(let s=0;s<3;s++){let d=e.create_element("div").append_to(l);d.element.innerHTML="text"+s+": "+e.request.GET.get("text"+s)}}let c=new F(e,"test_form","","GET").append_to(l);for(let s=0;s<3;s++)e.ensure_element("input","input"+s,{type:"text",name:"text"+s,value:"asdsad"+s}).append_to(c);return e.ensure_text_element("button","submit_button",{type:"submit",name:"action",value:"sent"}).append_to(c),new p(200,r.add_head_meta_data(n.element.innerText,o.element.innerText,"noindex,nofollow"))}async dom_ready(e,t){try{let r=0;this.button_event.element.addEventListener("click",()=>{r++,this.button_event.element.innerHTML="Changed "+r+" times"})}catch(r){console.error(r)}}async on_destroy(){}},B=class extends H{constructor(e){e.i18n.set_locale("de"),super(e)}async build(e){return await super.build(e)}async dom_ready(e,t){super.dom_ready(e,t)}},K=class{async build(e){let t=new w(e),r=e.ensure_text_element("h1","test-page2").append_to(t.main),n=e.ensure_element("p","description").append_to(t.main);return n.element.innerHTML="This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.",u.reporter(1,"TEST","Warn counter test for Testworker",e,null),new p(200,t.add_head_meta_data(r.element.innerText,n.element.innerText,"noindex,nofollow"))}async dom_ready(e,t){setTimeout(()=>{t.page_change_to("/",!1)},1e3)}async on_destroy(){console.log("on_destroy test")}},W=class{async build(){return new L("/",301)}async dom_ready(){}async on_destroy(){}},U=class{async build(e){let t=new w(e);return new p(200,t.add_head_meta_data("element_test","element_test","noindex,nofollow"))}async dom_ready(){}async on_destroy(){}},x=class{async build(e){let t="Hello this is indeed first come, first served basis";return new p(200,t)}async dom_ready(e){}async on_destroy(){}},k=class{async build(e){let t="Hello "+e.request.path_dirs[2];return new p(200,t)}async dom_ready(e){}async on_destroy(e){}},G=class{async build(e){return e.request.path_dirs[2]==="first-come-first-served"?new x().build(e):new k().build(e)}async dom_ready(e){e.request.path_dirs[2]==="first-come-first-served"&&new x().dom_ready(e),new k().dom_ready(e)}async on_destroy(){}},j=class{async build(){throw new Error("Crash Test")}async dom_ready(){}async on_destroy(){}},J=class{async build(e){let t=new w(e),r=e.document_body.appendChild(document.createElement("h1"));return r.innerText="ERROR 404 - Not found",new p(404,t.add_head_meta_data(r.innerText,r.innerText,"noindex,nofollow"))}async dom_ready(){}async on_destroy(){}},oe=[new h("/",H),new h("/test2",K),new h("/test3",W),new h("/german",B),new h("/crash",j),new h("/element_test",U),new h("/hello/first-come-first-served",x),new h("/hello/*",k),new h("/hi/*",G)],se=[new h("/",N)];var ie=new M({before_route:{build:async a=>{a.i18n.set_locale("en");let e=a.get_observer("user");e.is_null()&&a.api_request_observer(e,"POST","/api/v1/account/user",{}),a.api_request("POST","/api/v1/account/create",{user_name:"a"})},dom_ready:async()=>{console.log("ASDAAAAAAAAA")}},error_handler:async a=>{let e=new w(a),t=a.document_body.appendChild(document.createElement("h1"));return t.innerText="ERROR 500 - Internal server error",new p(500,e.add_head_meta_data(t.innerText,t.innerText,"noindex,nofollow"))},not_found_handler:J}),$={platform:0,stage:0,port:8080,api_protocol_address:"",api_protocol_address_ssr:"http://localhost:40201",domain_to_route_selector:async a=>a.request.host.split(":")[0]==="127.0.0.1"?se:oe,middleware:ie,i18n:Z,build_on_page_load:!1,api_error_event:(a,e,t,r,n,o)=>{a.request.path!=="/"&&e!==null&&o.status===401&&e.page_change_to("/",!0)}};new O($);
+// utils.ts
+function parse_url(url) {
+  const url_protocol_split = url.split("://");
+  if (url_protocol_split.length < 2)
+    throw new Error("Invalid URL: " + url);
+  const protocol = url_protocol_split[0] + ":";
+  const url_querystring_split = url_protocol_split[1].split("?");
+  const url_host_path_split = url_querystring_split[0].split("/");
+  const host = url_host_path_split[0];
+  let path;
+  if (url_host_path_split.length < 2) {
+    path = "/";
+  } else {
+    path = "";
+    for (let i = 1; i < url_host_path_split.length; i++) {
+      path += "/" + url_host_path_split[i];
+    }
+  }
+  let query_string;
+  let fragment;
+  if (url_querystring_split.length > 1) {
+    const query_string_fragment_split = url_querystring_split[1].split("#");
+    query_string = query_string_fragment_split[0];
+    fragment = query_string_fragment_split.length > 1 ? query_string_fragment_split[1] : "";
+  } else {
+    query_string = "";
+    fragment = "";
+  }
+  return {
+    protocol,
+    host,
+    path,
+    query_string,
+    fragment
+  };
+}
+function key_value_list_to_object(list, list_delimiter, key_value_delimiter) {
+  const result = {};
+  const list_split = list.split(list_delimiter);
+  for (let i = 0; i < list_split.length; i++) {
+    const item = list_split[i];
+    const item_split = item.split(key_value_delimiter);
+    if (item_split[0] !== "") {
+      if (item_split.length === 2) {
+        result[item_split[0]] = item_split[1];
+      } else {
+        result[item_split[0]] = "";
+      }
+    }
+  }
+  return result;
+}
+function html_element_set_attributes(html_element, attributes) {
+  for (let i = 0; i < attributes.length; i++) {
+    const attribute = attributes[i];
+    html_element.setAttribute(attribute.name, attribute.value);
+  }
+}
+var Observer = class {
+  observers = [];
+  retriever = null;
+  value = null;
+  retriever_listeners = [];
+  renew_is_running = false;
+  // Set the retriever function that will be used in the get function
+  define_retriever(retriever) {
+    this.retriever = retriever;
+  }
+  // Remove the retriever function
+  remove_retriever() {
+    this.retriever = null;
+  }
+  // Observer listener
+  subscribe(fn) {
+    if (this.value !== null)
+      fn(this.value);
+    this.observers.push(fn);
+  }
+  unsubscribe(fn) {
+    this.observers = this.observers.filter((observer) => observer !== fn);
+  }
+  /**
+   * Retriever listener: executed before the retriever starts
+   */
+  add_retriever_listener(fn) {
+    this.retriever_listeners.push(fn);
+  }
+  remove_retriever_listener(fn) {
+    this.retriever_listeners = this.retriever_listeners.filter((listeners) => listeners !== fn);
+  }
+  // Notify all observers with a value
+  set(value) {
+    this.value = value;
+    this.observers.forEach((observer) => observer(value));
+  }
+  // Notify all observers with a value
+  set_value(value) {
+    this.set({ ok: true, val: value });
+  }
+  // Set value to null. DOES NOT NOTIFY.
+  set_null() {
+    this.value = null;
+  }
+  /**
+   * Returns true if value is null
+   */
+  is_null() {
+    return this.value === null;
+  }
+  // Notify all observers with a value if value is unknown
+  set_once(value) {
+    if (this.value === null) {
+      this.set({ ok: true, val: value });
+    }
+  }
+  // Get the value as Promise by this.value, with the retriever or by subscribe and unsubscribe
+  get() {
+    return new Promise((resolve, reject) => {
+      if (this.value === null) {
+        if (this.retriever === null || this.renew_is_running) {
+          const sub = (value) => {
+            if (value.ok) {
+              resolve(value.val);
+            } else {
+              reject(value.err);
+            }
+            this.unsubscribe(sub);
+          };
+          this.subscribe(sub);
+        } else {
+          this.get_renew().then((value) => resolve(value)).catch((error) => reject(error));
+        }
+      } else {
+        if (this.value.ok) {
+          resolve(this.value.val);
+        } else {
+          reject(this.value.err);
+        }
+      }
+    });
+  }
+  // Fix the get_renew method
+  get_renew() {
+    return new Promise(async (resolve, reject) => {
+      if (this.renew_is_running) {
+        const sub = (value) => {
+          if (value.ok) {
+            resolve(value.val);
+          } else {
+            reject(value.err);
+          }
+          this.unsubscribe(sub);
+        };
+        this.subscribe(sub);
+      } else {
+        const result = await this.renew();
+        if (result.ok) {
+          resolve(result.val);
+        } else {
+          reject(result.err);
+        }
+      }
+    });
+  }
+  // Fix the renew method
+  renew() {
+    return new Promise(async (resolve, reject) => {
+      if (this.retriever === null) {
+        reject(new Error("For Observer.renew() the retriever must be defined"));
+        return;
+      }
+      this.renew_is_running = true;
+      this.retriever_listeners.forEach((listener) => listener());
+      try {
+        const value = await this.retriever();
+        this.set(value);
+        this.renew_is_running = false;
+        if (value.ok) {
+          resolve(value);
+        } else {
+          FW.reporter(2 /* Error */, "Observer", "ERROR executing Observer.retriever()", null, value.err);
+          resolve(value);
+        }
+      } catch (error) {
+        this.renew_is_running = false;
+        const errorResult = {
+          ok: false,
+          err: error instanceof Error ? error : new Error(String(error))
+        };
+        reject(errorResult);
+      }
+    });
+  }
+  // Get the current number of observers
+  get count() {
+    return this.observers.length;
+  }
+  // Clear all observers
+  clear() {
+    this.observers = [];
+    this.value = null;
+  }
+};
+
+// frontwork.ts
+var FW = {
+  /**
+   * Is false if dom.ts / frontwork-service.ts / frontwork-testworker.ts has been imported
+   */
+  is_client_side: true,
+  /**
+   * If true the default reporter will sent some client logs to the dev server
+   */
+  reporter_client_to_server: true,
+  /**
+   * IF true FW.reporter will not be be called on LogType.Info.
+   * Warn and Error messages will always be reported.
+   */
+  verbose_logging: false,
+  /**
+   * To enable a bug reporter for staging and production you can modify FW.reporter, that it sents a request to the backend
+   * @param log_type: LogType 
+   * @param category: string 
+   * @param text: string
+  */
+  // deno-lint-ignore no-unused-vars
+  reporter: function(log_type, category, text, context, error) {
+    if (FW.reporter_client_to_server && FW.is_client_side) {
+      fetch(location.protocol + "//" + location.host + "//dr", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ report_text: text })
+      });
+    }
+    if (log_type === 2 /* Error */) {
+      if (error === null)
+        console.error(text);
+      else
+        console.error(text, error);
+    } else if (log_type === 1 /* Warn */) {
+      console.warn(text);
+    } else if (log_type === 0 /* Info */) {
+      console.log(text);
+    }
+  }
+};
+var HTMLElementWrapper = class {
+  element;
+  created_element;
+  // true if element was created; Otherwise false the element already exists
+  constructor(element, created_element) {
+    this.element = element;
+    this.created_element = created_element;
+  }
+  prepend_to(parent) {
+    if (this.created_element)
+      parent.element.prepend(this.element);
+    return this;
+  }
+  append_to(parent) {
+    if (this.created_element)
+      parent.element.append(this.element);
+    return this;
+  }
+  replace_text(search, replace) {
+    this.element.innerText = this.element.innerText.split(search).join(replace);
+  }
+  replace_html(search, replace) {
+    this.element.innerHTML = this.element.innerHTML.split(search).join(replace);
+  }
+  then(runnable) {
+    if (this.created_element)
+      runnable();
+  }
+  show() {
+    const attr_value = this.element.getAttribute("style");
+    if (attr_value)
+      this.element.setAttribute("style", attr_value.replace("display: none;", ""));
+  }
+  hide() {
+    const current_style = this.element.getAttribute("style");
+    if (current_style === null) {
+      this.element.setAttribute("style", "display: none;");
+    } else {
+      if (!current_style.includes("display: none;"))
+        this.element.setAttribute("style", current_style + " display: none;");
+    }
+  }
+};
+var FrontworkForm = class extends HTMLElementWrapper {
+  constructor(context, id, action, method) {
+    super(context.ensure_element("form", id, { action, method }).element, context.do_building);
+    this.element.setAttribute("fw-form", "1");
+  }
+};
+var I18nLocale = class {
+  locale;
+  translations;
+  constructor(locale, translations) {
+    this.locale = locale;
+    this.translations = translations;
+  }
+  get_translation(id) {
+    const translation = this.translations[id];
+    if (translation === void 0) {
+      FW.reporter(2 /* Error */, "I18n", "    Missing translation for the locale '" + this.locale + `': ,"` + id + '": "translated_text"', null, null);
+      return "";
+    }
+    return translation;
+  }
+};
+var Scope = class {
+  items;
+  constructor(items) {
+    this.items = items;
+  }
+  get(key) {
+    const value = this.items[key];
+    if (value === void 0)
+      return null;
+    return value;
+  }
+  forEach(callback) {
+    Object.entries(this.items).forEach(([key, value]) => {
+      callback(key, value);
+    });
+  }
+};
+var GetScope = class extends Scope {
+  constructor(items) {
+    super(items);
+  }
+};
+var PostScope = class extends Scope {
+  constructor(items) {
+    super(items);
+  }
+  /** Retrieve the POST data from a Request object and set it to PostScope.items */
+  async from_request(_request) {
+    let content_type = _request.headers.get("content-type");
+    if (content_type !== null) {
+      content_type = content_type.split(";")[0];
+      if (_request.body !== null) {
+        if (content_type === "application/x-www-form-urlencoded") {
+          const reader = _request.body.getReader();
+          if (reader !== null) {
+            await reader.read().then((body) => {
+              if (body.value !== null) {
+                const body_string = new TextDecoder().decode(body.value);
+                this.items = key_value_list_to_object(body_string, "&", "=");
+              }
+            });
+          }
+        } else if (content_type === "application/json") {
+          const reader = _request.body.getReader();
+          if (reader !== null) {
+            await reader.read().then((body) => {
+              if (body.value !== null) {
+                const body_string = new TextDecoder().decode(body.value);
+                this.items = JSON.parse(body_string);
+              }
+            });
+          }
+        }
+      }
+    }
+    return this;
+  }
+};
+var CookiesScope = class extends Scope {
+  constructor(items) {
+    super(items);
+  }
+};
+var FrontworkRequest = class {
+  headers;
+  method;
+  url;
+  protocol;
+  host;
+  path;
+  path_dirs;
+  query_string;
+  fragment;
+  GET;
+  POST;
+  COOKIES;
+  constructor(method, url, headers, post) {
+    const parsed_url = parse_url(url);
+    this.headers = headers;
+    this.method = method;
+    this.url = url;
+    this.protocol = parsed_url.protocol;
+    this.host = parsed_url.host;
+    this.path = parsed_url.path;
+    this.path_dirs = decodeURIComponent(parsed_url.path.replace(/\+/g, "%20")).split("/");
+    this.query_string = parsed_url.query_string;
+    this.fragment = parsed_url.fragment;
+    this.GET = new GetScope(
+      key_value_list_to_object(parsed_url.query_string, "&", "=")
+    );
+    this.POST = post;
+    const cookies_string = this.headers.get("cookie");
+    this.COOKIES = new CookiesScope(
+      cookies_string === null ? {} : key_value_list_to_object(cookies_string, "; ", "=")
+    );
+  }
+  __request_text(category) {
+    let text = this.method + " " + this.path;
+    if (this.query_string !== "")
+      text += "?" + this.query_string;
+    text += " [" + category + "]";
+    const keys = Object.keys(this.POST.items);
+    if (keys.length !== 0) {
+      text += "\n    Scope POST: ";
+      keys.forEach((key) => {
+        text += "\n        " + key + ' = "' + this.POST.items[key] + '"';
+      });
+    }
+    return text;
+  }
+  log(category, context) {
+    if (FW.verbose_logging)
+      FW.reporter(0 /* Info */, category, this.__request_text(category), context, null);
+  }
+  error(category, context, error) {
+    FW.reporter(2 /* Error */, category, this.__request_text(category), context, error);
+  }
+};
+var FrontworkResponse = class {
+  status_code;
+  mime_type = "text/html";
+  // content: DocumentBuilderInterface|Blob|string;
+  content;
+  headers = [];
+  cookies = [];
+  constructor(status_code, content) {
+    this.status_code = status_code;
+    this.content = content;
+  }
+  set_mime_type(mime_type) {
+    this.mime_type = mime_type;
+    return this;
+  }
+  add_header(name, value) {
+    this.headers.push([name, value]);
+    return this;
+  }
+  get_header(name) {
+    for (const header of this.headers) {
+      if (header[0] === name) {
+        return header[1];
+      }
+    }
+    return null;
+  }
+  set_cookie(cookie) {
+    for (let i = 0; i < this.cookies.length; i++) {
+      if (this.cookies[i].name === cookie.name) {
+        this.cookies[i] = cookie;
+        return this;
+      }
+    }
+    this.cookies.push(cookie);
+    return this;
+  }
+  into_response() {
+    const response = new Response(this.content.toString(), { status: this.status_code });
+    response.headers.set("content-type", this.mime_type);
+    for (let i = 0; i < this.headers.length; i++) {
+      const header = this.headers[i];
+      response.headers.set(header[0], header[1]);
+    }
+    for (let i = 0; i < this.cookies.length; i++) {
+      const cookie = this.cookies[i];
+      response.headers.append("set-cookie", cookie.to_string());
+    }
+    return response;
+  }
+};
+var DocumentBuilder = class {
+  context;
+  doctype;
+  constructor(context) {
+    this.context = context;
+    this.doctype = "<!DOCTYPE html>";
+    this.set_html_lang(context.selected_locale.locale);
+  }
+  //
+  // Head methods
+  //
+  head_append_tag(tag, attributes) {
+    const element = document.createElement(tag);
+    if (attributes) {
+      for (const key in attributes) {
+        element.setAttribute(key, attributes[key]);
+      }
+    }
+    this.context.document_head.append(element);
+    return this;
+  }
+  add_head_meta_data(title, description, robots) {
+    const meta_chatset = this.context.document_head.appendChild(document.createElement("meta"));
+    meta_chatset.setAttribute("charset", "UTF-8");
+    const meta_compatible = this.context.document_head.appendChild(document.createElement("meta"));
+    meta_compatible.setAttribute("http-equiv", "X-UA-Compatible");
+    meta_compatible.setAttribute("content", "IE=edge");
+    const meta_viewport = this.context.document_head.appendChild(document.createElement("meta"));
+    meta_viewport.setAttribute("name", "viewport");
+    meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
+    const meta_title = this.context.document_head.appendChild(document.createElement("title"));
+    meta_title.innerHTML = title;
+    const meta_description = this.context.document_head.appendChild(document.createElement("meta"));
+    meta_description.setAttribute("name", "description");
+    meta_description.setAttribute("content", description);
+    const meta_robots = this.context.document_head.appendChild(document.createElement("meta"));
+    meta_robots.setAttribute("name", "robots");
+    meta_robots.setAttribute("content", robots);
+    return this;
+  }
+  add_head_meta_opengraph_website(title, description, url, image_url) {
+    const meta_og_type = this.context.document_head.appendChild(document.createElement("meta"));
+    meta_og_type.setAttribute("property", "og:type");
+    meta_og_type.setAttribute("content", "website");
+    const meta_og_url = this.context.document_head.appendChild(document.createElement("meta"));
+    meta_og_url.setAttribute("property", "og:url");
+    meta_og_url.setAttribute("content", url);
+    const meta_og_title = this.context.document_head.appendChild(document.createElement("meta"));
+    meta_og_title.setAttribute("property", "og:title");
+    meta_og_title.setAttribute("content", title);
+    const meta_og_description = this.context.document_head.appendChild(document.createElement("meta"));
+    meta_og_description.setAttribute("property", "og:description");
+    meta_og_description.setAttribute("content", description);
+    const meta_og_image = this.context.document_head.appendChild(document.createElement("meta"));
+    meta_og_image.setAttribute("property", "og:image");
+    meta_og_image.setAttribute("content", image_url);
+    return this;
+  }
+  //
+  // Body methods
+  //
+  set_html_lang(code) {
+    this.context.document_html.setAttribute("lang", code);
+    return this;
+  }
+  body_append(wr) {
+    this.context.document_body.append(wr.element);
+    return wr;
+  }
+  //
+  // Build methods
+  //
+  html() {
+    const style_css = this.context.document_head.appendChild(document.createElement("link"));
+    style_css.setAttribute("id", "fw-style");
+    style_css.setAttribute("rel", "stylesheet");
+    style_css.setAttribute("href", "/css/style.css");
+    style_css.setAttribute("type", "text/css");
+    const main_js = this.context.document_body.appendChild(document.createElement("script"));
+    main_js.setAttribute("id", "fw-script");
+    main_js.setAttribute("src", "/js/main.js");
+    main_js.setAttribute("type", "text/javascript");
+    return this.context.document_html;
+  }
+  toString() {
+    const html_response = this.html();
+    return this.doctype + "\n" + html_response.outerHTML;
+  }
+};
+var FrontworkResponseRedirect = class extends FrontworkResponse {
+  constructor(redirect_path, status_code) {
+    if (FW.verbose_logging)
+      FW.reporter(0 /* Info */, "REDIRECT", "    [" + status_code + " REDIRECT]-> " + redirect_path, null, null);
+    super(status_code, "redirecting...");
+    this.add_header("Location", redirect_path);
+  }
+};
+var previous_route_id = 0;
+var Route = class {
+  id;
+  path;
+  component;
+  constructor(path, component) {
+    this.path = path;
+    this.component = component;
+    this.id = previous_route_id;
+    previous_route_id += 1;
+  }
+};
+var client_observers = {};
+var FrontworkContext = class {
+  platform;
+  stage;
+  client_ip;
+  // For Deno side use only. On Client side it will be always 127.0.0.1
+  api_protocol_address;
+  // API Address Browser should use
+  api_protocol_address_ssr;
+  // API Address Deno should use
+  i18n;
+  request;
+  do_building;
+  document_html;
+  document_head;
+  document_body;
+  api_error_event;
+  client;
+  /**
+   * Set-Cookie headers for deno side rendering. Deno should retrieve Cookies from the API and pass them to the browser. Should not be used to manually set Cookies. Use the FrontworkResponse.set_cookie method instead
+   */
+  set_cookies = [];
+  selected_locale;
+  constructor(platform, stage, client_ip, api_protocol_address, api_protocol_address_ssr, api_error_event, i18n2, request, do_building, client) {
+    this.platform = platform;
+    this.stage = stage;
+    this.client_ip = client_ip;
+    this.api_protocol_address = api_protocol_address;
+    this.api_protocol_address_ssr = api_protocol_address_ssr;
+    this.api_error_event = api_error_event;
+    this.request = request;
+    this.do_building = do_building;
+    this.client = client;
+    this.document_html = document.createElement("html");
+    this.document_head = this.document_html.appendChild(document.createElement("head"));
+    this.document_body = this.document_html.appendChild(document.createElement("body"));
+    if (i18n2.length === 0)
+      throw new Error("I18n: No locales provided");
+    this.i18n = i18n2;
+    this.selected_locale = i18n2[0];
+  }
+  set_locale(locale) {
+    if (FW.verbose_logging)
+      FW.reporter(0 /* Info */, "I18n", '    Setting locale to "' + locale + '"', null, null);
+    const locale_found = this.i18n.find((l) => l.locale === locale);
+    if (locale_found === void 0) {
+      FW.reporter(2 /* Error */, "I18n", "Locale '" + locale + "' does not exist", null, null);
+      return false;
+    }
+    this.selected_locale = locale_found;
+    return true;
+  }
+  get_translation(key) {
+    return this.selected_locale.get_translation(key);
+  }
+  get_translation_replace(key, search, replace) {
+    return this.selected_locale.get_translation(key).split(search).join(replace);
+  }
+  get_translation_replace_number(key, search, number) {
+    if (number === 1)
+      return this.selected_locale.get_translation(key + "_one");
+    return this.selected_locale.get_translation(key).split(search).join(number.toString());
+  }
+  server_observers = {};
+  get_observer(key) {
+    if (FW.is_client_side) {
+      if (!client_observers[key]) {
+        client_observers[key] = new Observer();
+      }
+      return client_observers[key];
+    } else {
+      if (!this.server_observers[key]) {
+        this.server_observers[key] = new Observer();
+      }
+      return this.server_observers[key];
+    }
+  }
+  /**
+   * Creates an HTML element. DOES NOT CHECK IF ALREADY EXIST.
+   * @param tag The tag name of the element to create.
+   * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
+   * @returns HTMLElementWrapper
+   */
+  create_element(tag, attributes) {
+    const elem = document.createElement(tag);
+    if (attributes) {
+      for (const key in attributes) {
+        elem.setAttribute(key, attributes[key]);
+      }
+    }
+    return new HTMLElementWrapper(elem, true);
+  }
+  /**
+   * Creates a new element and appends I18n text. DOES NOT CHECK IF ALREADY EXIST.
+   * @param tag The tag name of the element to create.
+   * @param i18n_key The keyword specified in the english.json. Uses innerText to set the translated text.
+   * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
+   * @returns HTMLElementWrapper
+   */
+  create_text_element(tag, i18n_key, attributes) {
+    const elem = document.createElement(tag);
+    elem.innerText = this.get_translation(i18n_key);
+    if (attributes) {
+      for (const key in attributes) {
+        elem.setAttribute(key, attributes[key]);
+      }
+    }
+    return new HTMLElementWrapper(elem, true);
+  }
+  /**
+   * Ensures the existence of an HTML element by ID. Creates a new element if it doesn't exist.
+   * @param tag The tag name of the element to create if it doesn't exist.
+   * @param id The ID of the element to search for or create. Must be unique!
+   * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
+   * @returns The HTML element with the specified ID.
+   */
+  ensure_element(tag, id, attributes) {
+    const elem = this.do_building ? this.document_html.querySelector("#" + id) : document.getElementById(id);
+    if (elem !== null)
+      return new HTMLElementWrapper(elem, false);
+    const elem2 = document.createElement(tag);
+    elem2.id = id;
+    if (attributes) {
+      for (const key in attributes) {
+        elem2.setAttribute(key, attributes[key]);
+      }
+    }
+    return new HTMLElementWrapper(elem2, true);
+  }
+  /**
+   * Ensures the existence of an HTML element by ID. Creates a new element and appends I18n text if it doesn't exist
+   * @param tag The tag name of the element.
+   * @param id The ID of the element to search for or create. Must be unique!
+   * @param text The text content of the element.     
+   * @param attributes Optional. Example: { class: "container", "data-role": "content" }
+   * @returns The newly created HTML element.
+   */
+  ensure_text_element(tag, id, attributes) {
+    const elem = this.do_building ? this.document_html.querySelector("#" + id) : document.getElementById(id);
+    if (elem !== null)
+      return new HTMLElementWrapper(elem, false);
+    const elem2 = document.createElement(tag);
+    elem2.id = id;
+    elem2.innerText = this.get_translation(id);
+    if (attributes) {
+      for (const key in attributes) {
+        elem2.setAttribute(key, attributes[key]);
+      }
+    }
+    return new HTMLElementWrapper(elem2, true);
+  }
+  async api_request(method, path, params, extras = {}) {
+    let url = (FW.is_client_side ? this.api_protocol_address : this.api_protocol_address_ssr) + path;
+    const options = extras;
+    options.method = method;
+    options.headers = extras.headers ? extras.headers : new Headers();
+    let params_string = "";
+    const params_array = Object.entries(params);
+    if (params_array.length > 0) {
+      params_string += params_array[0][0] + "=" + params_array[0][1];
+      for (let a = 1; a < params_array.length; a++) {
+        params_string += "&" + params_array[a][0] + "=" + params_array[a][1];
+      }
+    }
+    if (method === "GET") {
+      if (params_string.length > 0)
+        url += "?" + params_string;
+    } else {
+      options.body = params_string;
+      options.headers.set("Content-Type", "application/x-www-form-urlencoded");
+    }
+    if (!FW.is_client_side) {
+      let cookies_string = "";
+      this.request.COOKIES.forEach((key, name) => {
+        cookies_string += key + "=" + name + "; ";
+      });
+      options.headers.set("Cookie", cookies_string);
+      options.headers.set("X-Forwarded-For", this.client_ip);
+    }
+    try {
+      const response = await fetch(url, options);
+      if (!FW.is_client_side) {
+        const set_cookies = response.headers.getSetCookie();
+        set_cookies.forEach((item) => this.set_cookies.push(item));
+      }
+      if (!response.ok) {
+        FW.reporter(2 /* Error */, "api_request", "ERROR executing api_request( " + method + " " + path + " )", this, null);
+        console.error(response);
+        try {
+          let api_error_response = await response.json();
+          api_error_response.status = response.status;
+          this.api_error_event(this, this.client, method, path, params, api_error_response);
+          return {
+            ok: false,
+            err: api_error_response
+          };
+        } catch (error) {
+          FW.reporter(2 /* Error */, "api_request", "Could not parse ApiErrorResponse for api_request(" + method + " " + path + ")", this, error);
+          let api_error_response = { status: 501, error_message: "API did not returned parsable JSON" };
+          this.api_error_event(this, this.client, method, path, params, api_error_response);
+          return {
+            ok: false,
+            err: api_error_response
+          };
+        }
+      }
+      const data = await response.json();
+      return {
+        ok: true,
+        val: data
+      };
+    } catch (error) {
+      FW.reporter(2 /* Error */, "api_request", "ERROR executing api_request( " + method + " " + path + " )", this, error);
+      let api_error_response = { status: 503, error_message: error };
+      this.api_error_event(this, this.client, method, path, params, api_error_response);
+      return {
+        ok: false,
+        err: api_error_response
+      };
+    }
+  }
+  /* Set the retriever of an Observer to be a specified api_request */
+  api_request_observer(observer, method, path, params, extras = {}) {
+    const retriever = async () => {
+      const result = await this.api_request(method, path, params, extras);
+      if (result.ok) {
+        return { ok: true, val: result.val };
+      } else {
+        return { ok: false, err: new Error(result.err.error_message) };
+      }
+    };
+    observer.define_retriever(retriever);
+    observer.renew().catch((_error) => {
+    });
+  }
+};
+var Frontwork = class {
+  platform;
+  stage;
+  port;
+  api_protocol_address;
+  api_protocol_address_ssr;
+  domain_to_route_selector;
+  middleware;
+  i18n;
+  api_error_event;
+  constructor(init) {
+    this.platform = init.platform;
+    this.stage = init.stage;
+    this.port = init.port;
+    this.api_protocol_address = init.api_protocol_address;
+    this.api_protocol_address_ssr = init.api_protocol_address_ssr;
+    this.domain_to_route_selector = init.domain_to_route_selector;
+    this.middleware = init.middleware;
+    this.i18n = init.i18n;
+    this.api_error_event = init.api_error_event === void 0 ? () => {
+    } : init.api_error_event;
+    if (this.stage === 0 /* Development */)
+      FW.verbose_logging = true;
+  }
+  async route_resolver(context) {
+    const routes = await this.domain_to_route_selector(context);
+    for (let b = 0; b < routes.length; b++) {
+      const route = routes[b];
+      const route_path_dirs = route.path.split("/");
+      if (context.request.path_dirs.length === route_path_dirs.length) {
+        for (let c = 0; c < route_path_dirs.length; c++) {
+          if (context.request.path_dirs.length === route_path_dirs.length) {
+            let found = true;
+            for (let i = 0; i < route_path_dirs.length; i++) {
+              const route_path_dir = route_path_dirs[i];
+              if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i]) {
+                found = false;
+                break;
+              }
+            }
+            if (found) {
+              if (FW.verbose_logging)
+                context.request.log("ROUTE #" + route.id + " (" + route.path + ")", context);
+              return route;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+  async route_execute_build(context, route) {
+    if (route) {
+      try {
+        const component = new route.component(context);
+        return { response: await component.build(context), component };
+      } catch (error) {
+        context.request.error("ROUTE #" + route.id + " (" + route.path + ")", context, error);
+        return { response: await this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
+      }
+    }
+    if (FW.verbose_logging)
+      context.request.log("NOT_FOUND", context);
+    try {
+      const component = new this.middleware.not_found_handler(context);
+      return { response: await component.build(context), component };
+    } catch (error) {
+      context.request.error("NOT_FOUND", context, error);
+      return { response: await this.middleware.error_handler_component.build(context), component: this.middleware.error_handler_component };
+    }
+  }
+};
+var FrontworkMiddleware = class {
+  error_handler;
+  /** The error handler should only have a response. The Component is only for internal use. */
+  error_handler_component;
+  not_found_handler;
+  before_route;
+  redirect_lonely_slash;
+  constructor(init) {
+    this.error_handler = init.error_handler;
+    this.error_handler_component = {
+      async build(context) {
+        context.document_head.innerHTML = "";
+        context.document_body.innerHTML = "";
+        return init.error_handler(context);
+      },
+      dom_ready() {
+      },
+      on_destroy() {
+      }
+    };
+    this.not_found_handler = init.not_found_handler;
+    this.before_route = init.before_route;
+    this.redirect_lonely_slash = init && init.redirect_lonely_slash ? init.redirect_lonely_slash : true;
+  }
+};
+
+// frontwork-client.ts
+var FrontworkClient = class extends Frontwork {
+  build_on_page_load;
+  client_observers = {};
+  // page_change() behaviour: 
+  // It kills the previous Promise so that it will not execute its Component build function since it is not needed because the user already clicked to the next page.
+  // But we should wait for page_change_form because we want ensure that the data is transmitted.
+  page_change_ready = true;
+  page_change_previous_abort_controller = null;
+  is_page_change_ready() {
+    return this.page_change_ready;
+  }
+  previous_component = null;
+  previous_context = null;
+  constructor(init) {
+    super(init);
+    if (typeof init.build_on_page_load === "boolean")
+      this.build_on_page_load = init.build_on_page_load;
+    else
+      this.build_on_page_load = false;
+    document.addEventListener("DOMContentLoaded", () => {
+      const request = new FrontworkRequest("GET", location.toString(), new Headers([["Cookie", document.cookie]]), new PostScope({}));
+      this.page_change(request, this.build_on_page_load, false);
+    });
+    document.addEventListener("click", async (event) => {
+      const target = event.target;
+      if (target.tagName === "A" && (target.target === "" || target.target === "_self")) {
+        const url = new URL(target.href);
+        if (url.hostname !== "" && url.hostname !== window.location.hostname) {
+          return;
+        }
+        if (this.page_change_ready) {
+          if (await this.page_change_to(target.href, false)) {
+            event.preventDefault();
+          }
+        } else {
+          event.preventDefault();
+        }
+      }
+    }, false);
+    document.addEventListener("submit", async (event) => {
+      const target = event.target;
+      if (target.tagName === "FORM" && target.getAttribute("fw-form") !== null) {
+        event.preventDefault();
+        if (target.ariaDisabled === "true") {
+          console.log("fw-form is ariaDisabled. Because it already has been submitted.", target);
+        } else {
+          target.ariaDisabled = "true";
+          let submit_button = event.submitter;
+          submit_button = submit_button && submit_button.name ? submit_button : null;
+          const result = await this.page_change_form(target, submit_button);
+          console.log("page_change_form result", result);
+          target.ariaDisabled = "false";
+        }
+      }
+    });
+    addEventListener("popstate", (event) => {
+      if (this.page_change_ready) {
+        const savestate = event.state;
+        if (savestate && savestate.url) {
+          const request = new FrontworkRequest("GET", savestate.url, new Headers(), new PostScope({}));
+          this.page_change(request, true, true);
+        }
+      } else {
+        history.pushState(null, "", window.location.pathname);
+      }
+    });
+    if (this.stage === 0 /* Development */) {
+      console.info("hot-reloading is enabled; Make sure this is the development environment");
+      let state = 0;
+      const connect = () => {
+        const ws = new WebSocket("ws://" + location.host + "//ws");
+        ws.onopen = function() {
+          ws.send("REQUEST::SERVICE_STARTED");
+          if (state === 2) {
+            location.reload();
+          } else {
+            state = 1;
+          }
+        };
+        ws.onclose = function() {
+          state = 2;
+          setTimeout(connect, 1e3);
+        };
+        ws.onerror = function() {
+          ws.close();
+        };
+      };
+      connect();
+    }
+  }
+  async page_change(request, do_building, ignore_not_ready) {
+    if (this.page_change_ready || ignore_not_ready) {
+      if (this.page_change_previous_abort_controller !== null) {
+        this.page_change_previous_abort_controller.abort();
+      }
+      const abort_controller = new AbortController();
+      this.page_change_previous_abort_controller = abort_controller;
+      if (this.previous_component !== null && this.previous_context !== null)
+        await this.previous_component.on_destroy(this.previous_context, this);
+      const context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, this.api_error_event, this.i18n, request, do_building, this);
+      this.previous_context = context;
+      const route = await this.route_resolver(context);
+      try {
+        this.middleware.before_route.build(context);
+        this.middleware.before_route.dom_ready(context, this);
+      } catch (error) {
+        context.request.error("before_route", context, error);
+      }
+      if (do_building) {
+        const reb_result = await this.route_execute_build(context, route);
+        if (abort_controller.signal.aborted) {
+          this.page_change_ready = true;
+          return null;
+        }
+        for (let i = 0; i < reb_result.response.cookies.length; i++) {
+          const cookie = reb_result.response.cookies[i];
+          if (cookie.http_only === false) {
+            document.cookie = cookie.toString();
+          }
+        }
+        if (reb_result.response.status_code === 301 || reb_result.response.status_code === 302) {
+          const redirect_url = reb_result.response.get_header("Location");
+          if (redirect_url === null) {
+            FW.reporter(2 /* Error */, "REDIRECT", "Tried to redirect: Status Code is 301, but Location header is null", context, null);
+            this.page_change_ready = true;
+            return null;
+          } else {
+            if (FW.verbose_logging)
+              FW.reporter(0 /* Info */, "REDIRECT", "Redirect to: " + redirect_url, context, null);
+            this.page_change_to(redirect_url, true);
+            this.page_change_ready = true;
+            return { method: request.method, url: context.request.url, is_redirect: true, status_code: reb_result.response.status_code };
+          }
+        }
+        const resolved_content = reb_result.response.content;
+        if (typeof resolved_content.context.document_html !== "undefined") {
+          resolved_content.html();
+          html_element_set_attributes(document.children[0], resolved_content.context.document_html.attributes);
+          html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
+          document.head.innerHTML = resolved_content.context.document_head.innerHTML;
+          const html = document.body.parentElement;
+          if (document.body !== null)
+            document.body.remove();
+          if (html !== null) {
+            for (let i = 0; i < context.document_body.children.length; i++) {
+              const child = context.document_body.children[i];
+              if (child.tagName === "SCRIPT") {
+                child.remove();
+              }
+            }
+            html.append(context.document_body);
+          }
+          reb_result.component.dom_ready(context, this);
+          this.previous_component = reb_result.component;
+          this.page_change_ready = true;
+          return { method: request.method, url: request.url, is_redirect: false, status_code: reb_result.response.status_code };
+        }
+      } else {
+        if (route !== null) {
+          const route_component = new route.component(context);
+          route_component.dom_ready(context, this);
+          this.previous_component = route_component;
+        } else {
+          const not_found_component = new this.middleware.not_found_handler(context);
+          not_found_component.dom_ready(context, this);
+          this.previous_component = not_found_component;
+        }
+      }
+      this.page_change_ready = true;
+    }
+    return null;
+  }
+  // function replacement for window.location; accessible for the Component method dom_ready
+  async page_change_to(url_or_path, ignore_not_ready) {
+    if (FW.verbose_logging)
+      FW.reporter(0 /* Info */, "PageChange", "    page_change_to: " + url_or_path, null, null);
+    let url;
+    const test = url_or_path.indexOf("//");
+    if (test === 0 || test === 5 || test === 6) {
+      url = url_or_path;
+    } else {
+      url = location.protocol + "//" + location.host + url_or_path;
+    }
+    const request = new FrontworkRequest("GET", url, new Headers(), new PostScope({}));
+    const result = await this.page_change(request, true, ignore_not_ready === true);
+    if (result !== null) {
+      if (result.is_redirect)
+        return true;
+      history.pushState(result, document.title, url);
+      return true;
+    }
+    return false;
+  }
+  // function to handle Form submits being handled in client
+  async page_change_form(form, submit_button) {
+    this.page_change_ready = false;
+    if (FW.verbose_logging)
+      FW.reporter(0 /* Info */, "PageChange", "page_change_form", null, null);
+    let method = form.getAttribute("method");
+    if (method === null)
+      method = "POST";
+    const IS_METHOD_GET = method === "GET";
+    if (submit_button)
+      submit_button.disabled = true;
+    let url;
+    const action = form.getAttribute("action");
+    if (action === "") {
+      if (this.previous_context) {
+        if (IS_METHOD_GET) {
+          url = this.previous_context.request.protocol + "//" + this.previous_context.request.host + this.previous_context.request.path;
+        } else {
+          url = this.previous_context.request.url;
+        }
+      } else {
+        url = location.protocol + "//" + location.host + window.location.pathname.toString();
+        if (IS_METHOD_GET && location.search !== "")
+          url += location.search;
+      }
+    } else {
+      url = location.protocol + "//" + location.host + action;
+    }
+    if (this.middleware.redirect_lonely_slash && url.substring(url.length - 1) === "/") {
+      url = url.substring(0, url.length - 1);
+    }
+    const form_data = new FormData(form);
+    const POST = new PostScope({});
+    if (IS_METHOD_GET) {
+      let first = true;
+      form_data.forEach((value, key) => {
+        if (first) {
+          first = false;
+          url += "?";
+        } else {
+          url += "&";
+        }
+        url += key + "=" + encodeURIComponent(value.toString());
+      });
+      if (submit_button !== null) {
+        url += (first ? "?" : "&") + submit_button.name + "=" + submit_button.value;
+      }
+    } else {
+      form_data.forEach((value, key) => POST.items[key] = value.toString());
+      if (submit_button !== null) {
+        POST.items[submit_button.name] = submit_button.value;
+      }
+    }
+    const request = new FrontworkRequest(method, url, new Headers(), POST);
+    const result = await this.page_change(request, true, true);
+    console.log("page_change_form result inner", result);
+    if (result !== null) {
+      if (result.is_redirect)
+        return true;
+      history.pushState(result, document.title, url);
+      return true;
+    }
+    if (submit_button)
+      submit_button.disabled = true;
+    return false;
+  }
+};
+
+// test/i18n/english.json
+var english_default = {
+  title1: "Frontwork Test Page",
+  text1: "This is a test page for the Frontwork framework.",
+  title2: "Test Form",
+  "test-page2": "Test Page 2",
+  another_title1: "Hello from 127.0.0.1",
+  another_text1: "Yes you can have different domains :)",
+  "a-home": "Home",
+  "a-test2": "Test2",
+  "a-test3": "Test3",
+  "a-german": "German",
+  "a-crash": "Crash",
+  event_button_tester: "Event Button Tester",
+  formtest_title_fail: "This form test was sent to the Deno server!",
+  formtest_title_ok: "This form test was not sent to the Deno server :)",
+  submit_button: "Submit"
+};
+
+// test/i18n/german.json
+var german_default = {
+  title1: "Frontwork Test Seite",
+  text1: "Dies ist eine deutsche Test Seite f\xFCr das Frontwork framework.",
+  title2: "Test Formular",
+  "a-home": "Startseite",
+  "a-test2": "Testseite2",
+  "a-test3": "Testseite3",
+  "a-german": "Deutsch",
+  "a-crash": "Absturz",
+  event_button_tester: "Ereignistastentester",
+  formtest_title_fail: "Dieser Formtest wurde an den Deno Server gesendet!",
+  formtest_title_ok: "Dieser Formtest wurde nicht an den Deno Server gesendet :)",
+  submit_button: "Senden"
+};
+
+// test/test.i18n.ts
+var i18n = [
+  new I18nLocale("en", english_default),
+  new I18nLocale("de", german_default)
+];
+
+// test/test.routes.ts
+var MyMainDocumentBuilder = class extends DocumentBuilder {
+  main;
+  constructor(context) {
+    super(context);
+    const header = this.body_append(context.create_element("header"));
+    context.ensure_text_element("a", "a-home", { href: "/" }).append_to(header);
+    context.ensure_text_element("a", "a-test2", { href: "/test2" }).append_to(header);
+    context.ensure_text_element("a", "a-test3", { href: "/test3" }).append_to(header);
+    context.ensure_text_element("a", "a-german", { href: "/german" }).append_to(header);
+    context.ensure_text_element("a", "a-crash", { href: "/crash" }).append_to(header);
+    this.main = this.body_append(context.create_element("main"));
+  }
+};
+var AnotherComponent = class {
+  async build(context) {
+    const document_builder = new DocumentBuilder(context);
+    const main = document_builder.body_append(context.create_element("main"));
+    context.ensure_text_element("h1", "another_title1").append_to(main);
+    context.ensure_text_element("p", "another_text1").append_to(main);
+    return new FrontworkResponse(200, document_builder);
+  }
+  async dom_ready() {
+  }
+  async on_destroy() {
+  }
+};
+var TestComponent = class {
+  button_event;
+  constructor(context) {
+    this.button_event = context.ensure_text_element("button", "event_button_tester", { type: "button" });
+  }
+  async build(context) {
+    const user = await context.get_observer("user").get();
+    console.log("The User is", user);
+    const document_builder = new MyMainDocumentBuilder(context);
+    const title = context.ensure_text_element("h1", "title1").append_to(document_builder.main);
+    const description = context.ensure_text_element("p", "text1").append_to(document_builder.main);
+    this.button_event.append_to(document_builder.main);
+    const section = context.create_element("section").append_to(document_builder.main);
+    context.ensure_text_element("h2", "title2").append_to(section);
+    const action = context.request.GET.get("action");
+    if (action !== null) {
+      context.ensure_text_element("h3", "formtest_title_" + (FW.is_client_side ? "ok" : "fail")).append_to(section);
+      for (let i = 0; i < 3; i++) {
+        const div = context.create_element("div").append_to(section);
+        div.element.innerHTML = "text" + i + ": " + context.request.GET.get("text" + i);
+      }
+    }
+    const form = new FrontworkForm(context, "test_form", "", "GET").append_to(section);
+    for (let i = 0; i < 3; i++) {
+      context.ensure_element("input", "input" + i, { type: "text", name: "text" + i, value: "asdsad" + i }).append_to(form);
+    }
+    context.ensure_text_element("button", "submit_button", { type: "submit", name: "action", value: "sent" }).append_to(form);
+    return new FrontworkResponse(
+      200,
+      document_builder.add_head_meta_data(title.element.innerText, description.element.innerText, "noindex,nofollow")
+    );
+  }
+  async dom_ready(context, client) {
+    try {
+      let times = 0;
+      this.button_event.element.addEventListener("click", () => {
+        times++;
+        this.button_event.element.innerHTML = "Changed " + times + " times";
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  }
+  async on_destroy() {
+  }
+};
+var TestGerman = class extends TestComponent {
+  constructor(context) {
+    context.set_locale("de");
+    super(context);
+  }
+  async build(context) {
+    return await super.build(context);
+  }
+  async dom_ready(context, client) {
+    super.dom_ready(context, client);
+  }
+};
+var Test2Component = class {
+  async build(context) {
+    const document_builder = new MyMainDocumentBuilder(context);
+    const title1 = context.ensure_text_element("h1", "test-page2").append_to(document_builder.main);
+    const description = context.ensure_element("p", "description").append_to(document_builder.main);
+    description.element.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
+    FW.reporter(1 /* Warn */, "TEST", "Warn counter test for Testworker", context, null);
+    return new FrontworkResponse(
+      200,
+      document_builder.add_head_meta_data(title1.element.innerText, description.element.innerText, "noindex,nofollow")
+    );
+  }
+  async dom_ready(context, client) {
+    setTimeout(() => {
+      client.page_change_to("/", false);
+    }, 1e3);
+  }
+  async on_destroy() {
+    console.log("on_destroy test");
+  }
+};
+var Test3Component = class {
+  async build() {
+    return new FrontworkResponseRedirect("/", 301);
+  }
+  async dom_ready() {
+  }
+  async on_destroy() {
+  }
+};
+var ElementTestComponent = class {
+  async build(context) {
+    const document_builder = new MyMainDocumentBuilder(context);
+    return new FrontworkResponse(
+      200,
+      document_builder.add_head_meta_data("element_test", "element_test", "noindex,nofollow")
+    );
+  }
+  async dom_ready() {
+  }
+  async on_destroy() {
+  }
+};
+var HelloWorldPrioTestComponent = class {
+  async build(context) {
+    const content = "Hello this is indeed first come, first served basis";
+    return new FrontworkResponse(200, content);
+  }
+  async dom_ready(context) {
+  }
+  async on_destroy() {
+  }
+};
+var HelloWorldComponent = class {
+  async build(context) {
+    const content = "Hello " + context.request.path_dirs[2];
+    return new FrontworkResponse(200, content);
+  }
+  async dom_ready(context) {
+  }
+  async on_destroy(context) {
+  }
+};
+var CollisionHandlerComponent = class {
+  async build(context) {
+    if (context.request.path_dirs[2] === "first-come-first-served") {
+      return new HelloWorldPrioTestComponent().build(context);
+    }
+    return new HelloWorldComponent().build(context);
+  }
+  async dom_ready(context) {
+    if (context.request.path_dirs[2] === "first-come-first-served") {
+      new HelloWorldPrioTestComponent().dom_ready(context);
+    }
+    new HelloWorldComponent().dom_ready(context);
+  }
+  async on_destroy() {
+  }
+};
+var CrashComponent = class {
+  async build() {
+    throw new Error("Crash Test");
+    return new FrontworkResponse(200, "this text shall never be seen in the browser");
+  }
+  async dom_ready() {
+  }
+  async on_destroy() {
+  }
+};
+var NotFoundComponent = class {
+  async build(context) {
+    const document_builder = new MyMainDocumentBuilder(context);
+    const h1 = context.document_body.appendChild(document.createElement("h1"));
+    h1.innerText = "ERROR 404 - Not found";
+    return new FrontworkResponse(
+      404,
+      document_builder.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
+    );
+  }
+  async dom_ready() {
+  }
+  async on_destroy() {
+  }
+};
+var default_routes = [
+  new Route("/", TestComponent),
+  new Route("/test2", Test2Component),
+  new Route("/test3", Test3Component),
+  new Route("/german", TestGerman),
+  new Route("/crash", CrashComponent),
+  new Route("/element_test", ElementTestComponent),
+  new Route("/hello/first-come-first-served", HelloWorldPrioTestComponent),
+  new Route("/hello/*", HelloWorldComponent),
+  new Route("/hi/*", CollisionHandlerComponent)
+];
+var another_routes = [
+  new Route("/", AnotherComponent)
+];
+var middleware = new FrontworkMiddleware({
+  before_route: {
+    build: async (context) => {
+      console.log("context.request.COOKIES", context.request.COOKIES);
+      context.set_locale("en");
+      const observer = context.get_observer("user");
+      if (observer.is_null())
+        context.api_request_observer(observer, "POST", "/api/v1/account/user", {});
+    },
+    dom_ready: async () => {
+      console.log("ASDAAAAAAAAA");
+    }
+  },
+  error_handler: async (context) => {
+    const document_builder = new MyMainDocumentBuilder(context);
+    const h1 = context.document_body.appendChild(document.createElement("h1"));
+    h1.innerText = "ERROR 500 - Internal server error";
+    return new FrontworkResponse(
+      500,
+      document_builder.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
+    );
+  },
+  not_found_handler: NotFoundComponent
+});
+var APP_CONFIG = {
+  platform: 0 /* Web */,
+  stage: 0 /* Development */,
+  port: 8080,
+  api_protocol_address: "",
+  api_protocol_address_ssr: "http://localhost:40201",
+  domain_to_route_selector: async (context) => {
+    const domain = context.request.host.split(":")[0];
+    if (domain === "127.0.0.1")
+      return another_routes;
+    return default_routes;
+  },
+  middleware,
+  i18n,
+  build_on_page_load: false,
+  api_error_event: (context, client, method, path, params, error) => {
+    if (context.request.path !== "/" && client !== null && error.status === 401) {
+      client.page_change_to("/", true);
+    }
+  }
+};
+
+// test/test.client.ts
+new FrontworkClient(APP_CONFIG);
