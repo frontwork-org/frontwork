@@ -23,7 +23,7 @@ export class FrontworkClient extends Frontwork {
 
         // DOM Ready
         document.addEventListener("DOMContentLoaded", () => {
-            const request = new FrontworkRequest("GET", location.toString(), new Headers(), new PostScope({}));
+            const request = new FrontworkRequest("GET", location.toString(), new Headers([["Cookie", document.cookie]]), new PostScope({}));
             this.page_change(request, this.build_on_page_load, false);
         });
 

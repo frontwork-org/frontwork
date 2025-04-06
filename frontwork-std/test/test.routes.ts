@@ -247,6 +247,8 @@ export function login_check(context: FrontworkContext): Promise<User> {
 const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: async (context: FrontworkContext) => {
+			console.log("context.request.COOKIES", context.request.COOKIES);
+			
 			context.set_locale("en");
 			const observer = context.get_observer<User>("user");
 			if(observer.is_null()) context.api_request_observer<User>(observer, "POST", "/api/v1/account/user", {});
