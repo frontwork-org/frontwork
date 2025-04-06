@@ -192,7 +192,7 @@ fn main() {
                         // Download successful, now unzip it
                         let archive_file: PathBuf = PathBuf::from(file_path);
                         let target_dir: PathBuf = PathBuf::from(bin_dir);
-                        if let Err(err) = zip_extensions::zip_extract(&archive_file, &target_dir) {
+                        if let Err(err) = crate::utils::zip_extract(&archive_file, &target_dir) {
                             println!("Extration of archive failed.\n\n{:#?}", err);
                         } else {
                             if let Err(err) = utils::make_file_executable(&bin_file) {
