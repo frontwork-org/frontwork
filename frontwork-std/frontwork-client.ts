@@ -15,6 +15,10 @@ export class FrontworkClient extends Frontwork {
     previous_component: Component|null = null;
     previous_context: FrontworkContext|null = null;
 
+    private get_headers(): Headers {
+        return new Headers([["Cookie", document.cookie]]);
+    }
+
     constructor(init: FrontworkInit) {
         super(init);
 
@@ -23,7 +27,7 @@ export class FrontworkClient extends Frontwork {
 
         // DOM Ready
         document.addEventListener("DOMContentLoaded", () => {
-            const request = new FrontworkRequest("GET", location.toString(), new Headers([["Cookie", document.cookie]]), new PostScope({}));
+            const request = new FrontworkRequest("GET", location.toString(), this.get_headers(), new PostScope({}));
             this.page_change(request, this.build_on_page_load, false);
         });
 
@@ -80,7 +84,7 @@ export class FrontworkClient extends Frontwork {
                 // validate event.state; it could be a different value if the state has been set by another script
                 const savestate: PageChangeSavestate = event.state;
                 if (savestate && savestate.url) {
-                    const request = new FrontworkRequest("GET", savestate.url, new Headers(), new PostScope({}));
+                    const request = new FrontworkRequest("GET", savestate.url, this.get_headers(), new PostScope({}));
                     this.page_change(request, true, true);
                 }
             } else {
@@ -235,7 +239,7 @@ export class FrontworkClient extends Frontwork {
             url = location.protocol+"//"+location.host+url_or_path
         }
 
-        const request = new FrontworkRequest("GET", url, new Headers(), new PostScope({}));
+        const request = new FrontworkRequest("GET", url, this.get_headers(), new PostScope({}));
         const result = await this.page_change(request, true, ignore_not_ready === true);
         if(result !== null) {
             if(result.is_redirect) return true;
@@ -304,7 +308,7 @@ export class FrontworkClient extends Frontwork {
             }
         }
 
-        const request = new FrontworkRequest(method, url, new Headers(), POST);
+        const request = new FrontworkRequest(method, url, this.get_headers(), POST);
         const result = await this.page_change(request, true, true);
         console.log("page_change_form result inner", result);
         
