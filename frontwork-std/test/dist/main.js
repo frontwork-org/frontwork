@@ -927,9 +927,9 @@ var FrontworkMiddleware = class {
 var FrontworkClient = class extends Frontwork {
   build_on_page_load;
   client_observers = {};
-  // page_change() behaviour: 
-  // It kills the previous Promise so that it will not execute its Component build function since it is not needed because the user already clicked to the next page.
-  // But we should wait for page_change_form because we want ensure that the data is transmitted.
+  /** page_change() behaviour: 
+      It kills the previous Promise so that it will not execute its Component build function since it is not needed because the user already clicked to the next page.
+      But we should wait for page_change_form because we want ensure that the data is transmitted. */
   page_change_ready = true;
   page_change_previous_abort_controller = null;
   is_page_change_ready() {
@@ -937,6 +937,9 @@ var FrontworkClient = class extends Frontwork {
   }
   previous_component = null;
   previous_context = null;
+  get_headers() {
+    return new Headers([["Cookie", document.cookie]]);
+  }
   constructor(init) {
     super(init);
     if (typeof init.build_on_page_load === "boolean")
@@ -944,7 +947,7 @@ var FrontworkClient = class extends Frontwork {
     else
       this.build_on_page_load = false;
     document.addEventListener("DOMContentLoaded", () => {
-      const request = new FrontworkRequest("GET", location.toString(), new Headers([["Cookie", document.cookie]]), new PostScope({}));
+      const request = new FrontworkRequest("GET", location.toString(), this.get_headers(), new PostScope({}));
       this.page_change(request, this.build_on_page_load, false);
     });
     document.addEventListener("click", async (event) => {
@@ -983,7 +986,7 @@ var FrontworkClient = class extends Frontwork {
       if (this.page_change_ready) {
         const savestate = event.state;
         if (savestate && savestate.url) {
-          const request = new FrontworkRequest("GET", savestate.url, new Headers(), new PostScope({}));
+          const request = new FrontworkRequest("GET", savestate.url, this.get_headers(), new PostScope({}));
           this.page_change(request, true, true);
         }
       } else {
@@ -1025,7 +1028,13 @@ var FrontworkClient = class extends Frontwork {
         await this.previous_component.on_destroy(this.previous_context, this);
       const context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, this.api_error_event, this.i18n, request, do_building, this);
       this.previous_context = context;
-      const route = await this.route_resolver(context);
+      let route;
+      try {
+        route = await this.route_resolver(context);
+      } catch (error) {
+        context.request.error("ERROR in route_resolver", context, error);
+        return null;
+      }
       try {
         this.middleware.before_route.build(context);
         this.middleware.before_route.dom_ready(context, this);
@@ -1096,7 +1105,7 @@ var FrontworkClient = class extends Frontwork {
     }
     return null;
   }
-  // function replacement for window.location; accessible for the Component method dom_ready
+  // function replacement for window.location; accessible for the Component method dom_ready */
   async page_change_to(url_or_path, ignore_not_ready) {
     if (FW.verbose_logging)
       FW.reporter(0 /* Info */, "PageChange", "    page_change_to: " + url_or_path, null, null);
@@ -1107,7 +1116,7 @@ var FrontworkClient = class extends Frontwork {
     } else {
       url = location.protocol + "//" + location.host + url_or_path;
     }
-    const request = new FrontworkRequest("GET", url, new Headers(), new PostScope({}));
+    const request = new FrontworkRequest("GET", url, this.get_headers(), new PostScope({}));
     const result = await this.page_change(request, true, ignore_not_ready === true);
     if (result !== null) {
       if (result.is_redirect)
@@ -1117,7 +1126,7 @@ var FrontworkClient = class extends Frontwork {
     }
     return false;
   }
-  // function to handle Form submits being handled in client
+  /** function to handle Form submits being handled in client */
   async page_change_form(form, submit_button) {
     this.page_change_ready = false;
     if (FW.verbose_logging)
@@ -1170,7 +1179,7 @@ var FrontworkClient = class extends Frontwork {
         POST.items[submit_button.name] = submit_button.value;
       }
     }
-    const request = new FrontworkRequest(method, url, new Headers(), POST);
+    const request = new FrontworkRequest(method, url, this.get_headers(), POST);
     const result = await this.page_change(request, true, true);
     console.log("page_change_form result inner", result);
     if (result !== null) {
@@ -1182,6 +1191,9 @@ var FrontworkClient = class extends Frontwork {
     if (submit_button)
       submit_button.disabled = true;
     return false;
+  }
+  refresh() {
+    return this.page_change_to(window.location.toString(), true);
   }
 };
 
@@ -1461,6 +1473,7 @@ var APP_CONFIG = {
   api_protocol_address_ssr: "http://localhost:40201",
   domain_to_route_selector: async (context) => {
     const domain = context.request.host.split(":")[0];
+    throw new Error("TEST");
     if (domain === "127.0.0.1")
       return another_routes;
     return default_routes;
