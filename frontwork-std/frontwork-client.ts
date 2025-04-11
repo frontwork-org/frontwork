@@ -140,7 +140,14 @@ export class FrontworkClient extends Frontwork {
 
             const context = new FrontworkContext(this.platform, this.stage, "127.0.0.1", this.api_protocol_address, this.api_protocol_address_ssr, this.api_error_event, this.i18n, request, do_building, this);
             this.previous_context = context;
-            const route: Route|null = await this.route_resolver(context);
+            let route;
+            try {
+                route = await this.route_resolver(context);
+            // deno-lint-ignore no-explicit-any
+            } catch (error: any) {
+                context.request.error("ERROR in route_resolver", context, error);
+                return null;
+            }
             
             
             // Middleware: before Route

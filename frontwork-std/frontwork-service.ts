@@ -324,7 +324,15 @@ export class FrontworkWebservice extends Frontwork {
                 true,
                 null,
             );
-            const route = await this.route_resolver(context);
+
+            let route;
+            try {
+                route = await this.route_resolver(context);
+            // deno-lint-ignore no-explicit-any
+            } catch (error: any) {
+                context.request.error("ERROR in route_resolver", context, error);
+                return (await this.middleware.error_handler_component.build(context)).into_response();
+            }
 
             // Middleware: before Route
             try {
