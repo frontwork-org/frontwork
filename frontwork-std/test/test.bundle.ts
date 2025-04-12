@@ -11,7 +11,7 @@ esbuild.build({
   format: "esm",
   target: "esnext",
   minify: false,
-  sourcemap: false,
+  sourcemap: true,
   treeShaking: true,
 });
 await esbuild.stop();

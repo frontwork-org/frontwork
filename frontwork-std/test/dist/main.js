@@ -407,6 +407,9 @@ var FrontworkRequest = class {
       cookies_string === null ? {} : key_value_list_to_object(cookies_string, "; ", "=")
     );
   }
+  get_domain() {
+    return this.host.split(":")[0];
+  }
   __request_text(category) {
     let text = this.method + " " + this.path;
     if (this.query_string !== "")
@@ -1473,7 +1476,6 @@ var APP_CONFIG = {
   api_protocol_address_ssr: "http://localhost:40201",
   domain_to_route_selector: async (context) => {
     const domain = context.request.host.split(":")[0];
-    throw new Error("TEST");
     if (domain === "127.0.0.1")
       return another_routes;
     return default_routes;
@@ -1490,3 +1492,4 @@ var APP_CONFIG = {
 
 // test/test.client.ts
 new FrontworkClient(APP_CONFIG);
+//# sourceMappingURL=main.js.map

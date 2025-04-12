@@ -306,6 +306,10 @@ export class FrontworkRequest {
         );
     }
 
+    get_domain(): string {
+        return this.host.split(":")[0];
+    }
+
     __request_text(category: string) {
         let text = this.method + " " + this.path;
         if(this.query_string !== "") text += "?" + this.query_string;
