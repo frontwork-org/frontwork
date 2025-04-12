@@ -17,6 +17,6 @@ if (__dir.slice(-1) === "/") __dir = __dir.slice(0, -1);
 new FrontworkWebservice(APP_CONFIG)
     .setup_assets_resolver(__dir + '/assets')
     .setup_style_css(__dir + '/dist/style.css')
-    .setup_main_js(__dir + '/dist/main.js')
+    .setup_main_js(__dir + '/dist/main.client.js')
     .set_api_path_prefixes(["/api/", "/files/"])
     .start();

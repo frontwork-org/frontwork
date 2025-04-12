@@ -563,7 +563,7 @@ var DocumentBuilder = class {
     style_css.setAttribute("type", "text/css");
     const main_js = this.context.document_body.appendChild(document.createElement("script"));
     main_js.setAttribute("id", "fw-script");
-    main_js.setAttribute("src", "/js/main.js");
+    main_js.setAttribute("src", "/js/main.client.js");
     main_js.setAttribute("type", "text/javascript");
     return this.context.document_html;
   }
@@ -1492,4 +1492,4 @@ var APP_CONFIG = {
 
 // test/test.client.ts
 new FrontworkClient(APP_CONFIG);
-//# sourceMappingURL=main.js.map
+//# sourceMappingURL=main.client.js.map
