@@ -278,8 +278,6 @@ export const APP_CONFIG: FrontworkInit = {
 	api_protocol_address_ssr: "http://localhost:40201",
 	domain_to_route_selector: async (context: FrontworkContext) => {
 		const domain = context.request.host.split(":")[0];
-		throw new Error("TEST");
-		
 		
 		if (domain === "127.0.0.1") return another_routes;
 		return default_routes;
