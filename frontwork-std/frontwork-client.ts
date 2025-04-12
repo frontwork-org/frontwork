@@ -45,13 +45,9 @@ export class FrontworkClient extends Frontwork {
                 }
         
                 if (this.page_change_ready) {
-                    if (await this.page_change_to(target.href, false)) {
-                        // only prevent default if page_change_to does not fail
-                        event.preventDefault();
-                    }
-                } else {
-                    event.preventDefault();
+                    await this.page_change_to(target.href, false);
                 }
+                event.preventDefault();
             }
         }, false);
 
