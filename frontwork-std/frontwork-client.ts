@@ -32,7 +32,7 @@ export class FrontworkClient extends Frontwork {
         });
 
         // add event listener for page change on link click
-        document.addEventListener('click', async (event) => {
+        document.addEventListener('click', (event) => {
             const target = event.target as HTMLAnchorElement;
             if (target.tagName === 'A' && (target.target === "" || target.target === "_self")) {
                 // Create a URL object to easily access hostname
@@ -43,11 +43,12 @@ export class FrontworkClient extends Frontwork {
                     // External link - let it proceed normally
                     return;
                 }
-        
-                if (this.page_change_ready) {
-                    await this.page_change_to(target.href, false);
-                }
+                
                 event.preventDefault();
+
+                if (this.page_change_ready) {
+                    this.page_change_to(target.href, false);
+                }
             }
         }, false);
 
