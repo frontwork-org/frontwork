@@ -953,19 +953,16 @@ var FrontworkClient = class extends Frontwork {
       const request = new FrontworkRequest("GET", location.toString(), this.get_headers(), new PostScope({}));
       this.page_change(request, this.build_on_page_load, false);
     });
-    document.addEventListener("click", async (event) => {
+    document.addEventListener("click", (event) => {
       const target = event.target;
       if (target.tagName === "A" && (target.target === "" || target.target === "_self")) {
         const url = new URL(target.href);
         if (url.hostname !== "" && url.hostname !== window.location.hostname) {
           return;
         }
+        event.preventDefault();
         if (this.page_change_ready) {
-          if (await this.page_change_to(target.href, false)) {
-            event.preventDefault();
-          }
-        } else {
-          event.preventDefault();
+          this.page_change_to(target.href, false);
         }
       }
     }, false);
