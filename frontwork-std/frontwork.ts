@@ -508,10 +508,10 @@ export class DocumentBuilder implements DocumentBuilderInterface {
         style_css.setAttribute("href", "/css/style.css");
         style_css.setAttribute("type", "text/css");
 
-        // force adding main.js to the end of the body
+        // force adding main.client.js to the end of the body
         const main_js = this.context.document_body.appendChild( document.createElement("script") );
         main_js.setAttribute("id", "fw-script");
-        main_js.setAttribute("src", "/js/main.js");
+        main_js.setAttribute("src", "/js/main.client.js");
         main_js.setAttribute("type", "text/javascript");
 
         return this.context.document_html;
