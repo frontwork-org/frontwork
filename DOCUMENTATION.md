@@ -48,10 +48,26 @@ With FrontworkInit.domain_to_route_selector we are able to selects which routes 
 
 ### Route
 Routes contains the path where the spezific Component will be executed.
-The path con also contain "*" which mean any but not empty characters for the desired directory.  
+The path can also contain "*" (single wildcard) which mean any characters for the desired directory.  
 Example:
 
-    /hello/*
+- `/api/users/*` matches `/api/users/123`
+  
+The "**" (double asterisk) typically matches zero or more path segments in routing. Double asterisk should be listed last in the routing lists, otherwise there may routing collisions.  
+Example matches:
+- Route "/api/**" will match:
+  - "/api"
+  - "/api/users"
+  - "/api/users/123"
+  - "/api/any/number/of/segments"
+- Route "/api/**/settings" will match:
+  - "/api/settings"
+  - "/api/users/settings"
+  - "/api/users/123/settings"
+- Route "/api/**" will match:
+  - "/api"
+  - "/api/users"
+  - "/api/users/123"
 
 #### Routes collision
 To handle issue that a route like "/hello/*" make "/hello/world" never in use. It is a easy fix by ordering the array of routes. The priority is first come, first served.
