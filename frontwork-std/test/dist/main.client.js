@@ -854,27 +854,30 @@ var Frontwork = class {
   }
   async route_resolver(context) {
     const routes = await this.domain_to_route_selector(context);
-    for (let b = 0; b < routes.length; b++) {
-      const route = routes[b];
-      const route_path_dirs = route.path.split("/");
-      if (context.request.path_dirs.length === route_path_dirs.length) {
-        for (let c = 0; c < route_path_dirs.length; c++) {
-          if (context.request.path_dirs.length === route_path_dirs.length) {
-            let found = true;
-            for (let i = 0; i < route_path_dirs.length; i++) {
-              const route_path_dir = route_path_dirs[i];
-              if (route_path_dir !== "*" && route_path_dir !== context.request.path_dirs[i]) {
-                found = false;
-                break;
-              }
-            }
-            if (found) {
-              if (FW.verbose_logging)
-                context.request.log("ROUTE #" + route.id + " (" + route.path + ")", context);
-              return route;
-            }
-          }
+    const request_dirs = context.request.path_dirs;
+    for (let r = 0; r < routes.length; r++) {
+      const route = routes[r];
+      const route_dirs = route.path.split("/");
+      let matches = true;
+      for (let i = 0; i < Math.max(route_dirs.length, request_dirs.length); i++) {
+        if (route_dirs[i] === "**") {
+          if (FW.verbose_logging)
+            context.request.log("ROUTE #" + route.id + " (" + route.path + ")", context);
+          return route;
         }
+        if (i >= route_dirs.length || i >= request_dirs.length) {
+          matches = false;
+          break;
+        }
+        if (route_dirs[i] !== "*" && route_dirs[i] !== request_dirs[i]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) {
+        if (FW.verbose_logging)
+          context.request.log("ROUTE #" + route.id + " (" + route.path + ")", context);
+        return route;
       }
     }
     return null;
