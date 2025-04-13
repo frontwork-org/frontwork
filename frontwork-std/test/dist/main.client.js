@@ -958,7 +958,9 @@ var FrontworkClient = class extends Frontwork {
     });
     document.addEventListener("click", (event) => {
       const target = event.target;
-      if (target.tagName === "A" && (target.target === "" || target.target === "_self")) {
+      if (target.href === "") {
+        event.preventDefault();
+      } else if (target.tagName === "A" && (target.target === "" || target.target === "_self")) {
         const url = new URL(target.href);
         if (url.hostname !== "" && url.hostname !== window.location.hostname) {
           return;

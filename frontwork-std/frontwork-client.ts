@@ -34,7 +34,10 @@ export class FrontworkClient extends Frontwork {
         // add event listener for page change on link click
         document.addEventListener('click', (event) => {
             const target = event.target as HTMLAnchorElement;
-            if (target.tagName === 'A' && (target.target === "" || target.target === "_self")) {
+            if (target.href === "") {
+                // do nothing on empty href
+                event.preventDefault();
+            } else if (target.tagName === 'A' && (target.target === "" || target.target === "_self")) {
                 // Create a URL object to easily access hostname
                 const url = new URL(target.href);
                 
