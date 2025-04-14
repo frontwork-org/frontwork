@@ -111,8 +111,8 @@ export class Asset {
     }
 }
 
-//TODO: Consider: FrontworkSubservice
-export interface FrontworkSubservice { (_req: Request, _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>): Response|null };
+/** FrontworkSubservice executed only on Deno server before Routung and before "before_route" */
+export interface FrontworkSubservice { (request: FrontworkRequest, _req: Request, _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>): Promise<Response | null> };
 
 const abort_controller = new AbortController();
 
@@ -125,6 +125,8 @@ export class FrontworkWebservice extends Frontwork {
 
     private assets_folder_path = "";
     private assets: Asset[] = [];
+
+    private subservices: FrontworkSubservice[] = [];
 
     constructor(init: FrontworkInit) {
         super(init);
@@ -224,6 +226,18 @@ export class FrontworkWebservice extends Frontwork {
         return this;
     }
 
+    add_subservice(subservice: FrontworkSubservice) {
+        this.subservices.push(subservice);
+        return this;
+    }
+
+    add_subservices(subservices: FrontworkSubservice[]) {
+        for (const subservice of subservices) {
+            this.subservices.push(subservice);
+        }
+        return this;
+    }
+
     private async assets_resolver(request: FrontworkRequest): Promise<Response | null> {
         if (request.path === this.style_css.relative_path) {
             try {
@@ -290,6 +304,15 @@ export class FrontworkWebservice extends Frontwork {
         );
 
         try {
+            // Subservice
+            for (let s = 0; s < this.subservices.length; s++) {
+                const subservice = this.subservices[s];
+                const result = await subservice(request, _req, _req_extras);
+                if (result !== null) {
+                    return result;
+                }
+            }
+
             // Assets resolver
             const resolved_asset = await this.assets_resolver(request);
             if (resolved_asset !== null) {
@@ -434,35 +457,16 @@ export class FrontworkWebservice extends Frontwork {
         return this.handler(_req, _req_extras);
     }
 
-    private async forward_request_to_api(
-        _req: Request,
-        _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>
-      ): Promise<Response> {
+    private async forward_request_to_api(_req: Request, _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>): Promise<Response> {
         try {
-            const client_ip = _req.headers.get("x-forwarded-for") || _req.headers.get("x-real-ip") || _req_extras.remoteAddr.hostname;
             const url = new URL(_req.url);
 
             // Construct new URL for the backend
-            const apiUrl = new URL(url.pathname, this.api_protocol_address_ssr);
+            const api_url = new URL(url.pathname, this.api_protocol_address_ssr);
             url.searchParams.forEach((value, key) => {
-                apiUrl.searchParams.append(key, value);
+                api_url.searchParams.append(key, value);
             });
-
-            // Forward original headers and add some extra information
-            const headers = new Headers(_req.headers);
-            headers.append('X-Forwarded-For', client_ip);
-            headers.append('X-Forwarded-Host', url.host);
-            headers.append('X-Original-URL', url.toString());
-
-            // Prepare request options
-            const requestOptions: RequestInit = {
-                method: _req.method,
-                headers: headers,
-                body: _req.body,
-            };
-
-            // Make the request to backend
-            const response = await fetch(apiUrl.toString(), requestOptions);
+            const response = await this.create_forward_request(api_url.toString(), _req, _req_extras);
 
             return response;
         } catch (error) {
@@ -474,4 +478,25 @@ export class FrontworkWebservice extends Frontwork {
         }
     }
 
+    public async create_forward_request(api_url: string, _req: Request, _req_extras: Deno.ServeHandlerInfo<Deno.NetAddr>): Promise<Response> {
+        const client_ip = _req.headers.get("x-forwarded-for") || _req.headers.get("x-real-ip") || _req_extras.remoteAddr.hostname;
+        const url = new URL(_req.url);
+
+        // Forward original headers and add some extra information
+        const headers = new Headers(_req.headers);
+        headers.append('X-Forwarded-For', client_ip);
+        headers.append('X-Forwarded-Host', url.host);
+        headers.append('X-Original-URL', url.toString());
+
+        // Prepare request options
+        const requestOptions: RequestInit = {
+            method: _req.method,
+            headers: headers,
+            body: _req.body,
+        };
+
+        // Make the request to backend
+        const response = await fetch(api_url, requestOptions);
+        return response;
+    }
 }
