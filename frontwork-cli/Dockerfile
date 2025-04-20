@@ -4,7 +4,10 @@ FROM alpine:latest
 RUN apk add --no-cache \
     rust \
     cargo \
-    build-base
+    build-base \
+    openssl \
+    openssl-dev \
+    pkgconfig
 
 # Install frontwork
 RUN cargo install frontwork
