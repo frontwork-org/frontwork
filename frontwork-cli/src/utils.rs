@@ -125,8 +125,8 @@ pub fn make_file_executable(file_path: &str) -> std::result::Result<(), std::io:
 
 /// Extracts a ZIP file to the given directory.
 pub fn zip_extract(archive_file: &PathBuf, target_dir: &PathBuf) -> ZipResult<()> {
-    let file = File::open(archive_file)?;
-    let mut archive = ZipArchive::new(file)?;
+    let file = File::open(archive_file).unwrap();
+    let mut archive = ZipArchive::new(file).unwrap();
     archive.extract(target_dir)
 }
 
