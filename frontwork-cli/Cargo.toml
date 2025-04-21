@@ -10,7 +10,8 @@ repository = "https://github.com/frontwork-org/frontwork"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = {version = "0.12.4", features = ["blocking"] }
+reqwest = {version = "0.12.15", features = ["blocking", "stream"] }
+tokio = { version = "1.44.2", features = ["full"] }
 anyhow = "1.0.97"
 shell = "0.3.2"
 time = "0.3.36"
@@ -22,3 +23,5 @@ rusync = "0.7.2"
 rsass = "0.29.0"
 zip = "2.1.0"
 regex = "1.11.1"
+indicatif = "0.17.11"
+futures-util = "0.3.31"

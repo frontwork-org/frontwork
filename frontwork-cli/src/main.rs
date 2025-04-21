@@ -8,6 +8,8 @@ use std::process::{self, Child};
 use std::{env, fs};
 use std::{thread, time};
 use utils::{create_dir_all_verbose, read_from_line, run_command, transverse_directory};
+use anyhow::Result;
+
 mod download;
 mod environment_platform;
 mod package_json;
@@ -135,7 +137,8 @@ impl Arguments {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
     let arguments = Arguments::new(&args).unwrap_or_else(|err| {
         if err == "" {
@@ -148,76 +151,7 @@ fn main() {
 
     match arguments.subcomand {
         SubCommand::Install => {
-            println!("GET & INSTALL: Deno");
-
-            // Check if deno is already installed
-            let deno_is_installed = std::process::Command::new("deno")
-                .arg("help")
-                .output()
-                .is_ok();
-
-            if deno_is_installed {
-                println!("Deno is already installed");
-            } else {
-                let target = if cfg!(target_os = "windows") {
-                    "x86_64-pc-windows-msvc"
-                } else if cfg!(target_os = "macos") {
-                    if cfg!(target_arch = "aarch64") {
-                        "aarch64-apple-darwin"
-                    } else {
-                        "x86_64-apple-darwin"
-                    }
-                } else {
-                    "x86_64-unknown-linux-gnu"
-                };
-
-                let homedir = env::var("HOME").unwrap();
-                let deno_uri = format!(
-                    "https://github.com/denoland/deno/releases/latest/download/deno-{}.zip",
-                    target
-                );
-                let deno_install = homedir.clone() + "/.deno";
-                let bin_dir = deno_install.clone() + "/bin";
-                let bin_file = deno_install.clone() + "/bin/deno";
-
-                // Create Deno installation directory if not exists
-                create_dir_all_verbose(&bin_dir);
-
-                match download::download_file(&deno_uri) {
-                    Err(_) => {
-                        println!("Download of {} failed", deno_uri);
-                    }
-
-                    Ok(file_path) => {
-                        // Download successful, now unzip it
-                        let archive_file: PathBuf = PathBuf::from(file_path);
-                        let target_dir: PathBuf = PathBuf::from(bin_dir);
-                        if let Err(err) = crate::utils::zip_extract(&archive_file, &target_dir) {
-                            println!("Extration of archive failed.\n\n{:#?}", err);
-                        } else {
-                            if let Err(err) = utils::make_file_executable(&bin_file) {
-                                println!("Unable to make file executable.\n\n{:#?}", err);
-                            } else {
-                                // Add path env of the executable
-                                let bashrc_path = homedir + "/.bashrc";
-                                let mut bashrc = fs::read_to_string(&bashrc_path)
-                                    .expect(".bashrc should exist and be readable");
-                                if !bashrc.contains("DENO_INSTALL") {
-                                    bashrc += "\n\n";
-                                    bashrc +=
-                                        &format!("export DENO_INSTALL=\"{}\"\n", deno_install);
-                                    bashrc +=
-                                        &"export PATH=\"$DENO_INSTALL/bin:$PATH\"\n".to_string();
-                                    fs::write(&bashrc_path, bashrc)
-                                        .expect(".bashrc should be writeable");
-                                    println!("Deno was installed successfully to {}", bin_file);
-                                    println!("Please restart shell to start using it.");
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            command_install().await;
         }
 
         SubCommand::Init | SubCommand::New => {
@@ -478,6 +412,86 @@ fn get_project_path() -> String {
     project_path
 }
 
+async fn command_install() {
+    println!("GET & INSTALL: Deno");
+
+    // Check if deno is already installed
+    // let deno_is_installed = std::process::Command::new("deno")
+    //     .arg("help")
+    //     .output()
+    //     .is_ok();
+
+    if false {
+        println!("Deno is already installed");
+    } else {
+        let target = if cfg!(target_os = "windows") {
+            "x86_64-pc-windows-msvc"
+        } else if cfg!(target_os = "macos") {
+            if cfg!(target_arch = "aarch64") {
+                "aarch64-apple-darwin"
+            } else {
+                "x86_64-apple-darwin"
+            }
+        } else {
+            "x86_64-unknown-linux-gnu"
+        };
+
+        let homedir = env::var("HOME").unwrap();
+        let deno_uri = format!(
+            "https://github.com/denoland/deno/releases/latest/download/deno-{}.zip",
+            target
+        );
+        let deno_install = homedir.clone() + "/.deno";
+        let bin_dir = deno_install.clone() + "/bin";
+        let bin_file = deno_install.clone() + "/bin/deno";
+
+        // Create Deno installation directory if not exists
+        create_dir_all_verbose(&bin_dir);
+
+        match download::download_large_file(&deno_uri).await {
+            Err(error) => {
+                println!("Download of {} failed", deno_uri);
+                println!("{:?}", error);
+            }
+
+            Ok(archive_file) => {
+                println!("Saved archive to: {:#?}", archive_file);
+                // Delete old binary file
+                let _ = std::fs::remove_file(&bin_file);
+                
+                // Download successful, now unzip it
+                let archive_file: PathBuf = PathBuf::from(archive_file);
+                let target_dir: PathBuf = PathBuf::from(&bin_dir);
+                if let Err(err) = crate::utils::zip_extract(&archive_file, &target_dir) {
+                    println!("Extration of archive failed.\n\n{:#?}", err);
+                } else {
+                    if let Err(err) = utils::make_file_executable(&bin_file) {
+                        println!("Unable to make file executable.\n\n{:#?}", err);
+                    } else {
+                        println!("Saved deno executable to: {:#?}", bin_file);
+
+                        // Add path env of the executable
+                        let bashrc_path = homedir + "/.bashrc";
+                        let mut bashrc = fs::read_to_string(&bashrc_path)
+                            .expect(".bashrc should exist and be readable");
+                        if !bashrc.contains("DENO_INSTALL") {
+                            bashrc += "\n\n";
+                            bashrc +=
+                                &format!("export DENO_INSTALL=\"{}\"\n", deno_install);
+                            bashrc +=
+                                &"export PATH=\"$DENO_INSTALL/bin:$PATH\"\n".to_string();
+                            fs::write(&bashrc_path, bashrc)
+                                .expect(".bashrc should be writeable");
+                            println!("Deno was installed successfully to {}", bin_file);
+                            println!("Please restart shell to start using it.");
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn command_build(environment: Environment) {
     println!("Building Frontwork-Project for {}", environment.to_str());
 
@@ -710,7 +724,7 @@ fn update_frontwork_deps() -> std::io::Result<()> {
         if Path::new(&file_path).exists() {
             let content = fs::read_to_string(&file_path)?;
             let new_content = pattern.replace_all(&content, &replacement);
-            
+
             if content != new_content {
                 fs::write(&file_path, new_content.as_bytes())?;
                 println!("Updated {}", &file_path);
