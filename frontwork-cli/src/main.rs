@@ -472,15 +472,20 @@ async fn command_install() {
 
                         // Add path env of the executable
                         let bashrc_path = homedir + "/.bashrc";
-                        let mut bashrc = fs::read_to_string(&bashrc_path)
-                            .expect(".bashrc should exist and be readable");
-                        if !bashrc.contains("DENO_INSTALL") {
-                            bashrc += "\n\n";
-                            bashrc +=
-                                &format!("export DENO_INSTALL=\"{}\"\n", deno_install);
-                            bashrc +=
-                                &"export PATH=\"$DENO_INSTALL/bin:$PATH\"\n".to_string();
-                            fs::write(&bashrc_path, bashrc)
+                        let bashrc_content = if Path::new(&bashrc_path).exists() {
+                            fs::read_to_string(&bashrc_path)
+                                .expect(".bashrc should be readable")
+                        } else {
+                            String::new() // Create empty string for new .bashrc
+                        };
+
+                        if !bashrc_content.contains("DENO_INSTALL") {
+                            let mut new_bashrc = bashrc_content;
+                            new_bashrc += "\n\n";
+                            new_bashrc += &format!("export DENO_INSTALL=\"{}\"\n", deno_install);
+                            new_bashrc += &"export PATH=\"$DENO_INSTALL/bin:$PATH\"\n".to_string();
+                            
+                            fs::write(&bashrc_path, new_bashrc)
                                 .expect(".bashrc should be writeable");
                             println!("Deno was installed successfully to {}", bin_file);
                             println!("Please restart shell to start using it.");

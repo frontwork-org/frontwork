@@ -19,7 +19,7 @@ RUN rm -rf /root/.cargo
 
 
 RUN frontwork install
-RUN deno --run
+RUN deno --help
 
 # Set the entrypoint
 ENTRYPOINT ["frontwork"]
