@@ -89,6 +89,9 @@ fi
 git tag -a "$NEW_VERSION" -m "Release v$NEW_VERSION"
 git push origin "$NEW_VERSION"
 
+# Remove bloat from template
+rm -rf ../frontwork-cli/template/node_modules/
+
 # Compile Rust project
 cd ../frontwork-cli
 cargo build --release
