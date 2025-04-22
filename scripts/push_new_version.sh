@@ -91,6 +91,7 @@ git push origin "$NEW_VERSION"
 
 # Remove bloat from template
 rm -rf ../frontwork-cli/template/node_modules/
+rm -rf ../frontwork-cli/template/dist/*
 
 # Compile Rust project
 cd ../frontwork-cli
