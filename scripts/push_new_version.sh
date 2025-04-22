@@ -79,18 +79,27 @@ gh pr create --repo frontwork-org/frontwork \
     --body "Creating a pull request to merge changes for v$NEW_VERSION from $MY_GIT_REPO into frontwork-org/frontwork"
 
 # Merge it
-gh repo set-default frontwork-org/frontwork
-gh pr merge --merge
+if ! gh pr merge --merge; then
+  echo "Error: Failed to merge PR. Please try to set default repository"
+  echo "gh repo set-default frontwork-org/frontwork"
+  exit 1
+fi
 
 # Create and push tag
 git tag -a "$NEW_VERSION" -m "Release v$NEW_VERSION"
 git push origin "$NEW_VERSION"
 
-# Create release
+# Compile Rust project
+cd ../frontwork-cli
+cargo build --release
+cd ../scripts
+
+# Create release with binary
 gh release create "$NEW_VERSION" \
   --title "Frontwork dev-$NEW_VERSION" \
   --notes "Release notes for version $NEW_VERSION" \
-  --target master
+  --target master \
+  "../target/release/frontwork"
 
 echo "Version updated from $CURRENT_VERSION to $NEW_VERSION"
 
