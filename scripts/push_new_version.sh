@@ -96,7 +96,7 @@ cd ../scripts
 
 # Create release with binary
 gh release create "$NEW_VERSION" \
-  --title "Frontwork dev-$NEW_VERSION" \
+  --title "Frontwork v-$NEW_VERSION" \
   --notes "Release notes for version $NEW_VERSION" \
   --target master \
   "../target/release/frontwork"
