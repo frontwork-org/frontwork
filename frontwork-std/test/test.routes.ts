@@ -166,17 +166,20 @@ class HelloWorldComponent implements Component {
 }
 
 class CollisionHandlerComponent implements Component {
-    async build(context: FrontworkContext) {
+	component: Component
+
+	constructor(context: FrontworkContext) {
 		if (context.request.path_dirs[2] === "first-come-first-served") {
-			return new HelloWorldPrioTestComponent().build(context);
+			this.component = new HelloWorldPrioTestComponent();
 		}
-		return new HelloWorldComponent().build(context);
+		this.component = new HelloWorldComponent();
 	}
-    async dom_ready(context: FrontworkContext) {
-		if (context.request.path_dirs[2] === "first-come-first-served") {
-			new HelloWorldPrioTestComponent().dom_ready(context);
-		}
-		new HelloWorldComponent().dom_ready(context);
+
+    async build(context: FrontworkContext) {
+		return this.component.build(context);
+	}
+    async dom_ready(context: FrontworkContext, client: FrontworkClient) {
+		return this.component.dom_ready(context, client);
 	}
 	async on_destroy() {}
 }

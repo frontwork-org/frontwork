@@ -18,12 +18,16 @@ mod utils;
 static PROJECT_TEMPLATE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/template/");
 static BUNDLE_TS_FILE_STR: &str = include_str!("../template/bundle.ts");
 
+fn print_header_version() {
+    println!("Frontwork CLI Tool v{} by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors", env!("CARGO_PKG_VERSION"));
+}
+
 fn print_help(no_error: bool, error_message: &str) {
     print!("\n");
     if no_error {
         println!("The usage of arguments has been entered wrong because {}. \nPlease follow the following usage:", error_message);
     } else {
-        println!("Frontwork CLI Tool v{} by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors", env!("CARGO_PKG_VERSION"));
+        print_header_version();
         println!("-- The TypeScript Framework using Deno & Webassembly --");
         println!("\n Usage:");
     }
@@ -43,6 +47,7 @@ fn print_help(no_error: bool, error_message: &str) {
 
 #[derive(PartialEq)]
 pub enum SubCommand {
+    Version,
     Install,
     Init,
     New,
@@ -75,6 +80,8 @@ impl Arguments {
         if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
             print_help(true, "");
             return Err("");
+        } else if args.contains(&"--version".to_string()) {
+            return Ok(Self { subcomand: SubCommand::Version, flag: Flag::Default, input: None });
         } else {
             let subcommand: SubCommand = match args[1].as_str() {
                 "install" => SubCommand::Install,
@@ -150,6 +157,10 @@ async fn main() {
     });
 
     match arguments.subcomand {
+        SubCommand::Version => {
+            print_header_version();
+        }
+
         SubCommand::Install => {
             command_install().await;
         }
