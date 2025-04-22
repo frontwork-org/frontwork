@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM alpine:latest AS rust
 
 # Install required dependencies
 RUN apk add --no-cache \
@@ -9,16 +9,25 @@ RUN apk add --no-cache \
     pkgconfig \
     gcc
 
-# Install frontwork
-RUN cargo install frontwork && \
-    mv /root/.cargo/bin/frontwork /usr/local/bin/
-
-# Clean up
-RUN apk del rust cargo
-RUN rm -rf /root/.cargo
+# Install /root/.cargo/bin/frontwork
+RUN cargo install frontwork
 
 
-RUN frontwork install
+FROM denoland/deno:alpine AS deno
+COPY --from=rust /root/.cargo/bin/frontwork /usr/local/bin/
+RUN chmod +x /usr/local/bin/
+
+# Install required dependencies
+RUN apk add --no-cache \
+    rust \
+    cargo \
+    musl-dev \
+    openssl-dev \
+    pkgconfig \
+    gcc
+
+
+# Now you can use deno
 RUN deno --help
 
 # Set the entrypoint
