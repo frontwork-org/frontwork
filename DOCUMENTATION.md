@@ -76,18 +76,22 @@ To handle issue that a route like "/hello/*" make "/hello/world" never in use. I
 In this case we just create a new Component that acts as middleman.
 ```TypeScript
 class CollisionHandlerComponent implements Component {
-    build(context: FrontworkContext) {
-        if (context.request.path_dirs[2] === "first-come-first-served") {
-            return new HelloWorldPrioTestComponent().build(context);
-        }
-        return new HelloWorldComponent().build(context);
-    }
-    dom_ready(context: FrontworkContext): void {
-        if (context.request.path_dirs[2] === "first-come-first-served") {
-            new HelloWorldPrioTestComponent().dom_ready(context);
-        }
-        new HelloWorldComponent().dom_ready(context);
-    }
+	component: Component
+
+	constructor(context: FrontworkContext) {
+		if (context.request.path_dirs[2] === "first-come-first-served") {
+			this.component = new HelloWorldPrioTestComponent();
+		}
+		this.component = new HelloWorldComponent();
+	}
+
+    async build(context: FrontworkContext) {
+		return this.component.build(context);
+	}
+    async dom_ready(context: FrontworkContext, client: FrontworkClient) {
+		return this.component.dom_ready(context, client);
+	}
+	async on_destroy() {}
 }
 ```
 

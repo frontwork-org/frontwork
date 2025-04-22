@@ -10,6 +10,8 @@
 For getting started you need to install the frontwork-cli tool "frontwork": 
 
     cargo install frontwork  
+Or install it [manually](https://github.com/frontwork-org/frontwork/releases/latest/download/frontwork)  
+  
 And then use `frontwork install` to install required dev-dependencies 
 
 To start a new project you can use `frontwork init` to use the current directory or `frontwork new` to create a new one.
