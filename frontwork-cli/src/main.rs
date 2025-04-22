@@ -396,7 +396,12 @@ async fn main() {
                 Environment::Production
             };
 
-            command_build(environment);
+            let target = args.iter().position(|arg| arg == "--target")
+                .and_then(|i| args.get(i + 1))
+                .map(|s| s.to_string())
+                .unwrap_or("x86_64-unknown-linux-gnu".to_string());
+
+            command_build(environment, target);
         }
 
         SubCommand::Watch => {
@@ -469,7 +474,7 @@ async fn command_install() {
                 println!("Saved archive to: {:#?}", archive_file);
                 // Delete old binary file
                 let _ = std::fs::remove_file(&bin_file);
-                
+
                 // Download successful, now unzip it
                 let archive_file: PathBuf = PathBuf::from(archive_file);
                 let target_dir: PathBuf = PathBuf::from(&bin_dir);
@@ -495,7 +500,7 @@ async fn command_install() {
                             new_bashrc += "\n\n";
                             new_bashrc += &format!("export DENO_INSTALL=\"{}\"\n", deno_install);
                             new_bashrc += &"export PATH=\"$DENO_INSTALL/bin:$PATH\"\n".to_string();
-                            
+
                             fs::write(&bashrc_path, new_bashrc)
                                 .expect(".bashrc should be writeable");
                             println!("Deno was installed successfully to {}", bin_file);
@@ -508,7 +513,7 @@ async fn command_install() {
     }
 }
 
-fn command_build(environment: Environment) {
+fn command_build(environment: Environment, target: String) {
     println!("Building Frontwork-Project for {}", environment.to_str());
 
     // TODO: category build; dist/web, dist/electron, dist/android, dist/ios
@@ -554,7 +559,7 @@ fn command_build(environment: Environment) {
     create_dir_all_verbose(&dist_web_path);
 
     // build service and client
-    let mut build_service_command = build_service(&project_path, &dist_web_path);
+    let mut build_service_command = build_service(target, &project_path, &dist_web_path);
     let mut build_client_command = build_client(&project_path, &dist_web_path);
 
     // rsync assets
@@ -659,7 +664,7 @@ fn build_css(project_path: &String, dist_web_path: &String) {
     );
 }
 
-fn build_service(project_path: &String, dist_web_path: &String) -> process::Child {
+fn build_service(target: String, project_path: &String, dist_web_path: &String) -> process::Child {
     let service_binary_path = format!("{}/main.service", dist_web_path);
     if Path::new(&service_binary_path).exists() {
         fs::remove_file(&service_binary_path).expect("Failed to remove existing binary file");
@@ -673,7 +678,7 @@ fn build_service(project_path: &String, dist_web_path: &String) -> process::Chil
         .arg("-o")
         .arg(service_binary_path)
         .arg("--target")
-        .arg("x86_64-unknown-linux-gnu")
+        .arg(target)
         .arg("--allow-read")
         .arg("--allow-net")
         .arg(format!("{}/src/main.service.ts", project_path));
