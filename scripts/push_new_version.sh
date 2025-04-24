@@ -80,9 +80,9 @@ gh pr create --repo frontwork-org/frontwork \
 
 # Merge it
 if ! gh pr merge --merge; then
-  echo "Error: Failed to merge PR. Please try to set default repository"
-  echo "gh repo set-default frontwork-org/frontwork"
-  exit 1
+    echo "Error: Failed to merge PR. Please try to set default repository"
+    echo "gh repo set-default frontwork-org/frontwork"
+    exit 1
 fi
 
 # Create and push tag
@@ -99,11 +99,15 @@ cargo build --release
 cd ../scripts
 
 # Create release with binary
-gh release create "$NEW_VERSION" \
+if ! gh release create "$NEW_VERSION" \
   --title "Frontwork v-$NEW_VERSION" \
   --notes "Release notes for version $NEW_VERSION" \
   --target master \
-  "../target/release/frontwork"
+  "../frontwork-cli/target/release/frontwork"; then
+    echo "Error: Failed to create release"
+    exit 1
+fi
+
 
 echo "Version updated from $CURRENT_VERSION to $NEW_VERSION"
 
