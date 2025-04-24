@@ -119,7 +119,6 @@ const abort_controller = new AbortController();
 export class FrontworkWebservice extends Frontwork {
     private style_css!: Asset;
     private main_client_js!: Asset;
-	private main_client_js_map!: Asset;
     private cache_max_age = 0;
     private api_path_prefixes = ["/api/"];
 
@@ -212,7 +211,11 @@ export class FrontworkWebservice extends Frontwork {
     
     setup_main_js(main_js_absolute_path: string) {
         this.main_client_js = new Asset(main_js_absolute_path, "/js/main.client.js", "text/javascript; charset=utf-8");
-        this.main_client_js_map = new Asset(main_js_absolute_path+".map", "/js/main.client.js.map", "application/json; charset=utf-8");
+        if (this.stage === EnvironmentStage.Development) {
+            this.assets.push(
+                new Asset(main_js_absolute_path+".map", "/js/main.client.js.map", "application/json; charset=utf-8")
+            )
+        }
         return this;
     }
     
@@ -420,28 +423,6 @@ export class FrontworkWebservice extends Frontwork {
 
             console.log("[LOG_FROM_CLIENT]", report_text);
             return new Response("Browser FW.reporter => Dev Server reported");
-        } else if (url.pathname === "/js/main.client.js.map") {
-            try {
-                const POST = await new PostScope({}).from_request(_req);
-                const request = new FrontworkRequest(
-                    _req.method,
-                    _req.url,
-                    _req.headers,
-                    POST,
-                );
-                return this.main_client_js_map.create_file_response(request, this.cache_max_age);
-                // deno-lint-ignore no-explicit-any
-            } catch (error: any) {
-                FW.reporter(
-                    LogType.Error,
-                    "ASSET",
-                    "ERROR can not load main.client.js.map from '"
-                        + this.main_client_js_map.absolute_path + "'\n",
-                    null,
-                    error,
-                );
-                return new Response("main.client.js.map is missing", {status: 500, statusText: "main.client.js.map is missing"});
-            }
         }
 
         for (let i = 0; i < this.api_path_prefixes.length; i++) {
