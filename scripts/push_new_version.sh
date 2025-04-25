@@ -100,7 +100,7 @@ cd ../scripts
 
 # Create release with binary
 if ! gh release create "$NEW_VERSION" \
-  --title "Frontwork v-$NEW_VERSION" \
+  --title "Frontwork v$NEW_VERSION" \
   --notes "Release notes for version $NEW_VERSION" \
   --target master \
   "../frontwork-cli/target/release/frontwork"; then
