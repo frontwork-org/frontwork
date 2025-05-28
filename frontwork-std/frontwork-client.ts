@@ -191,25 +191,25 @@ export class FrontworkClient extends Frontwork {
         
 
                 const resolved_content = <DocumentBuilder> reb_result.response.content;
-                if (typeof resolved_content.context.document_html !== "undefined") {
+                if (typeof resolved_content.context.html !== "undefined") {
                     resolved_content.html();
 
-                    html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.context.document_html.attributes);
-                    html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
-                    document.head.innerHTML = resolved_content.context.document_head.innerHTML;
+                    html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.context.html.element.attributes);
+                    html_element_set_attributes(document.head, resolved_content.context.head.element.attributes);
+                    document.head.innerHTML = resolved_content.context.head.element.innerHTML;
 
                     const html = document.body.parentElement;
                     if(document.body !== null) document.body.remove();
 
                     // Add all elements except script to the body
                     if(html !== null) {
-                        for (let i = 0; i < context.document_body.children.length; i++) {
-                            const child = context.document_body.children[i];
+                        for (let i = 0; i < context.body.element.children.length; i++) {
+                            const child = context.body.element.children[i];
                             if (child.tagName === "SCRIPT") {
                                 child.remove();
                             }
                         }
-                        html.append(context.document_body);
+                        html.append(context.body.element);
                     }
                     
                     reb_result.component.dom_ready(context, this);
