@@ -194,22 +194,22 @@ export class FrontworkClient extends Frontwork {
                 if (typeof resolved_content.context.html !== "undefined") {
                     resolved_content.html();
 
-                    html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.context.html.element.attributes);
-                    html_element_set_attributes(document.head, resolved_content.context.head.element.attributes);
-                    document.head.innerHTML = resolved_content.context.head.element.innerHTML;
+                    html_element_set_attributes(document.children[0] as HTMLElement, resolved_content.context.html.elem.attributes);
+                    html_element_set_attributes(document.head, resolved_content.context.head.elem.attributes);
+                    document.head.innerHTML = resolved_content.context.head.elem.innerHTML;
 
                     const html = document.body.parentElement;
                     if(document.body !== null) document.body.remove();
 
                     // Add all elements except script to the body
                     if(html !== null) {
-                        for (let i = 0; i < context.body.element.children.length; i++) {
-                            const child = context.body.element.children[i];
+                        for (let i = 0; i < context.body.elem.children.length; i++) {
+                            const child = context.body.elem.children[i];
                             if (child.tagName === "SCRIPT") {
                                 child.remove();
                             }
                         }
-                        html.append(context.body.element);
+                        html.append(context.body.elem);
                     }
                     
                     reb_result.component.dom_ready(context, this);

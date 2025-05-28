@@ -247,52 +247,52 @@ var FW = {
   }
 };
 var ElemKit = class {
-  element;
+  elem;
   created_element;
   // true if element was created; Otherwise false the element already exists
   constructor(element, created_element) {
-    this.element = element;
+    this.elem = element;
     this.created_element = created_element;
   }
   prepend_to(parent) {
     if (this.created_element)
-      parent.element.prepend(this.element);
+      parent.elem.prepend(this.elem);
     return this;
   }
   append_to(parent) {
     if (this.created_element)
-      parent.element.append(this.element);
+      parent.elem.append(this.elem);
     return this;
   }
   replace_text(search, replace) {
-    this.element.innerText = this.element.innerText.split(search).join(replace);
+    this.elem.innerText = this.elem.innerText.split(search).join(replace);
   }
   replace_html(search, replace) {
-    this.element.innerHTML = this.element.innerHTML.split(search).join(replace);
+    this.elem.innerHTML = this.elem.innerHTML.split(search).join(replace);
   }
   then(runnable) {
     if (this.created_element)
       runnable();
   }
   show() {
-    const attr_value = this.element.getAttribute("style");
+    const attr_value = this.elem.getAttribute("style");
     if (attr_value)
-      this.element.setAttribute("style", attr_value.replace("display: none;", ""));
+      this.elem.setAttribute("style", attr_value.replace("display: none;", ""));
   }
   hide() {
-    const current_style = this.element.getAttribute("style");
+    const current_style = this.elem.getAttribute("style");
     if (current_style === null) {
-      this.element.setAttribute("style", "display: none;");
+      this.elem.setAttribute("style", "display: none;");
     } else {
       if (!current_style.includes("display: none;"))
-        this.element.setAttribute("style", current_style + " display: none;");
+        this.elem.setAttribute("style", current_style + " display: none;");
     }
   }
 };
 var FrontworkForm = class extends ElemKit {
   constructor(context, id, action, method) {
-    super(context.ensure_element("form", id, { action, method }).element, context.do_building);
-    this.element.setAttribute("fw-form", "1");
+    super(context.ensure_element("form", id, { action, method }).elem, context.do_building);
+    this.elem.setAttribute("fw-form", "1");
   }
 };
 var I18nLocale = class {
@@ -502,26 +502,26 @@ var DocumentBuilder = class {
           element.setAttribute(key, attributes[key]);
         }
       }
-      this.context.head.element.append(element);
+      this.context.head.elem.append(element);
     }
     return this;
   }
   add_head_meta_data(title, description, robots) {
     if (this.context.do_building) {
-      const meta_chatset = this.context.head.element.appendChild(document.createElement("meta"));
+      const meta_chatset = this.context.head.elem.appendChild(document.createElement("meta"));
       meta_chatset.setAttribute("charset", "UTF-8");
-      const meta_compatible = this.context.head.element.appendChild(document.createElement("meta"));
+      const meta_compatible = this.context.head.elem.appendChild(document.createElement("meta"));
       meta_compatible.setAttribute("http-equiv", "X-UA-Compatible");
       meta_compatible.setAttribute("content", "IE=edge");
-      const meta_viewport = this.context.head.element.appendChild(document.createElement("meta"));
+      const meta_viewport = this.context.head.elem.appendChild(document.createElement("meta"));
       meta_viewport.setAttribute("name", "viewport");
       meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
-      const meta_title = this.context.head.element.appendChild(document.createElement("title"));
+      const meta_title = this.context.head.elem.appendChild(document.createElement("title"));
       meta_title.innerHTML = title;
-      const meta_description = this.context.head.element.appendChild(document.createElement("meta"));
+      const meta_description = this.context.head.elem.appendChild(document.createElement("meta"));
       meta_description.setAttribute("name", "description");
       meta_description.setAttribute("content", description);
-      const meta_robots = this.context.head.element.appendChild(document.createElement("meta"));
+      const meta_robots = this.context.head.elem.appendChild(document.createElement("meta"));
       meta_robots.setAttribute("name", "robots");
       meta_robots.setAttribute("content", robots);
     }
@@ -529,19 +529,19 @@ var DocumentBuilder = class {
   }
   add_head_meta_opengraph_website(title, description, url, image_url) {
     if (this.context.do_building) {
-      const meta_og_type = this.context.head.element.appendChild(document.createElement("meta"));
+      const meta_og_type = this.context.head.elem.appendChild(document.createElement("meta"));
       meta_og_type.setAttribute("property", "og:type");
       meta_og_type.setAttribute("content", "website");
-      const meta_og_url = this.context.head.element.appendChild(document.createElement("meta"));
+      const meta_og_url = this.context.head.elem.appendChild(document.createElement("meta"));
       meta_og_url.setAttribute("property", "og:url");
       meta_og_url.setAttribute("content", url);
-      const meta_og_title = this.context.head.element.appendChild(document.createElement("meta"));
+      const meta_og_title = this.context.head.elem.appendChild(document.createElement("meta"));
       meta_og_title.setAttribute("property", "og:title");
       meta_og_title.setAttribute("content", title);
-      const meta_og_description = this.context.head.element.appendChild(document.createElement("meta"));
+      const meta_og_description = this.context.head.elem.appendChild(document.createElement("meta"));
       meta_og_description.setAttribute("property", "og:description");
       meta_og_description.setAttribute("content", description);
-      const meta_og_image = this.context.head.element.appendChild(document.createElement("meta"));
+      const meta_og_image = this.context.head.elem.appendChild(document.createElement("meta"));
       meta_og_image.setAttribute("property", "og:image");
       meta_og_image.setAttribute("content", image_url);
     }
@@ -551,11 +551,11 @@ var DocumentBuilder = class {
   // Body methods
   //
   set_html_lang(code) {
-    this.context.html.element.setAttribute("lang", code);
+    this.context.html.elem.setAttribute("lang", code);
     return this;
   }
   body_append(wr) {
-    this.context.body.element.append(wr.element);
+    this.context.body.elem.append(wr.elem);
     return wr;
   }
   //
@@ -563,12 +563,12 @@ var DocumentBuilder = class {
   //
   html() {
     if (this.context.do_building) {
-      const style_css = this.context.head.element.appendChild(document.createElement("link"));
+      const style_css = this.context.head.elem.appendChild(document.createElement("link"));
       style_css.setAttribute("id", "fw-style");
       style_css.setAttribute("rel", "stylesheet");
       style_css.setAttribute("href", "/css/style.css");
       style_css.setAttribute("type", "text/css");
-      const main_js = this.context.body.element.appendChild(document.createElement("script"));
+      const main_js = this.context.body.elem.appendChild(document.createElement("script"));
       main_js.setAttribute("id", "fw-script");
       main_js.setAttribute("src", "/js/main.client.js");
       main_js.setAttribute("type", "text/javascript");
@@ -577,7 +577,7 @@ var DocumentBuilder = class {
   }
   toString() {
     const html_response = this.html();
-    return this.doctype + "\n" + html_response.element.outerHTML;
+    return this.doctype + "\n" + html_response.elem.outerHTML;
   }
 };
 var FrontworkResponseRedirect = class extends FrontworkResponse {
@@ -635,8 +635,8 @@ var FrontworkContext = class {
     this.client = client;
     if (do_building) {
       this.html = new ElemKit(document.createElement("html"), true);
-      this.head = new ElemKit(this.html.element.appendChild(document.createElement("head")), true);
-      this.body = new ElemKit(this.html.element.appendChild(document.createElement("body")), true);
+      this.head = new ElemKit(this.html.elem.appendChild(document.createElement("head")), true);
+      this.body = new ElemKit(this.html.elem.appendChild(document.createElement("body")), true);
     } else {
       this.html = new ElemKit(document.querySelector("html"), false);
       this.head = new ElemKit(document.querySelector("head"), false);
@@ -723,7 +723,7 @@ var FrontworkContext = class {
    * @returns The HTML element with the specified ID.
    */
   ensure_element(tag, id, attributes) {
-    const elem = this.do_building ? this.html.element.querySelector("#" + id) : document.getElementById(id);
+    const elem = this.do_building ? this.html.elem.querySelector("#" + id) : document.getElementById(id);
     if (elem !== null)
       return new ElemKit(elem, false);
     const elem2 = document.createElement(tag);
@@ -744,7 +744,7 @@ var FrontworkContext = class {
    * @returns The newly created HTML element.
    */
   ensure_text_element(tag, id, attributes) {
-    const elem = this.do_building ? this.html.element.querySelector("#" + id) : document.getElementById(id);
+    const elem = this.do_building ? this.html.elem.querySelector("#" + id) : document.getElementById(id);
     if (elem !== null)
       return new ElemKit(elem, false);
     const elem2 = document.createElement(tag);
@@ -928,8 +928,8 @@ var FrontworkMiddleware = class {
     this.error_handler = init.error_handler;
     this.error_handler_component = {
       async build(context) {
-        context.head.element.innerHTML = "";
-        context.body.element.innerHTML = "";
+        context.head.elem.innerHTML = "";
+        context.body.elem.innerHTML = "";
         return init.error_handler(context);
       },
       dom_ready() {
@@ -1089,20 +1089,20 @@ var FrontworkClient = class extends Frontwork {
         const resolved_content = reb_result.response.content;
         if (typeof resolved_content.context.html !== "undefined") {
           resolved_content.html();
-          html_element_set_attributes(document.children[0], resolved_content.context.html.element.attributes);
-          html_element_set_attributes(document.head, resolved_content.context.head.element.attributes);
-          document.head.innerHTML = resolved_content.context.head.element.innerHTML;
+          html_element_set_attributes(document.children[0], resolved_content.context.html.elem.attributes);
+          html_element_set_attributes(document.head, resolved_content.context.head.elem.attributes);
+          document.head.innerHTML = resolved_content.context.head.elem.innerHTML;
           const html = document.body.parentElement;
           if (document.body !== null)
             document.body.remove();
           if (html !== null) {
-            for (let i = 0; i < context.body.element.children.length; i++) {
-              const child = context.body.element.children[i];
+            for (let i = 0; i < context.body.elem.children.length; i++) {
+              const child = context.body.elem.children[i];
               if (child.tagName === "SCRIPT") {
                 child.remove();
               }
             }
-            html.append(context.body.element);
+            html.append(context.body.elem);
           }
           reb_result.component.dom_ready(context, this);
           this.previous_component = reb_result.component;
@@ -1303,7 +1303,7 @@ var TestComponent = class {
       context.ensure_text_element("h3", "formtest_title_" + (FW.is_client_side ? "ok" : "fail")).append_to(section);
       for (let i = 0; i < 3; i++) {
         const div = context.create_element("div").append_to(section);
-        div.element.innerHTML = "text" + i + ": " + context.request.GET.get("text" + i);
+        div.elem.innerHTML = "text" + i + ": " + context.request.GET.get("text" + i);
       }
     }
     const form = new FrontworkForm(context, "test_form", "", "GET").append_to(section);
@@ -1313,15 +1313,15 @@ var TestComponent = class {
     context.ensure_text_element("button", "submit_button", { type: "submit", name: "action", value: "sent" }).append_to(form);
     return new FrontworkResponse(
       200,
-      document_builder.add_head_meta_data(title.element.innerText, description.element.innerText, "noindex,nofollow")
+      document_builder.add_head_meta_data(title.elem.innerText, description.elem.innerText, "noindex,nofollow")
     );
   }
   async dom_ready(context, client) {
     try {
       let times = 0;
-      this.button_event.element.addEventListener("click", () => {
+      this.button_event.elem.addEventListener("click", () => {
         times++;
-        this.button_event.element.innerHTML = "Changed " + times + " times";
+        this.button_event.elem.innerHTML = "Changed " + times + " times";
       });
     } catch (error) {
       console.error(error);
@@ -1347,11 +1347,11 @@ var Test2Component = class {
     const document_builder = new MyMainDocumentBuilder(context);
     const title1 = context.ensure_text_element("h1", "test-page2").append_to(document_builder.main);
     const description = context.ensure_element("p", "description").append_to(document_builder.main);
-    description.element.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
+    description.elem.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
     FW.reporter(1 /* Warn */, "TEST", "Warn counter test for Testworker", context, null);
     return new FrontworkResponse(
       200,
-      document_builder.add_head_meta_data(title1.element.innerText, description.element.innerText, "noindex,nofollow")
+      document_builder.add_head_meta_data(title1.elem.innerText, description.elem.innerText, "noindex,nofollow")
     );
   }
   async dom_ready(context, client) {
@@ -1436,10 +1436,10 @@ var NotFoundComponent = class {
   async build(context) {
     const document_builder = new MyMainDocumentBuilder(context);
     const h1 = context.ensure_element("h1", "not_found_title").append_to(document_builder.main);
-    h1.element.innerText = "ERROR 404 - Not found";
+    h1.elem.innerText = "ERROR 404 - Not found";
     return new FrontworkResponse(
       404,
-      document_builder.add_head_meta_data(h1.element.innerText, h1.element.innerText, "noindex,nofollow")
+      document_builder.add_head_meta_data(h1.elem.innerText, h1.elem.innerText, "noindex,nofollow")
     );
   }
   async dom_ready() {
@@ -1476,7 +1476,7 @@ var middleware = new FrontworkMiddleware({
   },
   error_handler: async (context) => {
     const document_builder = new MyMainDocumentBuilder(context);
-    const h1 = context.body.element.appendChild(document.createElement("h1"));
+    const h1 = context.body.elem.appendChild(document.createElement("h1"));
     h1.innerText = "ERROR 500 - Internal server error";
     return new FrontworkResponse(
       500,
