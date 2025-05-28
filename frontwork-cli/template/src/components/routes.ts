@@ -17,13 +17,13 @@ export class MainDocumentBuilder extends DocumentBuilder {
 class NotFoundComponent implements Component {
     // deno-lint-ignore require-await
     async build(context: FrontworkContext) {
-		const document_builder = new DocumentBuilder(context);
-		const h1 = context.document_body.appendChild(document.createElement("h1"));
-		h1.innerText = "ERROR 404 - Not found";
+		const document_builder = new MainDocumentBuilder(context);
+		const h1 = context.ensure_element("h1", "not_found_title").append_to(document_builder.main);
+		h1.element.innerText = "ERROR 404 - Not found";
 
 		return new FrontworkResponse(404,
 			document_builder
-				.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
+				.add_head_meta_data(h1.element.innerText, h1.element.innerText, "noindex,nofollow")
 		);
 	}
     async dom_ready() {}
@@ -43,13 +43,13 @@ export const middleware = new FrontworkMiddleware({
 		dom_ready: async () => { }
 	},
 	error_handler: async (context: FrontworkContext) => {
-		const document_builder = new DocumentBuilder(context);
-		const h1 = context.document_body.appendChild(document.createElement("h1"));
-		h1.innerText = "ERROR 500 - Internal server error";
+		const document_builder = new MainDocumentBuilder(context);
+		const h1 = context.ensure_element("h1", "not_found_title").append_to(document_builder.main);
+		h1.element.innerText = "ERROR 500 - Internal server error";
 
 		return new FrontworkResponse(500,
 			document_builder
-				.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
+				.add_head_meta_data(h1.element.innerText, h1.element.innerText, "noindex,nofollow")
 		);
 	},
 	not_found_handler: NotFoundComponent,
