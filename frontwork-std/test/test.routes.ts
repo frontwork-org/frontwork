@@ -60,7 +60,7 @@ class TestComponent implements Component {
 			context.ensure_text_element("h3", "formtest_title_"+(FW.is_client_side? "ok" : "fail")).append_to(section);
 			for (let i = 0; i < 3; i++) {
 				const div = context.create_element("div").append_to(section);
-				div.element.innerHTML = "text"+i+": "+context.request.GET.get("text"+i);
+				div.elem.innerHTML = "text"+i+": "+context.request.GET.get("text"+i);
 			}
 
 		}
@@ -75,16 +75,16 @@ class TestComponent implements Component {
 
 		return new FrontworkResponse(200, 
 			document_builder
-				.add_head_meta_data(title.element.innerText, description.element.innerText, "noindex,nofollow")
+				.add_head_meta_data(title.elem.innerText, description.elem.innerText, "noindex,nofollow")
 		);
 	}
 	
     async dom_ready(context: FrontworkContext, client: FrontworkClient) {
 		try {
 			let times = 0;
-			this.button_event.element.addEventListener("click", () => {
+			this.button_event.elem.addEventListener("click", () => {
 				times++;
-				this.button_event.element.innerHTML = "Changed "+times+" times";
+				this.button_event.elem.innerHTML = "Changed "+times+" times";
 			})
 		} catch (error) {
 			console.error(error);
@@ -110,12 +110,12 @@ class Test2Component implements Component {
 
 		const title1 = context.ensure_text_element("h1", "test-page2").append_to(document_builder.main);
 		const description = context.ensure_element("p", "description").append_to(document_builder.main);
-		description.element.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
+		description.elem.innerHTML = "This is a test page <b>2</b> for the Frontwork framework. I will redirect you with js to the home page in 1 second.";
 		
 		FW.reporter(LogType.Warn, "TEST", "Warn counter test for Testworker", context, null);
 		return new FrontworkResponse(200, 
 			document_builder
-				.add_head_meta_data(title1.element.innerText, description.element.innerText, "noindex,nofollow")
+				.add_head_meta_data(title1.elem.innerText, description.elem.innerText, "noindex,nofollow")
 		);
 	}
     async dom_ready(context: FrontworkContext, client: FrontworkClient) {
@@ -198,11 +198,11 @@ class NotFoundComponent implements Component {
     async build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
 		const h1 = context.ensure_element("h1", "not_found_title").append_to(document_builder.main);
-		h1.element.innerText = "ERROR 404 - Not found";
+		h1.elem.innerText = "ERROR 404 - Not found";
 
 		return new FrontworkResponse(404,
 			document_builder
-				.add_head_meta_data(h1.element.innerText, h1.element.innerText, "noindex,nofollow")
+				.add_head_meta_data(h1.elem.innerText, h1.elem.innerText, "noindex,nofollow")
 		);
 	}
     async dom_ready() {}
@@ -260,7 +260,7 @@ const middleware = new FrontworkMiddleware({
 	},
 	error_handler: async (context: FrontworkContext) => {
 		const document_builder = new MyMainDocumentBuilder(context);
-		const h1 = context.body.element.appendChild(document.createElement("h1"));
+		const h1 = context.body.elem.appendChild(document.createElement("h1"));
 		h1.innerText = "ERROR 500 - Internal server error";
 
 		return new FrontworkResponse(500,

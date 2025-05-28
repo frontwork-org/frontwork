@@ -19,11 +19,11 @@ class NotFoundComponent implements Component {
     async build(context: FrontworkContext) {
 		const document_builder = new MainDocumentBuilder(context);
 		const h1 = context.ensure_element("h1", "not_found_title").append_to(document_builder.main);
-		h1.element.innerText = "ERROR 404 - Not found";
+		h1.elem.innerText = "ERROR 404 - Not found";
 
 		return new FrontworkResponse(404,
 			document_builder
-				.add_head_meta_data(h1.element.innerText, h1.element.innerText, "noindex,nofollow")
+				.add_head_meta_data(h1.elem.innerText, h1.elem.innerText, "noindex,nofollow")
 		);
 	}
     async dom_ready() {}
@@ -45,11 +45,11 @@ export const middleware = new FrontworkMiddleware({
 	error_handler: async (context: FrontworkContext) => {
 		const document_builder = new MainDocumentBuilder(context);
 		const h1 = context.ensure_element("h1", "not_found_title").append_to(document_builder.main);
-		h1.element.innerText = "ERROR 500 - Internal server error";
+		h1.elem.innerText = "ERROR 500 - Internal server error";
 
 		return new FrontworkResponse(500,
 			document_builder
-				.add_head_meta_data(h1.element.innerText, h1.element.innerText, "noindex,nofollow")
+				.add_head_meta_data(h1.elem.innerText, h1.elem.innerText, "noindex,nofollow")
 		);
 	},
 	not_found_handler: NotFoundComponent,

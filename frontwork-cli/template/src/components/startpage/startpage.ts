@@ -19,7 +19,7 @@ export class StartpageComponent implements Component {
 		if (action !== null) {
 			for (let i = 0; i < 3; i++) {
 				const div = context.create_element("div").append_to(section);
-				div.element.innerHTML = "text"+i+": "+context.request.GET.get("text"+i);
+				div.elem.innerHTML = "text"+i+": "+context.request.GET.get("text"+i);
 			}
 
 		}
@@ -35,7 +35,7 @@ export class StartpageComponent implements Component {
 
         return await new FrontworkResponse(200, 
             document_builder
-                .add_head_meta_data(title1.element.innerText, text1.element.innerText, "index,follow")
+                .add_head_meta_data(title1.elem.innerText, text1.elem.innerText, "index,follow")
         );
     }
 
