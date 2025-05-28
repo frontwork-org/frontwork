@@ -1,11 +1,11 @@
 // deno-lint-ignore-file no-unused-vars
-import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, HTMLElementWrapper, FrontworkForm, ApiErrorResponse } from "../frontwork.ts";
+import { Component, Route, FrontworkMiddleware, FrontworkResponse, DocumentBuilder, FrontworkResponseRedirect, FrontworkContext, FrontworkInit, EnvironmentPlatform, EnvironmentStage, FW, LogType, ElemKit, FrontworkForm, ApiErrorResponse } from "../frontwork.ts";
 import { FrontworkClient } from "../frontwork-client.ts";
 import { i18n } from "./test.i18n.ts";
 
 
 class MyMainDocumentBuilder extends DocumentBuilder {
-	main: HTMLElementWrapper<HTMLElement>;
+	main: ElemKit<HTMLElement>;
 
 	constructor(context: FrontworkContext) {
 		super(context);
@@ -33,7 +33,7 @@ class AnotherComponent implements Component {
 }
 
 class TestComponent implements Component {
-	button_event: HTMLElementWrapper<HTMLButtonElement>;
+	button_event: ElemKit<HTMLButtonElement>;
 	
 	constructor(context: FrontworkContext) {
 		this.button_event = context.ensure_text_element("button", "event_button_tester", { type: "button" });
@@ -197,12 +197,12 @@ class CrashComponent implements Component {
 class NotFoundComponent implements Component {
     async build(context: FrontworkContext) {
 		const document_builder = new MyMainDocumentBuilder(context);
-		const h1 = context.document_body.appendChild(document.createElement("h1"));
-		h1.innerText = "ERROR 404 - Not found";
+		const h1 = context.ensure_element("h1", "not_found_title").append_to(document_builder.main);
+		h1.element.innerText = "ERROR 404 - Not found";
 
 		return new FrontworkResponse(404,
 			document_builder
-				.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
+				.add_head_meta_data(h1.element.innerText, h1.element.innerText, "noindex,nofollow")
 		);
 	}
     async dom_ready() {}
@@ -234,7 +234,7 @@ export interface User {
 
 export function login_check(context: FrontworkContext): Promise<User> {
 	return new Promise(function (resolve, reject) {
-		context.api_request<User>("POST", "/api/v1/account/user", {})
+		context.api_request<User>("POST", "/api/v1/user/session", {})
 		.then(function(result) {
 			if (result.ok) {
 				console.log("Welcome, " + result.val.username);
@@ -254,13 +254,13 @@ const middleware = new FrontworkMiddleware({
 			
 			context.set_locale("en");
 			const observer = context.get_observer<User>("user");
-			if(observer.is_null()) context.api_request_observer<User>(observer, "POST", "/api/v1/account/user", {});
+			if(observer.is_null()) context.api_request_observer<User>(observer, "POST", "/api/v1/user/session", {});
 		},
 		dom_ready: async () => {  console.log("ASDAAAAAAAAA"); }
 	},
 	error_handler: async (context: FrontworkContext) => {
 		const document_builder = new MyMainDocumentBuilder(context);
-		const h1 = context.document_body.appendChild(document.createElement("h1"));
+		const h1 = context.body.element.appendChild(document.createElement("h1"));
 		h1.innerText = "ERROR 500 - Internal server error";
 
 		return new FrontworkResponse(500,

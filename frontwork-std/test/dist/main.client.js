@@ -246,7 +246,7 @@ var FW = {
     }
   }
 };
-var HTMLElementWrapper = class {
+var ElemKit = class {
   element;
   created_element;
   // true if element was created; Otherwise false the element already exists
@@ -289,7 +289,7 @@ var HTMLElementWrapper = class {
     }
   }
 };
-var FrontworkForm = class extends HTMLElementWrapper {
+var FrontworkForm = class extends ElemKit {
   constructor(context, id, action, method) {
     super(context.ensure_element("form", id, { action, method }).element, context.do_building);
     this.element.setAttribute("fw-form", "1");
@@ -495,81 +495,89 @@ var DocumentBuilder = class {
   // Head methods
   //
   head_append_tag(tag, attributes) {
-    const element = document.createElement(tag);
-    if (attributes) {
-      for (const key in attributes) {
-        element.setAttribute(key, attributes[key]);
+    if (this.context.do_building) {
+      const element = document.createElement(tag);
+      if (attributes) {
+        for (const key in attributes) {
+          element.setAttribute(key, attributes[key]);
+        }
       }
+      this.context.head.element.append(element);
     }
-    this.context.document_head.append(element);
     return this;
   }
   add_head_meta_data(title, description, robots) {
-    const meta_chatset = this.context.document_head.appendChild(document.createElement("meta"));
-    meta_chatset.setAttribute("charset", "UTF-8");
-    const meta_compatible = this.context.document_head.appendChild(document.createElement("meta"));
-    meta_compatible.setAttribute("http-equiv", "X-UA-Compatible");
-    meta_compatible.setAttribute("content", "IE=edge");
-    const meta_viewport = this.context.document_head.appendChild(document.createElement("meta"));
-    meta_viewport.setAttribute("name", "viewport");
-    meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
-    const meta_title = this.context.document_head.appendChild(document.createElement("title"));
-    meta_title.innerHTML = title;
-    const meta_description = this.context.document_head.appendChild(document.createElement("meta"));
-    meta_description.setAttribute("name", "description");
-    meta_description.setAttribute("content", description);
-    const meta_robots = this.context.document_head.appendChild(document.createElement("meta"));
-    meta_robots.setAttribute("name", "robots");
-    meta_robots.setAttribute("content", robots);
+    if (this.context.do_building) {
+      const meta_chatset = this.context.head.element.appendChild(document.createElement("meta"));
+      meta_chatset.setAttribute("charset", "UTF-8");
+      const meta_compatible = this.context.head.element.appendChild(document.createElement("meta"));
+      meta_compatible.setAttribute("http-equiv", "X-UA-Compatible");
+      meta_compatible.setAttribute("content", "IE=edge");
+      const meta_viewport = this.context.head.element.appendChild(document.createElement("meta"));
+      meta_viewport.setAttribute("name", "viewport");
+      meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
+      const meta_title = this.context.head.element.appendChild(document.createElement("title"));
+      meta_title.innerHTML = title;
+      const meta_description = this.context.head.element.appendChild(document.createElement("meta"));
+      meta_description.setAttribute("name", "description");
+      meta_description.setAttribute("content", description);
+      const meta_robots = this.context.head.element.appendChild(document.createElement("meta"));
+      meta_robots.setAttribute("name", "robots");
+      meta_robots.setAttribute("content", robots);
+    }
     return this;
   }
   add_head_meta_opengraph_website(title, description, url, image_url) {
-    const meta_og_type = this.context.document_head.appendChild(document.createElement("meta"));
-    meta_og_type.setAttribute("property", "og:type");
-    meta_og_type.setAttribute("content", "website");
-    const meta_og_url = this.context.document_head.appendChild(document.createElement("meta"));
-    meta_og_url.setAttribute("property", "og:url");
-    meta_og_url.setAttribute("content", url);
-    const meta_og_title = this.context.document_head.appendChild(document.createElement("meta"));
-    meta_og_title.setAttribute("property", "og:title");
-    meta_og_title.setAttribute("content", title);
-    const meta_og_description = this.context.document_head.appendChild(document.createElement("meta"));
-    meta_og_description.setAttribute("property", "og:description");
-    meta_og_description.setAttribute("content", description);
-    const meta_og_image = this.context.document_head.appendChild(document.createElement("meta"));
-    meta_og_image.setAttribute("property", "og:image");
-    meta_og_image.setAttribute("content", image_url);
+    if (this.context.do_building) {
+      const meta_og_type = this.context.head.element.appendChild(document.createElement("meta"));
+      meta_og_type.setAttribute("property", "og:type");
+      meta_og_type.setAttribute("content", "website");
+      const meta_og_url = this.context.head.element.appendChild(document.createElement("meta"));
+      meta_og_url.setAttribute("property", "og:url");
+      meta_og_url.setAttribute("content", url);
+      const meta_og_title = this.context.head.element.appendChild(document.createElement("meta"));
+      meta_og_title.setAttribute("property", "og:title");
+      meta_og_title.setAttribute("content", title);
+      const meta_og_description = this.context.head.element.appendChild(document.createElement("meta"));
+      meta_og_description.setAttribute("property", "og:description");
+      meta_og_description.setAttribute("content", description);
+      const meta_og_image = this.context.head.element.appendChild(document.createElement("meta"));
+      meta_og_image.setAttribute("property", "og:image");
+      meta_og_image.setAttribute("content", image_url);
+    }
     return this;
   }
   //
   // Body methods
   //
   set_html_lang(code) {
-    this.context.document_html.setAttribute("lang", code);
+    this.context.html.element.setAttribute("lang", code);
     return this;
   }
   body_append(wr) {
-    this.context.document_body.append(wr.element);
+    this.context.body.element.append(wr.element);
     return wr;
   }
   //
   // Build methods
   //
   html() {
-    const style_css = this.context.document_head.appendChild(document.createElement("link"));
-    style_css.setAttribute("id", "fw-style");
-    style_css.setAttribute("rel", "stylesheet");
-    style_css.setAttribute("href", "/css/style.css");
-    style_css.setAttribute("type", "text/css");
-    const main_js = this.context.document_body.appendChild(document.createElement("script"));
-    main_js.setAttribute("id", "fw-script");
-    main_js.setAttribute("src", "/js/main.client.js");
-    main_js.setAttribute("type", "text/javascript");
-    return this.context.document_html;
+    if (this.context.do_building) {
+      const style_css = this.context.head.element.appendChild(document.createElement("link"));
+      style_css.setAttribute("id", "fw-style");
+      style_css.setAttribute("rel", "stylesheet");
+      style_css.setAttribute("href", "/css/style.css");
+      style_css.setAttribute("type", "text/css");
+      const main_js = this.context.body.element.appendChild(document.createElement("script"));
+      main_js.setAttribute("id", "fw-script");
+      main_js.setAttribute("src", "/js/main.client.js");
+      main_js.setAttribute("type", "text/javascript");
+    }
+    return this.context.html;
   }
   toString() {
     const html_response = this.html();
-    return this.doctype + "\n" + html_response.outerHTML;
+    return this.doctype + "\n" + html_response.element.outerHTML;
   }
 };
 var FrontworkResponseRedirect = class extends FrontworkResponse {
@@ -605,9 +613,9 @@ var FrontworkContext = class {
   i18n;
   request;
   do_building;
-  document_html;
-  document_head;
-  document_body;
+  html;
+  head;
+  body;
   api_error_event;
   client;
   /**
@@ -625,9 +633,15 @@ var FrontworkContext = class {
     this.request = request;
     this.do_building = do_building;
     this.client = client;
-    this.document_html = document.createElement("html");
-    this.document_head = this.document_html.appendChild(document.createElement("head"));
-    this.document_body = this.document_html.appendChild(document.createElement("body"));
+    if (do_building) {
+      this.html = new ElemKit(document.createElement("html"), true);
+      this.head = new ElemKit(this.html.element.appendChild(document.createElement("head")), true);
+      this.body = new ElemKit(this.html.element.appendChild(document.createElement("body")), true);
+    } else {
+      this.html = new ElemKit(document.querySelector("html"), false);
+      this.head = new ElemKit(document.querySelector("head"), false);
+      this.body = new ElemKit(document.querySelector("body"), false);
+    }
     if (i18n2.length === 0)
       throw new Error("I18n: No locales provided");
     this.i18n = i18n2;
@@ -673,7 +687,7 @@ var FrontworkContext = class {
    * Creates an HTML element. DOES NOT CHECK IF ALREADY EXIST.
    * @param tag The tag name of the element to create.
    * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
-   * @returns HTMLElementWrapper
+   * @returns ElemKit
    */
   create_element(tag, attributes) {
     const elem = document.createElement(tag);
@@ -682,14 +696,14 @@ var FrontworkContext = class {
         elem.setAttribute(key, attributes[key]);
       }
     }
-    return new HTMLElementWrapper(elem, true);
+    return new ElemKit(elem, true);
   }
   /**
    * Creates a new element and appends I18n text. DOES NOT CHECK IF ALREADY EXIST.
    * @param tag The tag name of the element to create.
    * @param i18n_key The keyword specified in the english.json. Uses innerText to set the translated text.
    * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
-   * @returns HTMLElementWrapper
+   * @returns ElemKit
    */
   create_text_element(tag, i18n_key, attributes) {
     const elem = document.createElement(tag);
@@ -699,7 +713,7 @@ var FrontworkContext = class {
         elem.setAttribute(key, attributes[key]);
       }
     }
-    return new HTMLElementWrapper(elem, true);
+    return new ElemKit(elem, true);
   }
   /**
    * Ensures the existence of an HTML element by ID. Creates a new element if it doesn't exist.
@@ -709,9 +723,9 @@ var FrontworkContext = class {
    * @returns The HTML element with the specified ID.
    */
   ensure_element(tag, id, attributes) {
-    const elem = this.do_building ? this.document_html.querySelector("#" + id) : document.getElementById(id);
+    const elem = this.do_building ? this.html.element.querySelector("#" + id) : document.getElementById(id);
     if (elem !== null)
-      return new HTMLElementWrapper(elem, false);
+      return new ElemKit(elem, false);
     const elem2 = document.createElement(tag);
     elem2.id = id;
     if (attributes) {
@@ -719,7 +733,7 @@ var FrontworkContext = class {
         elem2.setAttribute(key, attributes[key]);
       }
     }
-    return new HTMLElementWrapper(elem2, true);
+    return new ElemKit(elem2, true);
   }
   /**
    * Ensures the existence of an HTML element by ID. Creates a new element and appends I18n text if it doesn't exist
@@ -730,9 +744,9 @@ var FrontworkContext = class {
    * @returns The newly created HTML element.
    */
   ensure_text_element(tag, id, attributes) {
-    const elem = this.do_building ? this.document_html.querySelector("#" + id) : document.getElementById(id);
+    const elem = this.do_building ? this.html.element.querySelector("#" + id) : document.getElementById(id);
     if (elem !== null)
-      return new HTMLElementWrapper(elem, false);
+      return new ElemKit(elem, false);
     const elem2 = document.createElement(tag);
     elem2.id = id;
     elem2.innerText = this.get_translation(id);
@@ -741,7 +755,7 @@ var FrontworkContext = class {
         elem2.setAttribute(key, attributes[key]);
       }
     }
-    return new HTMLElementWrapper(elem2, true);
+    return new ElemKit(elem2, true);
   }
   async api_request(method, path, params, extras = {}) {
     let url = (FW.is_client_side ? this.api_protocol_address : this.api_protocol_address_ssr) + path;
@@ -914,8 +928,8 @@ var FrontworkMiddleware = class {
     this.error_handler = init.error_handler;
     this.error_handler_component = {
       async build(context) {
-        context.document_head.innerHTML = "";
-        context.document_body.innerHTML = "";
+        context.head.element.innerHTML = "";
+        context.body.element.innerHTML = "";
         return init.error_handler(context);
       },
       dom_ready() {
@@ -1073,22 +1087,22 @@ var FrontworkClient = class extends Frontwork {
           }
         }
         const resolved_content = reb_result.response.content;
-        if (typeof resolved_content.context.document_html !== "undefined") {
+        if (typeof resolved_content.context.html !== "undefined") {
           resolved_content.html();
-          html_element_set_attributes(document.children[0], resolved_content.context.document_html.attributes);
-          html_element_set_attributes(document.head, resolved_content.context.document_head.attributes);
-          document.head.innerHTML = resolved_content.context.document_head.innerHTML;
+          html_element_set_attributes(document.children[0], resolved_content.context.html.element.attributes);
+          html_element_set_attributes(document.head, resolved_content.context.head.element.attributes);
+          document.head.innerHTML = resolved_content.context.head.element.innerHTML;
           const html = document.body.parentElement;
           if (document.body !== null)
             document.body.remove();
           if (html !== null) {
-            for (let i = 0; i < context.document_body.children.length; i++) {
-              const child = context.document_body.children[i];
+            for (let i = 0; i < context.body.element.children.length; i++) {
+              const child = context.body.element.children[i];
               if (child.tagName === "SCRIPT") {
                 child.remove();
               }
             }
-            html.append(context.document_body);
+            html.append(context.body.element);
           }
           reb_result.component.dom_ready(context, this);
           this.previous_component = reb_result.component;
@@ -1421,11 +1435,11 @@ var CrashComponent = class {
 var NotFoundComponent = class {
   async build(context) {
     const document_builder = new MyMainDocumentBuilder(context);
-    const h1 = context.document_body.appendChild(document.createElement("h1"));
-    h1.innerText = "ERROR 404 - Not found";
+    const h1 = context.ensure_element("h1", "not_found_title").append_to(document_builder.main);
+    h1.element.innerText = "ERROR 404 - Not found";
     return new FrontworkResponse(
       404,
-      document_builder.add_head_meta_data(h1.innerText, h1.innerText, "noindex,nofollow")
+      document_builder.add_head_meta_data(h1.element.innerText, h1.element.innerText, "noindex,nofollow")
     );
   }
   async dom_ready() {
@@ -1454,7 +1468,7 @@ var middleware = new FrontworkMiddleware({
       context.set_locale("en");
       const observer = context.get_observer("user");
       if (observer.is_null())
-        context.api_request_observer(observer, "POST", "/api/v1/account/user", {});
+        context.api_request_observer(observer, "POST", "/api/v1/user/session", {});
     },
     dom_ready: async () => {
       console.log("ASDAAAAAAAAA");
@@ -1462,7 +1476,7 @@ var middleware = new FrontworkMiddleware({
   },
   error_handler: async (context) => {
     const document_builder = new MyMainDocumentBuilder(context);
-    const h1 = context.document_body.appendChild(document.createElement("h1"));
+    const h1 = context.body.element.appendChild(document.createElement("h1"));
     h1.innerText = "ERROR 500 - Internal server error";
     return new FrontworkResponse(
       500,

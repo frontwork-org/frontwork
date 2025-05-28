@@ -1,9 +1,9 @@
-import { Route, FrontworkMiddleware, FrontworkContext, Component, DocumentBuilder, FrontworkResponse, DomainToRouteSelector, HTMLElementWrapper } from "../dependencies.ts";
+import { Route, FrontworkMiddleware, FrontworkContext, Component, DocumentBuilder, FrontworkResponse, DomainToRouteSelector, ElemKit } from "../dependencies.ts";
 import { StartpageComponent } from "./startpage/startpage.ts";
 
 
 export class MainDocumentBuilder extends DocumentBuilder {
-	main: HTMLElementWrapper<HTMLElement>;
+	main: ElemKit<HTMLElement>;
 
 	constructor(context: FrontworkContext) {
 		super(context);

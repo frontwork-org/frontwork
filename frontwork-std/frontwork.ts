@@ -59,7 +59,7 @@ export const FW =  {
  * Utility functions for DOM element manipulation.
  * Some methods will only execute if do_building is true
  */
-export class HTMLElementWrapper<T extends HTMLElement> {
+export class ElemKit<T extends HTMLElement> {
     readonly element: T;
     readonly created_element: boolean; // true if element was created; Otherwise false the element already exists
 
@@ -68,12 +68,12 @@ export class HTMLElementWrapper<T extends HTMLElement> {
         this.created_element = created_element;
     }
 
-    prepend_to(parent: HTMLElementWrapper<HTMLElement>): this {
+    prepend_to(parent: ElemKit<HTMLElement>): this {
         if(this.created_element) parent.element.prepend(this.element);
         return this;
     }
 
-    append_to(parent: HTMLElementWrapper<HTMLElement>): this {
+    append_to(parent: ElemKit<HTMLElement>): this {
         if(this.created_element) parent.element.append(this.element);
         return this;
     }
@@ -108,7 +108,7 @@ export class HTMLElementWrapper<T extends HTMLElement> {
 /**
  * Importent: action must be "" or beginn with a slash
  */
-export class FrontworkForm extends HTMLElementWrapper<HTMLFormElement> {
+export class FrontworkForm extends ElemKit<HTMLFormElement> {
     constructor(context: FrontworkContext, id: string, action: string, method: string) {
         super(context.ensure_element("form", id, { action: action, method: method }).element, context.do_building);
         this.element.setAttribute("fw-form", "1");
@@ -401,7 +401,7 @@ export interface DocumentBuilderInterface {
     readonly doctype: string;
     head_append_tag(tag: string, attributes?: { [key: string]: string }): void;
     add_head_meta_data(title: string, description: string, robots: string): DocumentBuilder;
-    body_append(wr: HTMLElementWrapper<HTMLElement>): void;
+    body_append(wr: ElemKit<HTMLElement>): void;
     set_html_lang(code: string): DocumentBuilder;
     html(): void;
     toString(): string;
@@ -423,61 +423,67 @@ export class DocumentBuilder implements DocumentBuilderInterface {
     //
 
     head_append_tag(tag: string, attributes?: { [key: string]: string }) {
-        const element = document.createElement(tag);
-        if (attributes) {
-            for (const key in attributes) {
-                element.setAttribute(key, attributes[key]);
+        if (this.context.do_building) {
+            const element = document.createElement(tag);
+            if (attributes) {
+                for (const key in attributes) {
+                    element.setAttribute(key, attributes[key]);
+                }
             }
+            this.context.head.element.append(element);
         }
-        this.context.document_head.append(element);
         return this;
     }
 
     add_head_meta_data(title: string, description: string, robots: string): DocumentBuilder {
-        const meta_chatset = this.context.document_head.appendChild( document.createElement("meta") );
-        meta_chatset.setAttribute("charset", "UTF-8");
-        
-        const meta_compatible = this.context.document_head.appendChild( document.createElement("meta") );
-        meta_compatible.setAttribute("http-equiv", "X-UA-Compatible");
-        meta_compatible.setAttribute("content", "IE=edge");
-        
-        const meta_viewport = this.context.document_head.appendChild( document.createElement("meta") );
-        meta_viewport.setAttribute("name", "viewport");
-        meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
-        
-        const meta_title = this.context.document_head.appendChild( document.createElement("title") );
-        meta_title.innerHTML = title;
-        
-        const meta_description = this.context.document_head.appendChild( document.createElement("meta") );
-        meta_description.setAttribute("name", "description");
-        meta_description.setAttribute("content", description);
-        
-        const meta_robots = this.context.document_head.appendChild( document.createElement("meta") );
-        meta_robots.setAttribute("name", "robots");
-        meta_robots.setAttribute("content", robots);
+        if (this.context.do_building) {
+            const meta_chatset = this.context.head.element.appendChild( document.createElement("meta") );
+            meta_chatset.setAttribute("charset", "UTF-8");
+            
+            const meta_compatible = this.context.head.element.appendChild( document.createElement("meta") );
+            meta_compatible.setAttribute("http-equiv", "X-UA-Compatible");
+            meta_compatible.setAttribute("content", "IE=edge");
+            
+            const meta_viewport = this.context.head.element.appendChild( document.createElement("meta") );
+            meta_viewport.setAttribute("name", "viewport");
+            meta_viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
+            
+            const meta_title = this.context.head.element.appendChild( document.createElement("title") );
+            meta_title.innerHTML = title;
+            
+            const meta_description = this.context.head.element.appendChild( document.createElement("meta") );
+            meta_description.setAttribute("name", "description");
+            meta_description.setAttribute("content", description);
+            
+            const meta_robots = this.context.head.element.appendChild( document.createElement("meta") );
+            meta_robots.setAttribute("name", "robots");
+            meta_robots.setAttribute("content", robots);
+        }
         return this;
     }
 
     add_head_meta_opengraph_website(title: string, description: string, url: string, image_url: string): DocumentBuilder {
-        const meta_og_type = this.context.document_head.appendChild( document.createElement("meta") );
-        meta_og_type.setAttribute("property", "og:type");
-        meta_og_type.setAttribute("content", "website");
+        if (this.context.do_building) {
+            const meta_og_type = this.context.head.element.appendChild( document.createElement("meta") );
+            meta_og_type.setAttribute("property", "og:type");
+            meta_og_type.setAttribute("content", "website");
 
-        const meta_og_url = this.context.document_head.appendChild( document.createElement("meta") );
-        meta_og_url.setAttribute("property", "og:url");
-        meta_og_url.setAttribute("content", url);
+            const meta_og_url = this.context.head.element.appendChild( document.createElement("meta") );
+            meta_og_url.setAttribute("property", "og:url");
+            meta_og_url.setAttribute("content", url);
 
-        const meta_og_title = this.context.document_head.appendChild( document.createElement("meta") );
-        meta_og_title.setAttribute("property", "og:title");
-        meta_og_title.setAttribute("content", title);
+            const meta_og_title = this.context.head.element.appendChild( document.createElement("meta") );
+            meta_og_title.setAttribute("property", "og:title");
+            meta_og_title.setAttribute("content", title);
 
-        const meta_og_description = this.context.document_head.appendChild( document.createElement("meta") );
-        meta_og_description.setAttribute("property", "og:description");
-        meta_og_description.setAttribute("content", description);
+            const meta_og_description = this.context.head.element.appendChild( document.createElement("meta") );
+            meta_og_description.setAttribute("property", "og:description");
+            meta_og_description.setAttribute("content", description);
 
-        const meta_og_image = this.context.document_head.appendChild( document.createElement("meta") );
-        meta_og_image.setAttribute("property", "og:image");
-        meta_og_image.setAttribute("content", image_url);
+            const meta_og_image = this.context.head.element.appendChild( document.createElement("meta") );
+            meta_og_image.setAttribute("property", "og:image");
+            meta_og_image.setAttribute("content", image_url);
+        }
 
         return this;
     }
@@ -487,12 +493,12 @@ export class DocumentBuilder implements DocumentBuilderInterface {
     //
 
     set_html_lang(code: string): DocumentBuilder {
-        this.context.document_html.setAttribute("lang", code);
+        this.context.html.element.setAttribute("lang", code);
         return this;
     }
 
-    body_append(wr: HTMLElementWrapper<HTMLElement>) {
-        this.context.document_body.append(wr.element);
+    body_append(wr: ElemKit<HTMLElement>) {
+        this.context.body.element.append(wr.element);
         return wr;
     }
 
@@ -501,27 +507,29 @@ export class DocumentBuilder implements DocumentBuilderInterface {
     //
 
     html() {
-        // force adding style.css to the end of the head
-        const style_css = this.context.document_head.appendChild( document.createElement("link") );
-        style_css.setAttribute("id", "fw-style");
-        style_css.setAttribute("rel", "stylesheet");
-        style_css.setAttribute("href", "/css/style.css");
-        style_css.setAttribute("type", "text/css");
+        if (this.context.do_building) {
+            // force adding style.css to the end of the head
+            const style_css = this.context.head.element.appendChild( document.createElement("link") );
+            style_css.setAttribute("id", "fw-style");
+            style_css.setAttribute("rel", "stylesheet");
+            style_css.setAttribute("href", "/css/style.css");
+            style_css.setAttribute("type", "text/css");
+    
+            // force adding main.client.js to the end of the body
+            const main_js = this.context.body.element.appendChild( document.createElement("script") );
+            main_js.setAttribute("id", "fw-script");
+            main_js.setAttribute("src", "/js/main.client.js");
+            main_js.setAttribute("type", "text/javascript");
+        }
 
-        // force adding main.client.js to the end of the body
-        const main_js = this.context.document_body.appendChild( document.createElement("script") );
-        main_js.setAttribute("id", "fw-script");
-        main_js.setAttribute("src", "/js/main.client.js");
-        main_js.setAttribute("type", "text/javascript");
-
-        return this.context.document_html;
+        return this.context.html;
     }
 
     toString() {
         const html_response = this.html();
 
         return this.doctype + '\n' 
-            + html_response.outerHTML;
+            + html_response.element.outerHTML;
     }
 }
 
@@ -624,9 +632,9 @@ export class FrontworkContext {
     readonly request: FrontworkRequest;
     readonly do_building: boolean;
 
-    readonly document_html: HTMLHtmlElement;
-    readonly document_head: HTMLHeadElement;
-    readonly document_body: HTMLBodyElement;
+    readonly html: ElemKit<HTMLHtmlElement>;
+    readonly head: ElemKit<HTMLHeadElement>;
+    readonly body: ElemKit<HTMLBodyElement>;
 
     private api_error_event: ApiErrorEvent;
     private client: FrontworkClient|null;
@@ -648,9 +656,15 @@ export class FrontworkContext {
         this.do_building = do_building;
         this.client = client;
 
-        this.document_html = document.createElement("html");
-        this.document_head = this.document_html.appendChild( document.createElement("head") );
-        this.document_body = this.document_html.appendChild( document.createElement("body") );
+        if (do_building) {
+            this.html = new ElemKit(document.createElement("html"), true);
+            this.head = new ElemKit(this.html.element.appendChild(document.createElement("head")), true);
+            this.body = new ElemKit(this.html.element.appendChild(document.createElement("body")), true);
+        } else {
+            this.html = new ElemKit(document.querySelector("html") as HTMLHtmlElement, false);
+            this.head = new ElemKit(document.querySelector("head") as HTMLHeadElement, false);
+            this.body = new ElemKit(document.querySelector("body") as HTMLBodyElement, false);
+        }
         
         // I18n
         if(i18n.length === 0) throw new Error("I18n: No locales provided");
@@ -708,16 +722,16 @@ export class FrontworkContext {
      * Creates an HTML element. DOES NOT CHECK IF ALREADY EXIST.
      * @param tag The tag name of the element to create.
      * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
-     * @returns HTMLElementWrapper
+     * @returns ElemKit
      */
-    create_element<K extends keyof HTMLElementTagNameMap>(tag: K, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
+    create_element<K extends keyof HTMLElementTagNameMap>(tag: K, attributes?: { [key: string]: string }): ElemKit<HTMLElementTagNameMap[K]> {
         const elem = document.createElement(tag);
         if (attributes) {
             for (const key in attributes) {
                 elem.setAttribute(key, attributes[key]);
             }
         }
-        return new HTMLElementWrapper(elem, true);
+        return new ElemKit(elem, true);
     }
 
     /**
@@ -725,9 +739,9 @@ export class FrontworkContext {
      * @param tag The tag name of the element to create.
      * @param i18n_key The keyword specified in the english.json. Uses innerText to set the translated text.
      * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
-     * @returns HTMLElementWrapper
+     * @returns ElemKit
      */
-    create_text_element<K extends keyof HTMLElementTagNameMap>(tag: K, i18n_key: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
+    create_text_element<K extends keyof HTMLElementTagNameMap>(tag: K, i18n_key: string, attributes?: { [key: string]: string }): ElemKit<HTMLElementTagNameMap[K]> {
         const elem = document.createElement(tag);
         elem.innerText = this.get_translation(i18n_key);
         if (attributes) {
@@ -735,7 +749,7 @@ export class FrontworkContext {
                 elem.setAttribute(key, attributes[key]);
             }
         }
-        return new HTMLElementWrapper(elem, true);
+        return new ElemKit(elem, true);
     }
 
     /**
@@ -745,9 +759,9 @@ export class FrontworkContext {
      * @param attributes Optional. Attributes will be only added if it is created. Example: { class: "container", "data-role": "content" }
      * @returns The HTML element with the specified ID.
      */
-    ensure_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
-        const elem = this.do_building? this.document_html.querySelector("#"+id) : document.getElementById(id);
-        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K], false);
+    ensure_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): ElemKit<HTMLElementTagNameMap[K]> {
+        const elem = this.do_building? this.html.element.querySelector("#"+id) : document.getElementById(id);
+        if(elem !== null) return new ElemKit<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K], false);
         
         const elem2 = document.createElement(tag);
         elem2.id = id;
@@ -756,7 +770,7 @@ export class FrontworkContext {
                 elem2.setAttribute(key, attributes[key]);
             }
         }
-        return new HTMLElementWrapper(elem2, true);
+        return new ElemKit(elem2, true);
     }
 
     /**
@@ -767,9 +781,9 @@ export class FrontworkContext {
      * @param attributes Optional. Example: { class: "container", "data-role": "content" }
      * @returns The newly created HTML element.
      */
-    ensure_text_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): HTMLElementWrapper<HTMLElementTagNameMap[K]> {
-        const elem = this.do_building? this.document_html.querySelector("#"+id) : document.getElementById(id);
-        if(elem !== null) return new HTMLElementWrapper<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K], false);
+    ensure_text_element<K extends keyof HTMLElementTagNameMap>(tag: K, id: string, attributes?: { [key: string]: string }): ElemKit<HTMLElementTagNameMap[K]> {
+        const elem = this.do_building? this.html.element.querySelector("#"+id) : document.getElementById(id);
+        if(elem !== null) return new ElemKit<HTMLElementTagNameMap[K]>(elem as HTMLElementTagNameMap[K], false);
         
         const elem2 = document.createElement(tag);
         elem2.id = id;
@@ -779,7 +793,7 @@ export class FrontworkContext {
                 elem2.setAttribute(key, attributes[key]);
             }
         }
-        return new HTMLElementWrapper(elem2, true);
+        return new ElemKit(elem2, true);
     }
 
 
@@ -1015,8 +1029,8 @@ export class FrontworkMiddleware {
         this.error_handler = init.error_handler
         this.error_handler_component = {
             async build(context: FrontworkContext) {
-                context.document_head.innerHTML = "";
-                context.document_body.innerHTML = "";
+                context.head.element.innerHTML = "";
+                context.body.element.innerHTML = "";
                 return init.error_handler(context); 
             },
             dom_ready() {},
