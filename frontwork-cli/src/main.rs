@@ -378,6 +378,7 @@ async fn main() {
                 .arg("run")
                 .arg("--allow-read")
                 .arg("--allow-net")
+                .arg("--allow-env")
                 .arg(main_testworker_file_path)
                 .spawn()
                 .expect("failed to execute process")
@@ -681,6 +682,7 @@ fn build_service(target: String, project_path: &String, dist_web_path: &String) 
         .arg(target)
         .arg("--allow-read")
         .arg("--allow-net")
+        .arg("--allow-env")
         .arg(format!("{}/src/main.service.ts", project_path));
 
     println!("Program: {}", &command.get_program().to_string_lossy());
@@ -703,8 +705,8 @@ fn build_client(project_path: &String, dist_web_path: &String) -> process::Child
         .arg("run")
         .arg("--allow-read")
         .arg("--allow-write")
-        .arg("--allow-env")
         .arg("--allow-net")
+        .arg("--allow-env")
         .arg("--allow-run")
         .arg(bundle_ts_path)
         .arg(dist_web_file_path)
@@ -717,8 +719,9 @@ fn build_client(project_path: &String, dist_web_path: &String) -> process::Child
 fn run_service(project_path: &String) -> process::Child {
     std::process::Command::new("deno")
         .arg("run")
-        .arg("--allow-net")
         .arg("--allow-read")
+        .arg("--allow-net")
+        .arg("--allow-env")
         .arg("-c")
         .arg(format!("{}/deno.jsonc", project_path))
         .arg(format!("{}/src/main.service.ts", project_path))
