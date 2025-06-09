@@ -117,8 +117,8 @@ export interface FrontworkSubservice { (request: FrontworkRequest, _req: Request
 const abort_controller = new AbortController();
 
 export class FrontworkWebservice extends Frontwork {
-    private style_css!: Asset;
-    private main_client_js!: Asset;
+    private style_css: Asset|null = null;
+    private main_client_js: Asset|null = null;
     private cache_max_age = 0;
     private api_path_prefixes = ["/api/"];
 
@@ -242,7 +242,7 @@ export class FrontworkWebservice extends Frontwork {
     }
 
     private async assets_resolver(request: FrontworkRequest): Promise<Response | null> {
-        if (request.path === this.style_css.relative_path) {
+        if (this.style_css !== null && request.path === this.style_css.relative_path) {
             try {
                 return this.style_css.create_file_response(request, this.cache_max_age);
                 // deno-lint-ignore no-explicit-any
@@ -257,7 +257,7 @@ export class FrontworkWebservice extends Frontwork {
                 );
                 return null;
             }
-        } else if (request.path === this.main_client_js.relative_path) {
+        } else if (this.main_client_js !== null && request.path === this.main_client_js.relative_path) {
             try {
                 return this.main_client_js.create_file_response(request, this.cache_max_age);
                 // deno-lint-ignore no-explicit-any
