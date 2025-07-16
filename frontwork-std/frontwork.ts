@@ -860,7 +860,15 @@ export class FrontworkContext {
                     };
                 } catch (error: any) {
                     FW.reporter(LogType.Error, "api_request", "Could not parse ApiErrorResponse for api_request("+method+" "+path+")", this, error);
-                    let api_error_response: ApiErrorResponse = { status: 501, error_message: "API did not returned parsable JSON" }
+                    let error_message = "API did not returned parsable JSON. Response: `";
+                    const response_text = await response.text();
+                    if (response_text.length > 100) {
+                        error_message += response_text.substring(0, 100) + "...";
+                    } else {
+                        error_message += response_text;
+                    }
+                    error_message += "`";
+                    let api_error_response: ApiErrorResponse = { status: 501, error_message: error_message }
                     this.api_error_event(this, this.client, method, path, params, api_error_response);
 
                     return {
