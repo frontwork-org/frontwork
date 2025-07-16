@@ -255,6 +255,7 @@ const middleware = new FrontworkMiddleware({
 			context.set_locale("en");
 			const observer = context.get_observer<User>("user");
 			if(observer.is_null()) context.api_request_observer<User>(observer, "POST", "/api/v1/user/session", {});
+			context.api_request("POST", "/api/v1/user/set_storage_quota", {})
 		},
 		dom_ready: async () => {  console.log("ASDAAAAAAAAA"); }
 	},
