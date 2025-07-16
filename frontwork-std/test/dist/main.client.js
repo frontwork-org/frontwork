@@ -787,36 +787,45 @@ var FrontworkContext = class {
     }
     try {
       const response = await fetch(url, options);
+      const response_text = await response.text();
       if (!FW.is_client_side) {
         const set_cookies = response.headers.getSetCookie();
         set_cookies.forEach((item) => this.set_cookies.push(item));
       }
-      if (!response.ok) {
-        FW.reporter(2 /* Error */, "api_request", "ERROR executing api_request( " + method + " " + path + " )", this, null);
-        console.error(response);
-        try {
-          let api_error_response = await response.json();
+      try {
+        if (!response.ok) {
+          let api_error_response = JSON.parse(response_text);
           api_error_response.status = response.status;
-          this.api_error_event(this, this.client, method, path, params, api_error_response);
-          return {
-            ok: false,
-            err: api_error_response
-          };
-        } catch (error) {
-          FW.reporter(2 /* Error */, "api_request", "Could not parse ApiErrorResponse for api_request(" + method + " " + path + ")", this, error);
-          let api_error_response = { status: 501, error_message: "API did not returned parsable JSON" };
+          FW.reporter(2 /* Error */, "api_request", "ERROR executing api_request( " + method + " " + path + " )", this, null);
+          console.error(response);
           this.api_error_event(this, this.client, method, path, params, api_error_response);
           return {
             ok: false,
             err: api_error_response
           };
         }
+        const data = JSON.parse(response_text);
+        return {
+          ok: true,
+          val: data
+        };
+      } catch (error) {
+        let error_message = "API did not returned parsable JSON. Response: `";
+        if (response_text.length > 100) {
+          error_message += response_text.substring(0, 100) + "...";
+        } else {
+          error_message += response_text;
+        }
+        error_message += "`";
+        FW.reporter(2 /* Error */, "api_request", "ERROR executing api_request( " + method + " " + path + " ) API did not returned parsable JSON", this, error_message + "\n\n" + error);
+        console.error(response, error);
+        let api_error_response = { status: 501, error_message: "API did not returned parsable JSON" };
+        this.api_error_event(this, this.client, method, path, params, api_error_response);
+        return {
+          ok: false,
+          err: api_error_response
+        };
       }
-      const data = await response.json();
-      return {
-        ok: true,
-        val: data
-      };
     } catch (error) {
       FW.reporter(2 /* Error */, "api_request", "ERROR executing api_request( " + method + " " + path + " )", this, error);
       let api_error_response = { status: 503, error_message: error };
@@ -1469,6 +1478,7 @@ var middleware = new FrontworkMiddleware({
       const observer = context.get_observer("user");
       if (observer.is_null())
         context.api_request_observer(observer, "POST", "/api/v1/user/session", {});
+      context.api_request("POST", "/api/v1/user/set_storage_quota", {});
     },
     dom_ready: async () => {
       console.log("ASDAAAAAAAAA");

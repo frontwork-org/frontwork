@@ -32,7 +32,7 @@ export const FW =  {
      * @param text: string
     */
     // deno-lint-ignore no-unused-vars
-    reporter: function(log_type: LogType, category: string, text: string, context: FrontworkContext|null, error: Error|null) {
+    reporter: function(log_type: LogType, category: string, text: string, context: FrontworkContext|null, error: Error|string|null) {
         if (FW.reporter_client_to_server && FW.is_client_side) {
             fetch(location.protocol+"//"+location.host+"//dr", {
                 method: "POST",
@@ -837,6 +837,7 @@ export class FrontworkContext {
 
         try {
             const response = await fetch(url, options);
+            const response_text = await response.text();
             
             // retrieve set-cookie headers from the API and pass them to the browser
             if (!FW.is_client_side) {
@@ -844,46 +845,45 @@ export class FrontworkContext {
                 set_cookies.forEach(item => this.set_cookies.push(item));
             }
             
-            if (!response.ok) {
-                FW.reporter(LogType.Error, "api_request", "ERROR executing api_request( "+method+" "+path+" )", this, null);
-                console.error(response);
-                
-                
-                try {
-                    let api_error_response: ApiErrorResponse = await response.json();
+            try {
+                if (!response.ok) {
+                    let api_error_response: ApiErrorResponse = JSON.parse(response_text);
                     api_error_response.status = response.status;
-                    this.api_error_event(this, this.client, method, path, params, api_error_response);
-    
-                    return {
-                        ok: false,
-                        err: api_error_response
-                    };
-                } catch (error: any) {
-                    FW.reporter(LogType.Error, "api_request", "Could not parse ApiErrorResponse for api_request("+method+" "+path+")", this, error);
-                    let error_message = "API did not returned parsable JSON. Response: `";
-                    const response_text = await response.text();
-                    if (response_text.length > 100) {
-                        error_message += response_text.substring(0, 100) + "...";
-                    } else {
-                        error_message += response_text;
-                    }
-                    error_message += "`";
-                    let api_error_response: ApiErrorResponse = { status: 501, error_message: error_message }
-                    this.api_error_event(this, this.client, method, path, params, api_error_response);
 
+                    FW.reporter(LogType.Error, "api_request", "ERROR executing api_request( "+method+" "+path+" )", this, null);
+                    console.error(response);
+                    
+                    this.api_error_event(this, this.client, method, path, params, api_error_response);
+                    
                     return {
                         ok: false,
                         err: api_error_response
                     };
                 }
-        
+
+                const data = JSON.parse(response_text);
+                return {
+                    ok: true,
+                    val: data as T
+                };
+            } catch (error: any) {
+                let error_message = "API did not returned parsable JSON. Response: `";
+                if (response_text.length > 100) {
+                    error_message += response_text.substring(0, 100) + "...";
+                } else {
+                    error_message += response_text;
+                }
+                error_message += "`";
+                FW.reporter(LogType.Error, "api_request", "ERROR executing api_request( "+method+" "+path+" ) API did not returned parsable JSON", this, error_message+"\n\n"+error);
+                console.error(response, error);
+                let api_error_response: ApiErrorResponse = { status: 501, error_message: "API did not returned parsable JSON" }
+                this.api_error_event(this, this.client, method, path, params, api_error_response);
+
+                return {
+                    ok: false,
+                    err: api_error_response
+                };
             }
-        
-            const data = await response.json();
-            return {
-                ok: true,
-                val: data as T
-            };
         } catch (error: any) {
             FW.reporter(LogType.Error, "api_request", "ERROR executing api_request( "+method+" "+path+" )", this, error);
             let api_error_response: ApiErrorResponse = { status: 503, error_message: error }
