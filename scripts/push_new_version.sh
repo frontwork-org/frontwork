@@ -20,9 +20,9 @@ is_version() {
     
     # Check if input matches the pattern: one or more digits, dot, one or more digits, dot, one or more digits
     if [[ "$input" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        return 0
-    else
         return 1
+    else
+        return 0
     fi
 }
 
