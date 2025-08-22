@@ -8,10 +8,10 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
 
 # Check if there are any uncommitted changes
-if [[ ! -z $(git diff --minimal) ]]; then
-    echo "There are uncommitted changes. Please commit or stash them first."
-    exit 1
-fi
+# if [[ ! -z $(git diff --minimal) ]]; then
+#     echo "There are uncommitted changes. Please commit or stash them first."
+#     exit 1
+# fi
 
 
 # checks if a string uses the semitic version pattern
