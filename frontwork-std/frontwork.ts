@@ -874,7 +874,7 @@ export class FrontworkContext {
                     error_message += response_text;
                 }
                 error_message += "`";
-                FW.reporter(LogType.Error, "api_request", "ERROR executing api_request( "+method+" "+path+" ) API did not returned parsable JSON", this, error_message+"\n\n"+error);
+                FW.reporter(LogType.Error, "api_request", "ERROR executing api_request( "+method+" "+path+" ) Invalid JSON.", this, error_message+"\n\n"+error);
                 console.error(response, error);
                 let api_error_response: ApiErrorResponse = { status: 501, error_message: "API did not returned parsable JSON" }
                 this.api_error_event(this, this.client, method, path, params, api_error_response);

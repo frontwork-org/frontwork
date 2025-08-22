@@ -13,18 +13,36 @@ if [[ ! -z $(git diff --minimal) ]]; then
     exit 1
 fi
 
+
+# checks if a string uses the semitic version pattern
+is_version() {
+    local input="$1"
+    
+    # Check if input matches the pattern: one or more digits, dot, one or more digits, dot, one or more digits
+    if [[ "$input" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Get current version from package.json
 CURRENT_VERSION=$(grep '"version":' ../frontwork-std/package.json | sed 's/.*: "\(.*\)",/\1/')
+if is_version "$version"; then
+    echo "✓ CURRENT_VERSION is '$version'"
+else
+    echo "✗ 'CURRENT_VERSION $CURRENT_VERSION' is NOT a valid semitic version. Please check \"../frontwork-std/package.json\""
+    exit 1
+fi
 
-# Split version into components
-IFS='.' read -r -a version_parts <<< "$CURRENT_VERSION"
-MAJOR="${version_parts[0]}"
-MINOR="${version_parts[1]}"
-PATCH="${version_parts[2]}"
+# Get user input and validate
+echo "Please enter a version number (format: x.y.z): "
+read -r NEW_VERSION
 
-# Increment patch version
-NEW_PATCH=$((PATCH + 1))
-NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+while ! is_version "$NEW_VERSION"; do
+    echo "Invalid version format. Please enter a version like '1.2.3': "
+    read -r NEW_VERSION
+done
 
 # Update package.json
 sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" ../frontwork-std/package.json

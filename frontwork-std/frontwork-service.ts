@@ -9,7 +9,6 @@ import {
     FW,
     FrontworkResponseRedirect,
     FrontworkContext,
-    ApiErrorEvent,
 } from "./frontwork.ts";
 
 
@@ -117,8 +116,8 @@ export interface FrontworkSubservice { (request: FrontworkRequest, _req: Request
 const abort_controller = new AbortController();
 
 export class FrontworkWebservice extends Frontwork {
-    private style_css: Asset|null = null;
-    private main_client_js: Asset|null = null;
+    private style_css: Asset;
+    private main_client_js: Asset;
     private cache_max_age = 0;
     private api_path_prefixes = ["/api/"];
 
@@ -127,8 +126,19 @@ export class FrontworkWebservice extends Frontwork {
 
     private subservices: FrontworkSubservice[] = [];
 
-    constructor(init: FrontworkInit) {
+    constructor(init: FrontworkInit, dist_folder: string, style_css_path: string, main_js_path: string) {
         super(init);
+        if (dist_folder.slice(-1) !== "/") dist_folder += "/";
+
+        this.style_css = new Asset(style_css_path, "/css/style.css", "text/css; charset=utf-8");
+        this.main_client_js = new Asset(main_js_path, "/js/main.client.js", "text/javascript; charset=utf-8");
+        if (this.stage === EnvironmentStage.Development) {
+            this.assets.push(
+                new Asset(main_js_path+".map", "js/main.client.js.map", "application/json; charset=utf-8")
+            )
+        }
+
+        this.scan_directory(dist_folder, "/");
     }
 
     start() {
@@ -176,49 +186,37 @@ export class FrontworkWebservice extends Frontwork {
         globalThis.addEventListener("unload", () => abort_controller.abort());
     }
 
+    private scan_directory(dir_path: string, relative_path: string) {
+        for (const dirEntry of Deno.readDirSync(dir_path)) {
+            const absolute_path = dir_path + dirEntry.name;
+            if (dirEntry.isFile 
+                && absolute_path !== this.style_css.absolute_path 
+                && absolute_path !== this.main_client_js.absolute_path
+            ) {
+                this.assets.push(
+                    new Asset(
+                        absolute_path,
+                        relative_path + dirEntry.name,
+                        null
+                    ),
+                );
+            } else if (dirEntry.isDirectory) {
+                this.scan_directory(
+                    dir_path + dirEntry.name + "/",
+                    relative_path + dirEntry.name + "/",
+                );
+            }
+        }
+    };
+
     setup_assets_resolver(assets_folder_path: string) {
         // add last slash if not exists
         if (assets_folder_path.slice(-1) !== "/") assets_folder_path += "/";
         this.assets_folder_path = assets_folder_path;
-
-        const scan_directory = (dir_path: string, relative_path: string) => {
-            for (const dirEntry of Deno.readDirSync(dir_path)) {
-                if (dirEntry.isFile) {
-                    this.assets.push(
-                        new Asset(
-                            dir_path + dirEntry.name,
-                            relative_path + dirEntry.name,
-                            null
-                        ),
-                    );
-                } else if (dirEntry.isDirectory) {
-                    scan_directory(
-                        dir_path + dirEntry.name + "/",
-                        relative_path + dirEntry.name + "/",
-                    );
-                }
-            }
-        };
-
-        scan_directory(this.assets_folder_path, "/");
+        this.scan_directory(this.assets_folder_path, "/");
         return this;
     }
 
-    setup_style_css(style_css_absolute_path: string) {
-        this.style_css = new Asset(style_css_absolute_path, "/css/style.css", "text/css; charset=utf-8");
-        return this;
-    }
-    
-    setup_main_js(main_js_absolute_path: string) {
-        this.main_client_js = new Asset(main_js_absolute_path, "/js/main.client.js", "text/javascript; charset=utf-8");
-        if (this.stage === EnvironmentStage.Development) {
-            this.assets.push(
-                new Asset(main_js_absolute_path+".map", "/js/main.client.js.map", "application/json; charset=utf-8")
-            )
-        }
-        return this;
-    }
-    
     set_cache_max_age(cache_max_age: number) {
         this.cache_max_age = cache_max_age;
         return this;
@@ -242,7 +240,7 @@ export class FrontworkWebservice extends Frontwork {
     }
 
     private async assets_resolver(request: FrontworkRequest): Promise<Response | null> {
-        if (this.style_css !== null && request.path === this.style_css.relative_path) {
+        if (request.path === this.style_css.relative_path) {
             try {
                 return this.style_css.create_file_response(request, this.cache_max_age);
                 // deno-lint-ignore no-explicit-any
@@ -257,7 +255,7 @@ export class FrontworkWebservice extends Frontwork {
                 );
                 return null;
             }
-        } else if (this.main_client_js !== null && request.path === this.main_client_js.relative_path) {
+        } else if (request.path === this.main_client_js.relative_path) {
             try {
                 return this.main_client_js.create_file_response(request, this.cache_max_age);
                 // deno-lint-ignore no-explicit-any
