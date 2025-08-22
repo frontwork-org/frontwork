@@ -29,7 +29,7 @@ is_version() {
 # Get current version from package.json
 CURRENT_VERSION=$(grep '"version":' ../frontwork-std/package.json | sed 's/.*: "\(.*\)",/\1/')
 if is_version "$version"; then
-    echo "✓ CURRENT_VERSION is '$version'"
+    echo "✓ CURRENT_VERSION is '$CURRENT_VERSION'"
 else
     echo "✗ 'CURRENT_VERSION $CURRENT_VERSION' is NOT a valid semitic version. Please check \"../frontwork-std/package.json\""
     exit 1
