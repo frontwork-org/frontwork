@@ -3,7 +3,7 @@ import { EnvironmentStage, FrontworkRequest } from '../frontwork.ts';
 import { APP_CONFIG } from "./test.routes.ts";
 
 
-let __dir = new URL('.', import.meta.url).pathname.replace("/C:", "C:");
+export let __dir = new URL('.', import.meta.url).pathname.replace("/C:", "C:");
 if(Deno.build.os === "windows" && __dir.charAt(0) === "/") __dir.substring(1, __dir.length);
 
 // Required for binary run.
@@ -14,10 +14,11 @@ if (APP_CONFIG.stage !== EnvironmentStage.Development || __dir.includes("/tmp/")
 // Remove last slash if exist
 if (__dir.slice(-1) === "/") __dir = __dir.slice(0, -1);
 
+const __dir_dist = __dir + '/dist';
+const __dir_dist_style_css = __dir_dist+"/css/style.css";
+const __dir_dist_client_main_js = __dir_dist+"/js/test.client.js";
 
-const webservice = new FrontworkWebservice(APP_CONFIG)
+new FrontworkWebservice(APP_CONFIG, __dir_dist, __dir_dist_style_css, __dir_dist_client_main_js)
     .setup_assets_resolver(__dir + '/assets')
-    .setup_style_css(__dir + '/dist/style.css')
-    .setup_main_js(__dir + '/dist/main.client.js')
     .set_api_path_prefixes(["/api/", "/files/"])
-webservice.start();
+    .start();

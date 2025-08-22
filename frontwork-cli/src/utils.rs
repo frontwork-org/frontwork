@@ -85,7 +85,12 @@ pub fn sass(src: String, dest: String) {
         .. Default::default()
     };
     match compile_scss_path(src.as_ref(), format) {
-        Ok(css) => fs::write(Path::new(&dest), css).expect("can not write css file"),
+        Ok(css) => {
+            match fs::write(Path::new(&dest), css) {
+                Ok(f) => f,
+                Err(error) => panic!("can not write css file to {:?}. Error: {:?}", dest, error)
+            }
+        },
         Err(error) => println!("Unable to compile sass: {}", error),
     }
 }

@@ -5,6 +5,7 @@
 - Deno as server side renderer and assets sender
     - Simple assets sender with the method setup_assets_resolver(assets_dir)
 - CLI Tool to create project like ng, and provide CI capabilities like npm
+- Dynamic Imports with esbuild Code Splitting
 
 ## Getting Started
 For getting started you need to install the frontwork-cli tool "frontwork": 

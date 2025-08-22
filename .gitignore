@@ -6,3 +6,4 @@ deno.lock
 node_modules
 std_binary_main_service
 template_binary_main_service
+**/dist/**

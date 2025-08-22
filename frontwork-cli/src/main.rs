@@ -659,9 +659,12 @@ fn build_assets(project_path: &String, dist_web_path: &String) {
 }
 
 fn build_css(project_path: &String, dist_web_path: &String) {
+    let dist_css_dir = format!("{}/css", dist_web_path);
+    create_dir_all_verbose(&dist_css_dir);
+
     utils::sass(
         format!("{}/src/style.scss", project_path),
-        format!("{}/style.css", dist_web_path),
+        format!("{}/style.css", dist_css_dir),
     );
 }
 
@@ -695,7 +698,6 @@ fn build_service(target: String, project_path: &String, dist_web_path: &String) 
 
 fn build_client(project_path: &String, dist_web_path: &String) -> process::Child {
     let bundle_ts_path = format!("{}/bundle.ts", project_path);
-    let dist_web_file_path = format!("{}/main.client.js", dist_web_path);
 
     if !Path::new(&bundle_ts_path).exists() {
         fs::write(&bundle_ts_path, BUNDLE_TS_FILE_STR).expect("Unable to write bundle.ts file");
@@ -709,7 +711,7 @@ fn build_client(project_path: &String, dist_web_path: &String) -> process::Child
         .arg("--allow-env")
         .arg("--allow-run")
         .arg(bundle_ts_path)
-        .arg(dist_web_file_path)
+        .arg(dist_web_path)
         .arg("-c")
         .arg(format!("{}/deno.jsonc", project_path))
         .spawn()

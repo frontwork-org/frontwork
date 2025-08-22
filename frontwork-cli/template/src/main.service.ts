@@ -1,4 +1,4 @@
-import { FrontworkWebservice } from "https://deno.land/x/frontwork@0.2.6/frontwork-service.ts";
+import { FrontworkWebservice } from "https://deno.land/x/frontwork@a/frontwork-service.ts";
 import { APP_CONFIG } from "./environments/environment.ts";
 import { EnvironmentStage } from './dependencies.ts';
 
@@ -16,9 +16,10 @@ if (APP_CONFIG.stage !== EnvironmentStage.Development || __dir.includes("/tmp/")
     __dir_dist = __dir.substring(0, __dir.length - "/src".length) + "/dist/development-web"
 }
 
-new FrontworkWebservice(APP_CONFIG)
+const __dir_dist_style_css = __dir_dist+"/css/style.css";
+const __dir_dist_client_main_js = __dir_dist+"/js/main.client.js";
+
+new FrontworkWebservice(APP_CONFIG, __dir_dist, __dir_dist_style_css, __dir_dist_client_main_js)
     .setup_assets_resolver(__dir + '/assets')
-    .setup_style_css(__dir_dist + '/style.css')
-    .setup_main_js(__dir_dist + '/main.client.js')
-    .set_api_path_prefixes(["/files/"])
+    .set_api_path_prefixes(["/api/", "/files/"])
     .start();

@@ -1,1 +1,1 @@
-export * from "https://deno.land/x/frontwork@0.2.6/lib.ts";
+export * from "https://deno.land/x/frontwork@a/lib.ts";
