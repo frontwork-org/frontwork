@@ -71,6 +71,7 @@ FILES=(
     "frontwork-client.ts"
     "frontwork-service.ts"
     "frontwork-testworker.ts"
+    "frontwork-bundler.ts"
     "frontwork.ts"
     "lib.ts"
     "utils.ts"
