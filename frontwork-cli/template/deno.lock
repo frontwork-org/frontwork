@@ -239,10 +239,6 @@
     "https://deno.land/x/denoflate@1.2.1/pkg/denoflate_bg.wasm.js": "d581956245407a2115a3d7e8d85a9641c032940a8e810acbd59ca86afd34d44d",
     "https://deno.land/x/esbuild@v0.20.1/mod.js": "d50e500b53ce67e31116beba3916b0f9275c0e1cc20bc5cadc0fc1b7a3b06fd9",
     "https://deno.land/x/esbuild@v0.25.2/mod.js": "fde73e72559dc2932556506581bc61462cff72d0394382334500d956851cd9f5",
-    "https://deno.land/x/frontwork@0.4.0/frontwork-bundler.ts": "e09cce88570bca98004d03d45c2304f3fc0fa1ea6142f968556452174a057627",
-    "https://deno.land/x/frontwork@0.4.0/frontwork-client.ts": "c8f3d6e9c946a0dbd1ac20393931f9cb8892a79fcd9f68c4bcd1dd9f97b25efe",
-    "https://deno.land/x/frontwork@0.4.0/frontwork.ts": "47b2aaea3a674990906aed395ac36387b9b5963dfa23c388bb2ae91742e77251",
-    "https://deno.land/x/frontwork@0.4.0/lib.ts": "6f3627245b2ab1183096d6e1a533b744602e3cbeb1b81c64989b255f7e8c71f0",
-    "https://deno.land/x/frontwork@0.4.0/utils.ts": "be69f01305fb0314ab10ccdc5163fd129aaa3059046d7d82ce4b6bfb36eb978d"
+    "https://deno.land/x/frontwork@0.4.0/frontwork-bundler.ts": "e09cce88570bca98004d03d45c2304f3fc0fa1ea6142f968556452174a057627"
   }
 }
