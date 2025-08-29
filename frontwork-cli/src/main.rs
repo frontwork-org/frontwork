@@ -744,6 +744,7 @@ fn update_frontwork_deps() -> std::io::Result<()> {
         format!("{project_path}/src/dependencies.ts"),
         format!("{project_path}/src/main.service.ts"),
         format!("{project_path}/src/main.testworker.ts"),
+        format!("{project_path}/bundle.ts"),
     ];
 
     for file_path in files {
