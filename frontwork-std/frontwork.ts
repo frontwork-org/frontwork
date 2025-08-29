@@ -519,7 +519,11 @@ export class DocumentBuilder implements DocumentBuilderInterface {
             const main_js = this.context.body.elem.appendChild( document.createElement("script") );
             main_js.setAttribute("id", "fw-script");
             main_js.setAttribute("src", "/js/main.client.js");
-            main_js.setAttribute("type", "text/javascript");
+			if (this.context.module_splitting) {
+				main_js.setAttribute("type", "module");
+			} else {
+				main_js.setAttribute("type", "text/javascript");
+			}
         }
 
         return this.context.html;
@@ -629,6 +633,7 @@ export class FrontworkContext {
     readonly api_protocol_address: string; // API Address Browser should use
     readonly api_protocol_address_ssr: string; // API Address Deno should use
     readonly i18n: I18n;
+    readonly module_splitting: boolean;
     readonly request: FrontworkRequest;
     readonly do_building: boolean;
 
@@ -645,7 +650,7 @@ export class FrontworkContext {
     set_cookies: string[] = [];
     selected_locale: I18nLocale;
 
-    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, client_ip: string, api_protocol_address: string, api_protocol_address_ssr: string, api_error_event: ApiErrorEvent, i18n: I18n, request: FrontworkRequest, do_building: boolean, client: FrontworkClient|null) {
+    constructor(platform: EnvironmentPlatform, stage: EnvironmentStage, client_ip: string, api_protocol_address: string, api_protocol_address_ssr: string, api_error_event: ApiErrorEvent, i18n: I18n, module_splitting: boolean, request: FrontworkRequest, do_building: boolean, client: FrontworkClient|null) {
         this.platform = platform;
         this.stage = stage;
         this.client_ip = client_ip;
@@ -653,6 +658,7 @@ export class FrontworkContext {
         this.api_protocol_address_ssr = api_protocol_address_ssr;
         this.api_error_event = api_error_event;
         this.request = request;
+        this.module_splitting = module_splitting;
         this.do_building = do_building;
         this.client = client;
 
@@ -915,18 +921,24 @@ export class FrontworkContext {
 
 
 /**
- *   @param {EnvironmentPlatform} platform - Web, Desktop or Android
- *   @param {EnvironmentStage} stage - Development, Staging or Production
- *   @param {number} port - Which port should Deno start the webservice
- *   @param {string} api_protocol_address - The protocol and address for FrontworkContext.api_request. Example: http://localhost:40201. Should use https for staging and production. 
- *   @param {DomainToRouteSelector[]} domain_to_route_selector - Function that selects which routes should work under a domain 
- *   @param {FrontworkMiddleware} middleware - Handler for every edge case like 404er, 500er. You can also execute code before a route executes.
- *   @param {i18n} I18n - Prepare always translations before hand to save time later. For every static string please use the context.get_translation() method.
- *   @param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
+ *	@param {EnvironmentPlatform} platform - Web, Desktop or Android
+ *	@param {EnvironmentStage} stage - Development, Staging or Production
+ *	@param {number} port - Which port should Deno start the webservice
+ *	@param {string} api_protocol_address - The protocol and address for FrontworkContext.api_request. Example: http://localhost:40201. Should use https for staging and production. 
+ *	@param {DomainToRouteSelector[]} domain_to_route_selector - Function that selects which routes should work under a domain 
+ *	@param {FrontworkMiddleware} middleware - Handler for every edge case like 404er, 500er. You can also execute code before a route executes.
+ *	@param {i18n} I18n - Prepare always translations before hand to save time later. For every static string please use the context.get_translation() method.
+ *	@param {boolean} build_on_page_load - Enable or Disable Client-Side-Rendering on DOM Ready
+ *	@param {boolean} module_splitting - Enables or disables ECMAScript module splitting for dynamic imports.
+ *    - Enabled: Code will be split into separate modules only when using `import('my_module.ts')`, which returns a Promise.  
+ *               This improves startup performance by loading code on demand, following modern best practices.  
+ *               ⚠ WARNING: Only ~95% of browsers support this feature (no support for legacy browsers such as IE11). See: https://caniuse.com/es6-module-dynamic-import
+ *    - Disabled: Uses the standard JavaScript bundle mode, ensuring maximum compatibility (including IE11 support).  
  */
 export interface FrontworkInit {
     platform: EnvironmentPlatform, stage: EnvironmentStage, port: number, api_protocol_address: string, api_protocol_address_ssr: string, 
-    domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean, api_error_event?: ApiErrorEvent;
+    domain_to_route_selector: DomainToRouteSelector, middleware: FrontworkMiddleware, i18n: I18n, build_on_page_load: boolean, api_error_event?: ApiErrorEvent,
+    module_splitting: boolean
 }
 
 export class Frontwork {
@@ -939,6 +951,7 @@ export class Frontwork {
 	protected middleware: FrontworkMiddleware;
     protected i18n: I18n
     protected api_error_event: ApiErrorEvent;
+    protected module_splitting: boolean;
 
 	constructor(init: FrontworkInit) {
 		this.platform = init.platform;
@@ -949,6 +962,7 @@ export class Frontwork {
 		this.domain_to_route_selector = init.domain_to_route_selector;
 		this.middleware = init.middleware;
 		this.i18n = init.i18n;
+		this.module_splitting = init.module_splitting;
 		this.api_error_event = init.api_error_event === undefined? ()=>{} : init.api_error_event;
         if(this.stage === EnvironmentStage.Development) FW.verbose_logging = true;
 	}

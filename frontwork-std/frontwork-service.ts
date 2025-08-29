@@ -348,6 +348,7 @@ export class FrontworkWebservice extends Frontwork {
                 this.api_protocol_address_ssr,
                 this.api_error_event,
                 this.i18n,
+                this.module_splitting,
                 request,
                 true,
                 null,

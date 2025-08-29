@@ -257,7 +257,7 @@ const middleware = new FrontworkMiddleware({
 			if(observer.is_null()) context.api_request_observer<User>(observer, "POST", "/api/v1/user/session", {});
 			// context.api_request("POST", "/api/v1/user/set_storage_quota", {})
 		},
-		dom_ready: async () => {  console.log("ASDAAAAAAAAA"); }
+		dom_ready: async () => {  console.log("ASDAAAAAAAAA"); import("./test.second_module.ts") }
 	},
 	error_handler: async (context: FrontworkContext) => {
 		const document_builder = new MyMainDocumentBuilder(context);
@@ -289,6 +289,7 @@ export const APP_CONFIG: FrontworkInit = {
 	middleware: middleware,
 	i18n: i18n,
 	build_on_page_load: false,
+	module_splitting: true,
 	api_error_event: (context: FrontworkContext, client: FrontworkClient|null, method: "GET"|"POST", path: string, params: { [key: string]: string|number|boolean | string[]|number[]|boolean[] }, error: ApiErrorResponse) => {
 		if (context.request.path !== "/" && client !== null && error.status === 401) {
 			client.page_change_to("/", true);
