@@ -55,6 +55,7 @@ FILES=(
     "../frontwork-cli/template/src/dependencies.ts"
     "../frontwork-cli/template/src/main.service.ts"
     "../frontwork-cli/template/src/main.testworker.ts"
+    "../frontwork-cli/template/bundle.ts"
 )
 
 for file in "${FILES[@]}"; do
