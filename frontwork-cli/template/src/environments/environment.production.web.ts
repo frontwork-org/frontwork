@@ -11,5 +11,6 @@ export const APP_CONFIG: FrontworkInit = {
 	domain_to_route_selector: domain_to_route_selector,
 	middleware: middleware,
 	i18n: i18n,
-	build_on_page_load: false
+	build_on_page_load: false,
+	module_splitting: false,
 };

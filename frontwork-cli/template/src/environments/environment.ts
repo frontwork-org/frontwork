@@ -12,4 +12,5 @@ export const APP_CONFIG: FrontworkInit = {
 	middleware: middleware,
 	i18n: i18n,
 	build_on_page_load: false,
+	module_splitting: false,
 };
