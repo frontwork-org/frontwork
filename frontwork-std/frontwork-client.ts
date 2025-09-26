@@ -212,7 +212,11 @@ export class FrontworkClient extends Frontwork {
                         html.append(context.body.elem);
                     }
                     
+                    // We change here the document attributes from internal scope to real document, 
+                    // since after building it should be the same and we expect on dom_ready that events will be added
+                    context.__set_document();
                     reb_result.component.dom_ready(context, this);
+
                     this.previous_component = reb_result.component;
                     this.page_change_ready = true;
                     return { method: request.method, url: request.url, is_redirect: false, status_code: reb_result.response.status_code };

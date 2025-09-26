@@ -637,9 +637,38 @@ export class FrontworkContext {
     readonly request: FrontworkRequest;
     readonly do_building: boolean;
 
-    readonly html: ElemKit<HTMLHtmlElement>;
-    readonly head: ElemKit<HTMLHeadElement>;
-    readonly body: ElemKit<HTMLBodyElement>;
+    /**
+     * The root <html> element wrapper. 
+     * 
+     * After the build phase, this reference is updated from the internal scope to the actual document element.
+     * This ensures that, on dom_ready, all events and manipulations are applied to the real document structure.
+     * DO NOT ADD EVENTS on the constructor or build method!
+     */
+    html!: ElemKit<HTMLHtmlElement>;
+
+    /**
+     * The <head> element wrapper.
+     * 
+     * After building, this reference is switched from the internal scope to the actual document's <head> element.
+     * This ensures that, on dom_ready, all events and manipulations are applied to the real document structure.
+     * DO NOT ADD EVENTS on the constructor or build method!
+     */
+    head!: ElemKit<HTMLHeadElement>;
+
+    /**
+     * The <body> element wrapper.
+     * 
+     * Once the build process is complete, this reference is updated from the internal scope to the actual document's <body> element.
+     * This ensures that, on dom_ready, all events and manipulations are applied to the real document structure.
+     * DO NOT ADD EVENTS on the constructor or build method!
+     */
+    body!: ElemKit<HTMLBodyElement>;
+
+    __set_document() {
+        this.html = new ElemKit(document.querySelector("html") as HTMLHtmlElement, false);
+        this.head = new ElemKit(document.querySelector("head") as HTMLHeadElement, false);
+        this.body = new ElemKit(document.querySelector("body") as HTMLBodyElement, false);
+    }
 
     private api_error_event: ApiErrorEvent;
     private client: FrontworkClient|null;
@@ -663,13 +692,12 @@ export class FrontworkContext {
         this.client = client;
 
         if (do_building) {
+            // We create also for client new elemkits, so that we create new scopes
             this.html = new ElemKit(document.createElement("html"), true);
             this.head = new ElemKit(this.html.elem.appendChild(document.createElement("head")), true);
             this.body = new ElemKit(this.html.elem.appendChild(document.createElement("body")), true);
         } else {
-            this.html = new ElemKit(document.querySelector("html") as HTMLHtmlElement, false);
-            this.head = new ElemKit(document.querySelector("head") as HTMLHeadElement, false);
-            this.body = new ElemKit(document.querySelector("body") as HTMLBodyElement, false);
+            this.__set_document();
         }
         
         // I18n

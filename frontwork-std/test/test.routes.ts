@@ -251,13 +251,17 @@ const middleware = new FrontworkMiddleware({
 	before_route: {
 		build: async (context: FrontworkContext) => {
 			console.log("context.request.COOKIES", context.request.COOKIES);
-			
+			console.log("LOAD context.head", context.head);
+
 			context.set_locale("en");
 			const observer = context.get_observer<User>("user");
 			if(observer.is_null()) context.api_request_observer<User>(observer, "POST", "/api/v1/user/session", {});
 			// context.api_request("POST", "/api/v1/user/set_storage_quota", {})
 		},
-		dom_ready: async () => {  console.log("ASDAAAAAAAAA"); import("./test.second_module.ts") }
+		dom_ready: async (context: FrontworkContext) => {
+			console.log("LOAD context.head", context.head);
+			console.log("ASDAAAAAAAAA"); import("./test.second_module.ts") 
+		}
 	},
 	error_handler: async (context: FrontworkContext) => {
 		const document_builder = new MyMainDocumentBuilder(context);
