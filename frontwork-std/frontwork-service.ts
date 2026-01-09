@@ -473,6 +473,7 @@ export class FrontworkWebservice extends Frontwork {
             method: _req.method,
             headers: headers,
             body: _req.body,
+            redirect: "manual",
         };
 
         // Make the request to backend

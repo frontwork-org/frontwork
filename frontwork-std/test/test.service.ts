@@ -20,5 +20,5 @@ const __dir_dist_client_main_js = __dir_dist+"/js/test.client.js";
 
 new FrontworkWebservice(APP_CONFIG, __dir_dist, __dir_dist_style_css, __dir_dist_client_main_js)
     .setup_assets_resolver(__dir + '/assets')
-    .set_api_path_prefixes(["/api/", "/files/"])
+    .set_api_path_prefixes(["/api/", "/files/", "/.well-known/"])
     .start();
