@@ -1,5 +1,5 @@
 import { APP_CONFIG } from './src/environments/environment.ts';
-import { frontwork_bundler } from "jsr:@frontwork-org/frontwork@^0.4.11/bundler";
+import { frontwork_bundler } from "jsr:@frontwork-org/frontwork@^0.4.12/bundler";
 
 const distdir = Deno.args[0] || "dist/development-web";
 const distdir_js = distdir + "/js/";
