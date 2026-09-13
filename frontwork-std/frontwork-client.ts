@@ -1,9 +1,11 @@
+// deno-lint-ignore-file no-window
 import { Frontwork, FrontworkRequest, PostScope, DocumentBuilder, FrontworkInit, EnvironmentStage, LogType, FW, Route, FrontworkContext, Component } from "./frontwork.ts";
 import { html_element_set_attributes, Observer } from "./utils.ts";
 
 
 export class FrontworkClient extends Frontwork {
     private build_on_page_load: boolean;
+    // deno-lint-ignore no-explicit-any
     private readonly client_observers: {[key: string]: Observer<any>} = {};
 
     /** page_change() behaviour: 
@@ -96,17 +98,31 @@ export class FrontworkClient extends Frontwork {
         // websocket for hot-reload check
         if (this.stage === EnvironmentStage.Development) {
             console.info("hot-reloading is enabled; Make sure this is the development environment");
-            // location.reload() after noticing the disconnect and reconnect is successful
+            // location.reload() only after the dev service actually restarted.
+            // The server answers REQUEST::SERVICE_STARTED with the millisecond
+            // timestamp of the start of its current service instance. When the
+            // socket drops but the server did NOT restart (idle flap, proxy
+            // hiccup), that timestamp stays the same and no reload happens.
             let state = 0;
+            let service_started_timestamp = "";
+            let last_reload_at = 0;
 
             const connect = () => {
                 const ws = new WebSocket("ws://"+location.host+"//ws");
                 ws.onopen = function() {
                     ws.send("REQUEST::SERVICE_STARTED");
+                };
 
-                    if (state === 2) {
-                        location.reload();
+                ws.onmessage = function(event) {
+                    const started_at = String(event.data);
+                    if (state === 2 && started_at !== service_started_timestamp) {
+                        const NOW = Date.now();
+                        if (NOW - last_reload_at > 3000) {
+                            last_reload_at = NOW;
+                            location.reload();
+                        }
                     } else {
+                        service_started_timestamp = started_at;
                         state = 1;
                     }
                 };
