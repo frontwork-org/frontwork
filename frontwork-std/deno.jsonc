@@ -1,7 +1,7 @@
 {
   // JSR package: https://jsr.io/@frontwork-org/frontwork
   "name": "@frontwork-org/frontwork",
-  "version": "0.4.12",
+  "version": "0.5.0",
   "license": "MIT",
   "exports": {
     ".": "./lib.ts",
