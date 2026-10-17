@@ -19,7 +19,7 @@ static PROJECT_TEMPLATE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/templat
 static BUNDLE_TS_FILE_STR: &str = include_str!("../template/bundle.ts");
 
 fn print_header_version() {
-    println!("Frontwork CLI Tool v{} by LuceusXylian <luceusxylian@gmail.com> and frontwork-org <https://github.com/frontwork-org> Contributors", env!("CARGO_PKG_VERSION"));
+    println!("Frontwork CLI Tool v{} by LuceusXylian <luceusxylian@proton.me> and frontwork-org <https://github.com/frontwork-org> Contributors", env!("CARGO_PKG_VERSION"));
 }
 
 fn print_help(no_error: bool, error_message: &str) {
@@ -397,10 +397,12 @@ async fn main() {
                 Environment::Production
             };
 
+            // Only pass --target to deno compile when explicitly requested.
+            // Otherwise deno compile defaults to the host architecture,
+            // which makes this work on x86_64 and aarch64 (ARM64) alike.
             let target = args.iter().position(|arg| arg == "--target")
                 .and_then(|i| args.get(i + 1))
-                .map(|s| s.to_string())
-                .unwrap_or("x86_64-unknown-linux-gnu".to_string());
+                .map(|s| s.to_string());
 
             command_build(environment, target);
         }
@@ -429,6 +431,21 @@ fn get_project_path() -> String {
     project_path
 }
 
+/// Returns the Deno release target triple for the architecture/os this
+/// binary was compiled for (e.g. `x86_64-unknown-linux-gnu`,
+/// `aarch64-unknown-linux-gnu`, `aarch64-apple-darwin`).
+fn deno_release_target() -> &'static str {
+    let arch_x64 = cfg!(target_arch = "x86_64");
+
+    if cfg!(target_os = "windows") {
+        if arch_x64 { "x86_64-pc-windows-msvc" } else { "aarch64-pc-windows-msvc" }
+    } else if cfg!(target_os = "macos") {
+        if arch_x64 { "x86_64-apple-darwin" } else { "aarch64-apple-darwin" }
+    } else {
+        if arch_x64 { "x86_64-unknown-linux-gnu" } else { "aarch64-unknown-linux-gnu" }
+    }
+}
+
 async fn command_install() {
     println!("GET & INSTALL: Deno");
 
@@ -441,17 +458,7 @@ async fn command_install() {
     if false {
         println!("Deno is already installed");
     } else {
-        let target = if cfg!(target_os = "windows") {
-            "x86_64-pc-windows-msvc"
-        } else if cfg!(target_os = "macos") {
-            if cfg!(target_arch = "aarch64") {
-                "aarch64-apple-darwin"
-            } else {
-                "x86_64-apple-darwin"
-            }
-        } else {
-            "x86_64-unknown-linux-gnu"
-        };
+        let target = deno_release_target();
 
         let homedir = env::var("HOME").unwrap();
         let deno_uri = format!(
@@ -514,7 +521,7 @@ async fn command_install() {
     }
 }
 
-fn command_build(environment: Environment, target: String) {
+fn command_build(environment: Environment, target: Option<String>) {
     println!("Building Frontwork-Project for {}", environment.to_str());
 
     // TODO: category build; dist/web, dist/electron, dist/android, dist/ios
@@ -668,21 +675,27 @@ fn build_css(project_path: &String, dist_web_path: &String) {
     );
 }
 
-fn build_service(target: String, project_path: &String, dist_web_path: &String) -> process::Child {
+fn build_service(target: Option<String>, project_path: &String, dist_web_path: &String) -> process::Child {
     let service_binary_path = format!("{}/main.service", dist_web_path);
     if Path::new(&service_binary_path).exists() {
         fs::remove_file(&service_binary_path).expect("Failed to remove existing binary file");
     }
 
-    let mut binding = std::process::Command::new("deno");
-    let command = binding
+    let mut command = std::process::Command::new("deno");
+    command
         .arg("compile")
         .arg("-c")
         .arg(format!("{}/deno.jsonc", project_path))
         .arg("-o")
-        .arg(service_binary_path)
-        .arg("--target")
-        .arg(target)
+        .arg(&service_binary_path);
+
+    // Only cross compile when a target is explicitly given. Without it deno
+    // compile builds for the host architecture (e.g. x86_64 or aarch64).
+    if let Some(target) = target {
+        command.arg("--target").arg(target);
+    }
+
+    command
         .arg("--allow-read")
         .arg("--allow-net")
         .arg("--allow-env")
