@@ -312,8 +312,15 @@ export class FrontworkRequest {
         this.headers = headers;
         this.method = method;
         this.url = url;
-        this.protocol = parsed_url.protocol;
-        this.host = parsed_url.host;
+
+        // When the request was forwarded by a reverse proxy, use the original
+        // client-facing protocol and host instead of the internal address.
+        const forwarded_proto = headers.get("x-forwarded-proto")?.split(",")[0].trim().toLowerCase();
+        const forwarded_host = headers.get("x-forwarded-host")?.split(",")[0].trim();
+        this.protocol = forwarded_proto
+            ? forwarded_proto.replace(/:$/, "") + ":"
+            : parsed_url.protocol;
+        this.host = forwarded_host ? forwarded_host : parsed_url.host;
         this.path = parsed_url.path;
         this.path_dirs = decodeURIComponent(parsed_url.path.replace(/\+/g, '%20')).split("/");
         this.query_string = parsed_url.query_string;
@@ -919,8 +926,9 @@ export class FrontworkContext {
                 }
             }
 
-            const proto = this.request.protocol === "https" ? "https" : "http";
+            const proto = this.request.protocol.replace(/:$/, "") === "https" ? "https" : "http";
             options.headers.set("X-Forwarded-Proto", proto);
+            options.headers.set("X-Forwarded-Host", this.request.host);
         }
 
         try {

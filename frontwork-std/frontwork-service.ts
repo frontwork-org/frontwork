@@ -398,10 +398,7 @@ export class FrontworkWebservice extends Frontwork {
 
             // set-cookie headers from the API
             for (let i = 0; i < context.set_cookies.length; i++) {
-                reb_response.headers.append('set-cookie',
-                    context.set_cookies[i]
-                        .replace(" Secure;", "")
-                );
+                reb_response.headers.append('set-cookie', context.set_cookies[i]);
             }
 
             return reb_response;
