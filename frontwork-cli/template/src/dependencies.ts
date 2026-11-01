@@ -1,1 +1,1 @@
-export * from "jsr:@frontwork-org/frontwork@^0.5.1";
+export * from "jsr:@frontwork-org/frontwork@^0.5.2";
