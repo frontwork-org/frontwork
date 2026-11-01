@@ -577,8 +577,14 @@ fn command_build(environment: Environment, target: Option<String>) {
     build_css(&project_path, &dist_web_path);
 
     // wait for processes
-    build_service_command.wait().ok();
-    build_client_command.wait().ok();
+    let service_build_succeeded = wait_for_build_command(
+        &mut build_service_command,
+        "service build (deno compile)",
+    );
+    let client_build_succeeded = wait_for_build_command(
+        &mut build_client_command,
+        "client build (deno run bundle.ts)",
+    );
 
     // rename files back their original names
     if environment != Environment::Development {
@@ -586,6 +592,26 @@ fn command_build(environment: Environment, target: Option<String>) {
             .expect("expected to be able rename file");
         fs::rename(envfile_tempdev_path, envfile_dev_path)
             .expect("expected to be able rename file");
+    }
+
+    if !service_build_succeeded || !client_build_succeeded {
+        eprintln!("Build failed.");
+        process::exit(1);
+    }
+}
+
+/// Waits for a build command and reports whether it exited successfully.
+fn wait_for_build_command(command: &mut Child, description: &str) -> bool {
+    match command.wait() {
+        Ok(status) if status.success() => true,
+        Ok(status) => {
+            eprintln!("{} failed ({}).", description, status);
+            false
+        }
+        Err(error) => {
+            eprintln!("Failed to wait for {}: {}", description, error);
+            false
+        }
     }
 }
 
@@ -611,13 +637,20 @@ fn command_watch() {
         build_css(&project_path, &dist_web_path);
 
         // wait for processes
-        build_client_command.wait().ok();
+        let client_build_succeeded = wait_for_build_command(
+            &mut build_client_command,
+            "client build (deno run bundle.ts)",
+        );
 
         // start/restart service
-        if let Some(mut process) = run_service_process {
-            process.kill().ok();
+        if client_build_succeeded {
+            if let Some(mut process) = run_service_process {
+                process.kill().ok();
+            }
+            run_service_process = Some(run_service(&project_path));
+        } else {
+            eprintln!("Client build failed. Waiting for file changes before retrying.");
         }
-        run_service_process = Some(run_service(&project_path));
 
         loop {
             let files = transverse_directory(src_path);
